@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { products } from '@/lib/products';
 import { SITE_URL } from '@/lib/seo';
+import { findCoupon, calculateTotals } from '@/lib/coupons';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,8 +16,9 @@ function getStripe() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const items: { productId: string; qty: number }[] = body.items || [];
+    const items: { productId: string; qty: number; variantId?: string }[] = body.items || [];
     const shippingAddress = body.shippingAddress;
+    const couponCode: string | undefined = body.couponCode || undefined;
 
     if (!items.length) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
@@ -29,22 +31,46 @@ export async function POST(req: Request) {
     for (const it of items) {
       const p = products.find((x) => x.id === it.productId);
       if (!p) continue;
-      subtotal += p.price * it.qty;
+      const variant = it.variantId ? p.variants?.find((v) => v.vid === it.variantId) : undefined;
+      const price = variant?.price ?? p.price;
+      const variantLabel = variant ? ` (${variant.name})` : '';
+      subtotal += price * it.qty;
       line_items.push({
         quantity: it.qty,
         price_data: {
           currency: 'usd',
-          unit_amount: Math.round(p.price * 100),
+          unit_amount: Math.round(price * 100),
           product_data: {
-            name: p.name,
-            images: [p.image],
-            metadata: { productId: p.id, cjProductId: p.cjProductId || '' }
+            name: `${p.name}${variantLabel}`,
+            images: [variant?.image || p.image],
+            metadata: {
+              productId: p.id,
+              variantId: variant?.vid || '',
+              cjProductId: p.cjProductId || '',
+              cjVariantId: variant?.vid || p.cjVariantId || ''
+            }
           }
         }
       });
     }
 
-    const shippingCents = subtotal >= 50 ? 0 : 699;
+    // Apply coupon server-side (do NOT trust the client to compute the discount)
+    const { coupon, discount, shipping } = calculateTotals(subtotal, couponCode);
+
+    // Add coupon as a negative line item if it applies a $ discount
+    if (coupon && discount > 0) {
+      line_items.push({
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: -Math.round(discount * 100),
+          product_data: { name: `Discount (${coupon.code})` }
+        }
+      });
+    }
+
+    // Shipping line
+    const shippingCents = Math.round(shipping * 100);
     if (shippingCents > 0) {
       line_items.push({
         quantity: 1,
@@ -65,7 +91,8 @@ export async function POST(req: Request) {
       shipping_address_collection: { allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ', 'IE'] },
       metadata: {
         productSnapshot: JSON.stringify(items),
-        shippingAddress: JSON.stringify(shippingAddress || {})
+        shippingAddress: JSON.stringify(shippingAddress || {}),
+        couponCode: coupon?.code || ''
       }
     });
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { products } from '@/lib/products';
+import { calculateTotals } from '@/lib/coupons';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const items: { productId: string; qty: number; variantId?: string }[] = body.items || [];
+    const couponCode: string | undefined = body.couponCode || undefined;
     if (!items.length) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
 
     let subtotal = 0;
@@ -43,8 +45,16 @@ export async function POST(req: Request) {
       };
     });
 
-    const shipping = subtotal >= 50 ? 0 : 6.99;
-    const total = +(subtotal + shipping).toFixed(2);
+    // Server-side coupon math
+    const { coupon, discount, shipping, total } = calculateTotals(subtotal, couponCode);
+
+    const breakdown: Record<string, { currency_code: string; value: string }> = {
+      item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
+      shipping:   { currency_code: 'USD', value: shipping.toFixed(2) }
+    };
+    if (discount > 0) {
+      breakdown.discount = { currency_code: 'USD', value: discount.toFixed(2) };
+    }
 
     const token = await paypalToken();
     const r = await fetch(`${paypalBase()}/v2/checkout/orders`, {
@@ -56,12 +66,10 @@ export async function POST(req: Request) {
           amount: {
             currency_code: 'USD',
             value: total.toFixed(2),
-            breakdown: {
-              item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
-              shipping: { currency_code: 'USD', value: shipping.toFixed(2) }
-            }
+            breakdown
           },
-          items: ppItems
+          items: ppItems,
+          custom_id: coupon?.code || undefined
         }],
         application_context: {
           brand_name: 'MamaCare',

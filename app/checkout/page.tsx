@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/lib/cart';
 import { products } from '@/lib/products';
+import { calculateTotals } from '@/lib/coupons';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 type Form = {
@@ -20,28 +21,20 @@ type Form = {
 };
 
 const empty: Form = {
-  email: '',
-  fullName: '',
-  phone: '',
-  line1: '',
-  line2: '',
-  city: '',
-  state: '',
-  postalCode: '',
-  country: 'US'
+  email: '', fullName: '', phone: '',
+  line1: '', line2: '', city: '', state: '', postalCode: '', country: 'US'
 };
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, clear } = useCart();
+  const { items, couponCode, subtotal, clear } = useCart();
   const [form, setForm] = useState<Form>(empty);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const total = subtotal();
-  const shipping = total >= 50 ? 0 : 6.99;
-  const grand = +(total + shipping).toFixed(2);
+  const sub = subtotal();
+  const { coupon, discount, shipping, total: grand } = calculateTotals(sub, couponCode);
 
   useEffect(() => {
     if (items.length === 0) router.replace('/cart');
@@ -69,7 +62,7 @@ export default function CheckoutPage() {
       const res = await fetch('/api/checkout/stripe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, shippingAddress: form })
+        body: JSON.stringify({ items, shippingAddress: form, couponCode })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
@@ -90,21 +83,8 @@ export default function CheckoutPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="card p-6">
             <h2 className="font-display text-xl text-ink-900 mb-4">Contact</h2>
-            <input
-              type="email"
-              placeholder="Email *"
-              required
-              value={form.email}
-              onChange={(e) => update('email', e.target.value)}
-              className="input"
-            />
-            <input
-              type="tel"
-              placeholder="Phone"
-              value={form.phone}
-              onChange={(e) => update('phone', e.target.value)}
-              className="input mt-3"
-            />
+            <input type="email" placeholder="Email *" required value={form.email} onChange={(e) => update('email', e.target.value)} className="input" />
+            <input type="tel" placeholder="Phone" value={form.phone} onChange={(e) => update('phone', e.target.value)} className="input mt-3" />
           </div>
 
           <div className="card p-6">
@@ -125,27 +105,16 @@ export default function CheckoutPage() {
             .input:focus { box-shadow: 0 0 0 3px rgba(243,165,182,0.4); }
           `}</style>
 
-          {/* ─── Terms agreement (REQUIRED) ─── */}
           <div className="card p-6 border-2 border-blush-100 bg-blush-50/30">
             <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-1 w-5 h-5 accent-blush-400 flex-shrink-0"
-              />
+              <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-1 w-5 h-5 accent-blush-400 flex-shrink-0" />
               <span className="text-sm text-ink-700 leading-relaxed">
-                I have read and agree to MamaCare's{' '}
-                <Link href="/terms" target="_blank" className="underline text-blush-500 font-medium">
-                  Terms and Conditions
-                </Link>{' '}
+                I have read and agree to MamaCare&apos;s{' '}
+                <Link href="/terms" target="_blank" className="underline text-blush-500 font-medium">Terms and Conditions</Link>{' '}
                 and{' '}
-                <Link href="/privacy" target="_blank" className="underline text-blush-500 font-medium">
-                  Privacy Policy
-                </Link>
-                . I understand that MamaCare is a dropshipping retailer and does not manufacture
-                the products it sells, that shipping may take 5–18 business days, and that returns
-                are accepted within 14 days of delivery. <span className="text-blush-500">*</span>
+                <Link href="/privacy" target="_blank" className="underline text-blush-500 font-medium">Privacy Policy</Link>.
+                I understand that MamaCare is a dropshipping retailer and does not manufacture the products it sells,
+                that shipping may take 5–18 business days, and that returns are accepted within 14 days of delivery. <span className="text-blush-500">*</span>
               </span>
             </label>
           </div>
@@ -154,11 +123,7 @@ export default function CheckoutPage() {
 
           <div className="card p-6 space-y-4">
             <h2 className="font-display text-xl text-ink-900">Payment</h2>
-            <button
-              onClick={payWithStripe}
-              disabled={loading || !agreedToTerms}
-              className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            <button onClick={payWithStripe} disabled={loading || !agreedToTerms} className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed">
               {loading ? 'Redirecting…' : `Pay with Card · $${grand.toFixed(2)}`}
             </button>
 
@@ -177,7 +142,7 @@ export default function CheckoutPage() {
                     const r = await fetch('/api/checkout/paypal', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ items, shippingAddress: form })
+                      body: JSON.stringify({ items, shippingAddress: form, couponCode })
                     });
                     const d = await r.json();
                     if (!r.ok) throw new Error(d.error || 'PayPal order failed');
@@ -187,7 +152,7 @@ export default function CheckoutPage() {
                     const r = await fetch('/api/checkout/paypal/capture', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ orderId: data.orderID, items, shippingAddress: form })
+                      body: JSON.stringify({ orderId: data.orderID, items, shippingAddress: form, couponCode })
                     });
                     if (!r.ok) {
                       const d = await r.json().catch(() => ({}));
@@ -210,7 +175,6 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Order summary */}
         <aside className="card p-6 h-fit lg:sticky lg:top-24">
           <h2 className="font-display text-2xl text-ink-900">Order</h2>
           <ul className="mt-4 divide-y divide-ink-900/5">
@@ -221,17 +185,24 @@ export default function CheckoutPage() {
               const linePrice = variant?.price ?? p.price;
               return (
                 <li key={`${i.productId}-${i.variantId || ''}`} className="py-3 flex justify-between text-sm">
-                  <span>
-                    {p.name} {variant ? `(${variant.name})` : ''} × {i.qty}
-                  </span>
+                  <span>{p.name} {variant ? `(${variant.name})` : ''} × {i.qty}</span>
                   <span>${(linePrice * i.qty).toFixed(2)}</span>
                 </li>
               );
             })}
           </ul>
           <dl className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between"><dt>Subtotal</dt><dd>${total.toFixed(2)}</dd></div>
-            <div className="flex justify-between"><dt>Shipping</dt><dd>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</dd></div>
+            <div className="flex justify-between"><dt>Subtotal</dt><dd>${sub.toFixed(2)}</dd></div>
+            {coupon && discount > 0 && (
+              <div className="flex justify-between text-sage-500">
+                <dt>{coupon.code} (− {coupon.description.toLowerCase()})</dt>
+                <dd>− ${discount.toFixed(2)}</dd>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <dt>Shipping</dt>
+              <dd>{shipping === 0 ? <span className="text-sage-500">{coupon?.type === 'free-shipping' ? `Free (${coupon.code})` : 'Free'}</span> : `$${shipping.toFixed(2)}`}</dd>
+            </div>
             <div className="flex justify-between text-base text-ink-900 font-medium pt-2 border-t border-ink-900/10">
               <dt>Total</dt><dd>${grand.toFixed(2)}</dd>
             </div>
