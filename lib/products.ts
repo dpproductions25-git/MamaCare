@@ -48,7 +48,7 @@ export const products: Product[] = [
     shortDescription: 'Newborn rocker with 2 reclining angles, toy bar, and travel bag.',
     description:
       "A foldable baby bouncer designed for newborns to 9 months — perfect for nap time, feeds, and play. Two adjustable reclining angles, a rotatable toy bar to keep little hands engaged, and a 3-point safety harness give peace of mind. Folds flat into the included travel bag for stroller errands, weekend trips, or grandparent visits.",
-    price: 54.99,
+    price: 1.00,
     compareAtPrice: 74.99,
     currency: 'USD',
     image: cj('/17660160/eb1c24dd-b6bd-484d-bb05-e494c1482e2b.jpg'),
