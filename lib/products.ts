@@ -17,6 +17,27 @@ const cj = (path: string) =>
   `https://cf.cjdropshipping.com${path}?x-oss-process=image/format,webp,image/resize,w_900`;
 
 export const products: Product[] = [
+
+
+  //-------------------------------------------------------------
+  // 0- TEST
+  //=============================================================
+  {
+    id: 'mc-test',
+    slug: 'test-purchase',
+    name: 'TEST PRODUCT — Do Not Buy ($0.50)',
+    shortDescription: 'Internal test product. Used only to verify the checkout flow.',
+    description:
+      "This is an internal test product. Please do not purchase. It exists only to verify Stripe payments, database saves, and email notifications. Remove from lib/products.ts before going public.",
+    price: 0.50,
+    currency: 'USD',
+    image: 'https://images.unsplash.com/photo-1530021232320-687d8e3dba54?auto=format&fit=crop&w=900&q=80',
+    category: 'baby',
+    tags: ['test', 'internal'],
+    rating: 5.0,
+    reviewsCount: 1,
+    inStock: true
+  },
   // ─────────────────────────────────────────────────────────────
   // 1 — Bouncer (Light Gray)
   // ─────────────────────────────────────────────────────────────
