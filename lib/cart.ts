@@ -7,9 +7,12 @@ import { products } from './products';
 
 type CartState = {
   items: CartItem[];
+  couponCode: string | null;
   add: (productId: string, qty?: number, variantId?: string) => void;
   remove: (productId: string, variantId?: string) => void;
   setQty: (productId: string, qty: number, variantId?: string) => void;
+  applyCoupon: (code: string) => void;
+  removeCoupon: () => void;
   clear: () => void;
   count: () => number;
   subtotal: () => number;
@@ -22,6 +25,8 @@ export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      couponCode: null,
+
       add: (productId, qty = 1, variantId) =>
         set((state) => {
           const existing = state.items.find((i) => sameLine(i, productId, variantId));
@@ -34,19 +39,25 @@ export const useCart = create<CartState>()(
           }
           return { items: [...state.items, { productId, qty, variantId }] };
         }),
+
       remove: (productId, variantId) =>
         set((state) => ({ items: state.items.filter((i) => !sameLine(i, productId, variantId)) })),
+
       setQty: (productId, qty, variantId) =>
         set((state) => ({
           items:
             qty <= 0
               ? state.items.filter((i) => !sameLine(i, productId, variantId))
-              : state.items.map((i) =>
-                  sameLine(i, productId, variantId) ? { ...i, qty } : i
-                )
+              : state.items.map((i) => (sameLine(i, productId, variantId) ? { ...i, qty } : i))
         })),
-      clear: () => set({ items: [] }),
+
+      applyCoupon: (code) => set({ couponCode: code.trim().toUpperCase() || null }),
+      removeCoupon: () => set({ couponCode: null }),
+
+      clear: () => set({ items: [], couponCode: null }),
+
       count: () => get().items.reduce((n, i) => n + i.qty, 0),
+
       subtotal: () =>
         get().items.reduce((sum, i) => {
           const product = products.find((p) => p.id === i.productId);
