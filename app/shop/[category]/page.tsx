@@ -1,9 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ShopWithFilters from '@/components/ShopWithFilters';
-import { categories, products } from '@/lib/products';
+import { categories } from '@/lib/products';
+import { getMergedProducts } from '@/lib/product-overrides';
 import type { Category } from '@/lib/types';
 import { buildMetadata } from '@/lib/seo';
+
+export const revalidate = 30;
 
 type Params = { params: { category: string } };
 
@@ -21,9 +24,10 @@ export function generateMetadata({ params }: Params) {
   });
 }
 
-export default function CategoryPage({ params }: Params) {
+export default async function CategoryPage({ params }: Params) {
   const cat = categories.find((c) => c.slug === params.category);
   if (!cat) return notFound();
+  const products = await getMergedProducts();
 
   return (
     <section className="container-page py-10 sm:py-14">

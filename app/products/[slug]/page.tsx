@@ -2,8 +2,11 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
 import ProductGallery from '@/components/ProductGallery';
-import { products, getProduct } from '@/lib/products';
+import { products } from '@/lib/products';
+import { getMergedProduct } from '@/lib/product-overrides';
 import { buildMetadata, SITE_URL, SITE_NAME } from '@/lib/seo';
+
+export const revalidate = 30;
 
 type Params = { params: { slug: string } };
 
@@ -11,8 +14,8 @@ export function generateStaticParams() {
   return products.map((p) => ({ slug: p.slug }));
 }
 
-export function generateMetadata({ params }: Params) {
-  const p = getProduct(params.slug);
+export async function generateMetadata({ params }: Params) {
+  const p = await getMergedProduct(params.slug);
   if (!p) return buildMetadata({ title: 'Product not found' });
   return buildMetadata({
     title: `${p.name} — ${p.shortDescription}`,
@@ -22,8 +25,8 @@ export function generateMetadata({ params }: Params) {
   });
 }
 
-export default function ProductPage({ params }: Params) {
-  const product = getProduct(params.slug);
+export default async function ProductPage({ params }: Params) {
+  const product = await getMergedProduct(params.slug);
   if (!product) return notFound();
 
   const productJsonLd = {
@@ -39,9 +42,7 @@ export default function ProductPage({ params }: Params) {
       url: `${SITE_URL}/products/${product.slug}`,
       priceCurrency: product.currency,
       price: product.price.toFixed(2),
-      availability: product.inStock
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
+      availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition'
     },
     aggregateRating: {

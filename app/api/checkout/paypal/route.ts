@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { products } from '@/lib/products';
+import { products as staticProducts } from '@/lib/products';
+import { getAllOverrides } from '@/lib/db';
+import { applyOverridesToProducts } from '@/lib/product-overrides';
 import { calculateTotals } from '@/lib/coupons';
 
 export const runtime = 'nodejs';
@@ -31,9 +33,14 @@ export async function POST(req: Request) {
     const couponCode: string | undefined = body.couponCode || undefined;
     if (!items.length) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
 
+    // Apply admin overrides server-side
+    const overrides = await getAllOverrides();
+    const products = applyOverridesToProducts(staticProducts, overrides);
+
     let subtotal = 0;
     const ppItems = items.map((i) => {
       const p = products.find((x) => x.id === i.productId)!;
+      if (!p.inStock) throw new Error(`${p.name} is out of stock.`);
       const variant = i.variantId ? p.variants?.find((v) => v.vid === i.variantId) : undefined;
       const price = variant?.price ?? p.price;
       subtotal += price * i.qty;
@@ -45,16 +52,13 @@ export async function POST(req: Request) {
       };
     });
 
-    // Server-side coupon math
     const { coupon, discount, shipping, total } = calculateTotals(subtotal, couponCode);
 
     const breakdown: Record<string, { currency_code: string; value: string }> = {
       item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
       shipping:   { currency_code: 'USD', value: shipping.toFixed(2) }
     };
-    if (discount > 0) {
-      breakdown.discount = { currency_code: 'USD', value: discount.toFixed(2) };
-    }
+    if (discount > 0) breakdown.discount = { currency_code: 'USD', value: discount.toFixed(2) };
 
     const token = await paypalToken();
     const r = await fetch(`${paypalBase()}/v2/checkout/orders`, {
@@ -63,11 +67,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         intent: 'CAPTURE',
         purchase_units: [{
-          amount: {
-            currency_code: 'USD',
-            value: total.toFixed(2),
-            breakdown
-          },
+          amount: { currency_code: 'USD', value: total.toFixed(2), breakdown },
           items: ppItems,
           custom_id: coupon?.code || undefined
         }],

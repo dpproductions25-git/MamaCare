@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
-import { categories, getBestSellers } from '@/lib/products';
+import { categories } from '@/lib/products';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { buildMetadata } from '@/lib/seo';
+
+// Refresh the home page every 30s so admin price/stock edits show up quickly.
+export const revalidate = 30;
 
 export const metadata = buildMetadata({
   title: 'MamaCare — Baby Gear & Everyday Essentials',
@@ -11,8 +15,10 @@ export const metadata = buildMetadata({
   path: '/'
 });
 
-export default function HomePage() {
-  const bestSellers = getBestSellers().slice(0, 8);
+export default async function HomePage() {
+  const all = await getMergedProducts();
+  const bestSellers = all.filter((p) => p.bestSeller).slice(0, 8);
+
   return (
     <>
       <section className="relative overflow-hidden">
@@ -50,7 +56,6 @@ export default function HomePage() {
             />
           </div>
         </div>
-
         <div className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-blush-50 blur-3xl opacity-70 -z-10" />
         <div className="pointer-events-none absolute -bottom-32 -left-20 w-[380px] h-[380px] rounded-full bg-sage-50 blur-3xl opacity-70 -z-10" />
       </section>
@@ -65,11 +70,7 @@ export default function HomePage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {categories.map((c) => (
-            <Link
-              key={c.slug}
-              href={`/shop/${c.slug}`}
-              className="group card p-5 hover:-translate-y-0.5 hover:shadow-soft transition-all"
-            >
+            <Link key={c.slug} href={`/shop/${c.slug}`} className="group card p-5 hover:-translate-y-0.5 hover:shadow-soft transition-all">
               <div className="w-12 h-12 rounded-2xl bg-blush-50 flex items-center justify-center mb-3 group-hover:bg-blush-100 transition-colors">
                 <span aria-hidden className="text-blush-500">♥</span>
               </div>
@@ -123,14 +124,8 @@ export default function HomePage() {
           </p>
           <form action="/api/subscribe" method="post" className="mt-6 flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
             <label htmlFor="email" className="sr-only">Email address</label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              required
-              placeholder="Your email address"
-              className="flex-1 rounded-full px-5 py-3 bg-white border border-ink-900/10 focus:outline-none focus:ring-2 focus:ring-blush-300"
-            />
+            <input id="email" type="email" name="email" required placeholder="Your email address"
+              className="flex-1 rounded-full px-5 py-3 bg-white border border-ink-900/10 focus:outline-none focus:ring-2 focus:ring-blush-300" />
             <button type="submit" className="btn-primary">Subscribe</button>
           </form>
         </div>

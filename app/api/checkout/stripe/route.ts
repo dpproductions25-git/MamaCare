@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { products } from '@/lib/products';
+import { products as staticProducts } from '@/lib/products';
+import { getAllOverrides } from '@/lib/db';
+import { applyOverridesToProducts } from '@/lib/product-overrides';
 import { SITE_URL } from '@/lib/seo';
-import { findCoupon, calculateTotals } from '@/lib/coupons';
+import { calculateTotals } from '@/lib/coupons';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,9 +22,11 @@ export async function POST(req: Request) {
     const shippingAddress = body.shippingAddress;
     const couponCode: string | undefined = body.couponCode || undefined;
 
-    if (!items.length) {
-      return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
-    }
+    if (!items.length) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+
+    // Apply admin overrides server-side — never trust the client's price.
+    const overrides = await getAllOverrides();
+    const products = applyOverridesToProducts(staticProducts, overrides);
 
     const stripe = getStripe();
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
@@ -31,6 +35,9 @@ export async function POST(req: Request) {
     for (const it of items) {
       const p = products.find((x) => x.id === it.productId);
       if (!p) continue;
+      if (!p.inStock) {
+        return NextResponse.json({ error: `${p.name} is out of stock.` }, { status: 400 });
+      }
       const variant = it.variantId ? p.variants?.find((v) => v.vid === it.variantId) : undefined;
       const price = variant?.price ?? p.price;
       const variantLabel = variant ? ` (${variant.name})` : '';
@@ -54,10 +61,8 @@ export async function POST(req: Request) {
       });
     }
 
-    // Apply coupon server-side (do NOT trust the client to compute the discount)
     const { coupon, discount, shipping } = calculateTotals(subtotal, couponCode);
 
-    // Add coupon as a negative line item if it applies a $ discount
     if (coupon && discount > 0) {
       line_items.push({
         quantity: 1,
@@ -69,7 +74,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Shipping line
     const shippingCents = Math.round(shipping * 100);
     if (shippingCents > 0) {
       line_items.push({
