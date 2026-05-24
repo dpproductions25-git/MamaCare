@@ -27,6 +27,7 @@ export type Product = {
   name: string;
   shortDescription: string;
   description: string;
+  seoDescription?: string;
   price: number;
   compareAtPrice?: number;
   currency: 'USD';

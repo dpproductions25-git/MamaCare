@@ -1,10 +1,14 @@
 import type { MetadataRoute } from 'next';
-import { products, categories } from '@/lib/products';
+import { categories } from '@/lib/products';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllPosts } from '@/lib/blog';
 import { SITE_URL } from '@/lib/seo';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 60; // refresh sitemap every minute
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const allProducts = await getMergedProducts();
 
   const staticPaths: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`,         lastModified: now, changeFrequency: 'weekly',  priority: 1 },
@@ -26,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7
   }));
 
-  const productPaths: MetadataRoute.Sitemap = products.map((p) => ({
+  const productPaths: MetadataRoute.Sitemap = allProducts.map((p) => ({
     url: `${SITE_URL}/products/${p.slug}`,
     lastModified: now,
     changeFrequency: 'weekly',

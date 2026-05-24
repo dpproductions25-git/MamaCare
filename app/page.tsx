@@ -3,9 +3,9 @@ import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
 import { categories } from '@/lib/products';
 import { getMergedProducts } from '@/lib/product-overrides';
+import { getAllConfig } from '@/lib/db';
 import { buildMetadata } from '@/lib/seo';
 
-// Refresh the home page every 30s so admin price/stock edits show up quickly.
 export const revalidate = 30;
 
 export const metadata = buildMetadata({
@@ -15,9 +15,27 @@ export const metadata = buildMetadata({
   path: '/'
 });
 
+const DEFAULTS = {
+  hero_image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1400&q=80',
+  hero_eyebrow: 'Lovingly made for every mama',
+  hero_headline: 'Soft, supportive essentials for every season of motherhood.',
+  hero_subhead: 'From bump to baby and beyond — discover thoughtfully curated baby gear, sleep, feeding, and nursery products designed to feel as good as they look.',
+  hero_cta_text: 'Shop the collection',
+  hero_cta_link: '/shop'
+};
+
 export default async function HomePage() {
-  const all = await getMergedProducts();
+  const [all, config] = await Promise.all([getMergedProducts(), getAllConfig()]);
   const bestSellers = all.filter((p) => p.bestSeller).slice(0, 8);
+
+  const hero = {
+    image: config.hero_image || DEFAULTS.hero_image,
+    eyebrow: config.hero_eyebrow || DEFAULTS.hero_eyebrow,
+    headline: config.hero_headline || DEFAULTS.hero_headline,
+    subhead: config.hero_subhead || DEFAULTS.hero_subhead,
+    ctaText: config.hero_cta_text || DEFAULTS.hero_cta_text,
+    ctaLink: config.hero_cta_link || DEFAULTS.hero_cta_link
+  };
 
   return (
     <>
@@ -25,17 +43,16 @@ export default async function HomePage() {
         <div className="container-page py-14 sm:py-20 lg:py-28 grid lg:grid-cols-2 gap-10 items-center">
           <div className="animate-fadeUp">
             <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium">
-              Lovingly made for every mama
+              {hero.eyebrow}
             </p>
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-ink-900 leading-[1.05] mt-4">
-              Soft, supportive essentials for every season of motherhood.
+              {hero.headline}
             </h1>
             <p className="text-ink-700 mt-5 max-w-lg text-lg">
-              From bump to baby and beyond — discover thoughtfully curated baby gear,
-              sleep, feeding, and nursery products designed to feel as good as they look.
+              {hero.subhead}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/shop" className="btn-primary">Shop the collection</Link>
+              <Link href={hero.ctaLink} className="btn-primary">{hero.ctaText}</Link>
               <Link href="/about" className="btn-secondary">Our story</Link>
             </div>
             <div className="mt-10 flex items-center gap-6 text-sm text-ink-500">
@@ -47,10 +64,9 @@ export default async function HomePage() {
 
           <div className="relative aspect-[4/5] sm:aspect-[5/6] rounded-4xl overflow-hidden shadow-card animate-fadeUp">
             <Image
-              src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1400&q=80"
-              alt="Mother and newborn at home"
-              fill
-              priority
+              src={hero.image}
+              alt={hero.headline}
+              fill priority
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
             />

@@ -17,9 +17,12 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Params) {
   const p = await getMergedProduct(params.slug);
   if (!p) return buildMetadata({ title: 'Product not found' });
+  // Use admin-provided SEO description if set, otherwise auto-generate from tagline + body.
+  const description = p.seoDescription?.trim()
+    || `${p.shortDescription} ${p.description.slice(0, 140)}`;
   return buildMetadata({
     title: `${p.name} — ${p.shortDescription}`,
-    description: `${p.shortDescription} ${p.description.slice(0, 140)}`,
+    description,
     path: `/products/${p.slug}`,
     image: p.image
   });
