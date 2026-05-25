@@ -1,60 +1,28 @@
 import { buildMetadata } from '@/lib/seo';
+import { getPageContent } from '@/lib/page-content';
 
-export const metadata = buildMetadata({
-  title: 'Returns & Exchanges — 14-Day Policy',
-  description: '14-day easy returns at MamaCare. Read our return policy and how to start a return.',
-  path: '/returns'
-});
+export const revalidate = 30;
 
-export default function ReturnsPage() {
+export async function generateMetadata() {
+  const c = await getPageContent('returns');
+  return buildMetadata({ title: c.title, description: c.meta, path: '/returns' });
+}
+
+export default async function ReturnsPage() {
+  const c = await getPageContent('returns');
   return (
     <article className="container-page py-12 sm:py-16 max-w-3xl">
-      <h1 className="font-display text-4xl sm:text-5xl text-ink-900">Returns & Exchanges</h1>
-
-      <div className="mt-6 space-y-5 text-ink-700 leading-relaxed">
-        <p>
-          We want every mama to love what arrives. If something isn't right, you have
-          <strong> 14 days</strong> from the date of delivery to request a return.
-        </p>
-
-        <h2 className="font-display text-2xl text-ink-900 mt-8">Eligibility</h2>
-        <p>To qualify for a return, items must be:</p>
-        <ul className="list-disc ml-6 space-y-1">
-          <li>Unworn, unwashed, and in original packaging.</li>
-          <li>Returned within 14 days of delivery.</li>
-          <li>Accompanied by your order number.</li>
-        </ul>
-
-        <h2 className="font-display text-2xl text-ink-900 mt-8">Final-sale items</h2>
-        <p>The following items cannot be returned for health and safety reasons:</p>
-        <ul className="list-disc ml-6 space-y-1">
-          <li>Bottle warmers, brushes, and any product where the seal has been broken.</li>
-          <li>Used personal-care products (balms, oils, vitamins).</li>
-          <li>Items marked "Final Sale" at checkout.</li>
-        </ul>
-
-        <h2 className="font-display text-2xl text-ink-900 mt-8">How to start a return</h2>
-        <p>
-          Email us at <a className="underline text-blush-500" href="mailto:mamaacaree@gmail.com">mamaacaree@gmail.com</a>
-          {' '}with your order number and the reason for the return. We'll send you a return
-          address and instructions within 1 business day.
-        </p>
-
-        <h2 className="font-display text-2xl text-ink-900 mt-8">Refunds</h2>
-        <p>
-          Refunds are issued to your original payment method within 5 business days of
-          us receiving the returned item. Shipping fees are non-refundable. Return
-          shipping is the customer's responsibility unless the item arrived damaged or
-          defective.
-        </p>
-
-        <h2 className="font-display text-2xl text-ink-900 mt-8">Damaged or defective items</h2>
-        <p>
-          If your item arrived damaged or defective, contact us within 7 days of delivery
-          with photos and we'll replace it or refund you in full — including any return
-          shipping cost.
-        </p>
-      </div>
+      <h1 className="font-display text-4xl sm:text-5xl text-ink-900">{c.heading}</h1>
+      <div className="prose-content mt-6 text-ink-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: c.body }} />
+      <style>{`
+        .prose-content h2 { font-family: Georgia, serif; font-size: 1.5rem; color: #2A2A33; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .prose-content p { margin: 0.75rem 0; }
+        .prose-content ul, .prose-content ol { margin: 0.75rem 0 0.75rem 1.25rem; }
+        .prose-content li { margin: 0.3rem 0; }
+        .prose-content a { color: #D86A82; text-decoration: underline; }
+        .prose-content strong { color: #2A2A33; font-weight: 600; }
+        .prose-content .muted { color: #7A7A87; font-size: 0.875rem; }
+      `}</style>
     </article>
   );
 }

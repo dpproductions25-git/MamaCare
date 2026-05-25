@@ -1,25 +1,28 @@
 import { buildMetadata } from '@/lib/seo';
+import { getPageContent } from '@/lib/page-content';
 
-export const metadata = buildMetadata({
-  title: 'Shipping — Fast, Free Worldwide Delivery',
-  description: 'MamaCare ships worldwide with free U.S. delivery on orders over $50. See our delivery times and tracking info.',
-  path: '/shipping'
-});
+export const revalidate = 30;
 
-export default function ShippingPage() {
+export async function generateMetadata() {
+  const c = await getPageContent('shipping');
+  return buildMetadata({ title: c.title, description: c.meta, path: '/shipping' });
+}
+
+export default async function ShippingPage() {
+  const c = await getPageContent('shipping');
   return (
     <article className="container-page py-12 sm:py-16 max-w-3xl">
-      <h1 className="font-display text-4xl sm:text-5xl text-ink-900">Shipping</h1>
-      <div className="mt-6 space-y-5 text-ink-700 leading-relaxed">
-        <p>We ship worldwide. Because we ship directly from our supplier warehouses:</p>
-        <ul className="list-disc ml-6 space-y-1">
-          <li><strong>U.S. orders:</strong> 5–9 business days</li>
-          <li><strong>Canada, U.K., Australia, NZ, Ireland:</strong> 8–14 business days</li>
-          <li><strong>Other international:</strong> 8–18 business days</li>
-        </ul>
-        <p>Free standard shipping on U.S. orders over $50. Express options shown at checkout.</p>
-        <p>You&apos;ll receive a tracking link by email as soon as your order leaves our warehouse.</p>
-      </div>
+      <h1 className="font-display text-4xl sm:text-5xl text-ink-900">{c.heading}</h1>
+      <div className="prose-content mt-6 text-ink-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: c.body }} />
+      <style>{`
+        .prose-content h2 { font-family: Georgia, serif; font-size: 1.5rem; color: #2A2A33; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .prose-content p { margin: 0.75rem 0; }
+        .prose-content ul, .prose-content ol { margin: 0.75rem 0 0.75rem 1.25rem; }
+        .prose-content li { margin: 0.3rem 0; }
+        .prose-content a { color: #D86A82; text-decoration: underline; }
+        .prose-content strong { color: #2A2A33; font-weight: 600; }
+        .prose-content .muted { color: #7A7A87; font-size: 0.875rem; }
+      `}</style>
     </article>
   );
 }

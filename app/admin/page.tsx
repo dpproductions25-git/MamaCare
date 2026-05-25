@@ -44,7 +44,15 @@ export default async function AdminHome() {
         </Link>
         <Link href="/admin/products" className="card p-6 hover:-translate-y-0.5 hover:shadow-soft transition-all">
           <h2 className="font-display text-xl text-ink-900">Products →</h2>
-          <p className="text-sm text-ink-500 mt-1">Edit prices, stock, best-seller flags, descriptions.</p>
+          <p className="text-sm text-ink-500 mt-1">Add, edit, hide products. Manage prices and stock.</p>
+        </Link>
+        <Link href="/admin/homepage" className="card p-6 hover:-translate-y-0.5 hover:shadow-soft transition-all">
+          <h2 className="font-display text-xl text-ink-900">Homepage →</h2>
+          <p className="text-sm text-ink-500 mt-1">Edit the hero photo, headline, and call-to-action.</p>
+        </Link>
+        <Link href="/admin/pages" className="card p-6 hover:-translate-y-0.5 hover:shadow-soft transition-all">
+          <h2 className="font-display text-xl text-ink-900">Pages →</h2>
+          <p className="text-sm text-ink-500 mt-1">Edit About, FAQ, Shipping, Returns, Privacy, Terms.</p>
         </Link>
         <a href="https://app.cjdropshipping.com/myCJ.html#/order/orderList/list/0" target="_blank" rel="noreferrer" className="card p-6 hover:-translate-y-0.5 hover:shadow-soft transition-all">
           <h2 className="font-display text-xl text-ink-900">CJ Dropshipping ↗</h2>
