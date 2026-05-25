@@ -4,7 +4,6 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
 
-  // Don't fail the deploy on stray warnings — we can tighten later.
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
 
@@ -14,11 +13,19 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'cf.cjdropshipping.com' },
       { protocol: 'https', hostname: 'cbu01.alicdn.com' },
-      { protocol: 'https', hostname: 'oss-cf.cjdropshipping.com' }
+      { protocol: 'https', hostname: 'oss-cf.cjdropshipping.com' },
+      // Google Drive image hosting
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'drive.google.com' },
+      // Dropbox
+      { protocol: 'https', hostname: 'www.dropbox.com' },
+      { protocol: 'https', hostname: 'dl.dropboxusercontent.com' },
+      // imgur (popular admin choice)
+      { protocol: 'https', hostname: 'i.imgur.com' },
+      { protocol: 'https', hostname: 'imgur.com' }
     ]
   },
 
-  // Keep server-only payment SDKs out of the client bundle.
   experimental: {
     serverComponentsExternalPackages: ['stripe']
   },

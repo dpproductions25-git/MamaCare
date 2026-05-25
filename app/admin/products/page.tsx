@@ -63,6 +63,9 @@ export default async function AdminProductsPage() {
                           {isCustom && <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-sage-100 text-sage-500 text-[10px]">custom</span>}
                           {!visible && <span className="ml-1 inline-block px-2 py-0.5 rounded-full bg-cream-200 text-ink-500 text-[10px]">hidden</span>}
                         </p>
+                        <Link href={`/admin/products/${p.id}`} className="text-xs text-blush-500 hover:underline mt-1 inline-block">
+                          Edit full details →
+                        </Link>
                       </div>
                     </div>
                   </td>

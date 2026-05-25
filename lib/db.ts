@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import type { Category } from './types';
+import type { Category, ProductVariant } from './types';
 
 export type OrderStatus =
   | 'pending' | 'paid' | 'fulfilling' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
@@ -25,9 +25,19 @@ export type DbOrder = {
 
 export type DbOverride = {
   product_id: string;
+  name: string | null;
+  short_description: string | null;
+  description: string | null;
+  seo_description: string | null;
   price: number | null;
   compare_at_price: number | null;
-  short_description: string | null;
+  image: string | null;
+  images_json: string[] | null;
+  category: string | null;
+  tags_json: string[] | null;
+  cj_product_id: string | null;
+  cj_variant_id: string | null;
+  variants_json: ProductVariant[] | null;
   in_stock: boolean | null;
   best_seller: boolean | null;
   visible: boolean | null;
@@ -48,6 +58,7 @@ export type DbCustomProduct = {
   images: string[] | null;
   category: Category;
   tags: string[] | null;
+  variants_json: ProductVariant[] | null;
   rating: number;
   reviews_count: number;
   in_stock: boolean;
@@ -105,12 +116,23 @@ export async function ensureSchema() {
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_created  ON orders(created_at DESC);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);`;
 
+  // Product overrides — extended with all editable fields
   await sql`
     CREATE TABLE IF NOT EXISTS product_overrides (
       product_id TEXT PRIMARY KEY,
+      name TEXT,
+      short_description TEXT,
+      description TEXT,
+      seo_description TEXT,
       price NUMERIC(10,2),
       compare_at_price NUMERIC(10,2),
-      short_description TEXT,
+      image TEXT,
+      images_json JSONB,
+      category TEXT,
+      tags_json JSONB,
+      cj_product_id TEXT,
+      cj_variant_id TEXT,
+      variants_json JSONB,
       in_stock BOOLEAN,
       best_seller BOOLEAN,
       visible BOOLEAN,
@@ -118,8 +140,20 @@ export async function ensureSchema() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
   `;
+  // Add columns if upgrading from older schemas
   await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS visible BOOLEAN;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS name TEXT;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS description TEXT;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS seo_description TEXT;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS image TEXT;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS images_json JSONB;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS category TEXT;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS tags_json JSONB;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS cj_product_id TEXT;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS cj_variant_id TEXT;`;
+  await sql`ALTER TABLE product_overrides ADD COLUMN IF NOT EXISTS variants_json JSONB;`;
 
+  // Custom products
   await sql`
     CREATE TABLE IF NOT EXISTS custom_products (
       id TEXT PRIMARY KEY,
@@ -134,6 +168,7 @@ export async function ensureSchema() {
       images JSONB,
       category TEXT NOT NULL,
       tags JSONB,
+      variants_json JSONB,
       rating NUMERIC(2,1) DEFAULT 5.0,
       reviews_count INTEGER DEFAULT 0,
       in_stock BOOLEAN NOT NULL DEFAULT TRUE,
@@ -149,7 +184,9 @@ export async function ensureSchema() {
   await sql`CREATE INDEX IF NOT EXISTS idx_custom_category ON custom_products(category);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_custom_visible  ON custom_products(visible);`;
   await sql`ALTER TABLE custom_products ADD COLUMN IF NOT EXISTS seo_description TEXT;`;
+  await sql`ALTER TABLE custom_products ADD COLUMN IF NOT EXISTS variants_json JSONB;`;
 
+  // Site config
   await sql`
     CREATE TABLE IF NOT EXISTS site_config (
       key TEXT PRIMARY KEY,
@@ -245,32 +282,32 @@ export async function getAllOverrides(): Promise<Record<string, DbOverride>> {
   }
 }
 
-export async function upsertOverride(productId: string, fields: {
-  price?: number | null;
-  compare_at_price?: number | null;
-  short_description?: string | null;
-  in_stock?: boolean | null;
-  best_seller?: boolean | null;
-  visible?: boolean | null;
-  updated_by: string;
-}) {
-  await sql`
-    INSERT INTO product_overrides
-      (product_id, price, compare_at_price, short_description, in_stock, best_seller, visible, updated_by, updated_at)
-    VALUES
-      (${productId}, ${fields.price ?? null}, ${fields.compare_at_price ?? null},
-       ${fields.short_description ?? null}, ${fields.in_stock ?? null}, ${fields.best_seller ?? null},
-       ${fields.visible ?? null}, ${fields.updated_by}, NOW())
-    ON CONFLICT (product_id) DO UPDATE
-      SET price             = COALESCE(EXCLUDED.price, product_overrides.price),
-          compare_at_price  = COALESCE(EXCLUDED.compare_at_price, product_overrides.compare_at_price),
-          short_description = COALESCE(EXCLUDED.short_description, product_overrides.short_description),
-          in_stock          = COALESCE(EXCLUDED.in_stock, product_overrides.in_stock),
-          best_seller       = COALESCE(EXCLUDED.best_seller, product_overrides.best_seller),
-          visible           = COALESCE(EXCLUDED.visible, product_overrides.visible),
-          updated_by        = EXCLUDED.updated_by,
-          updated_at        = NOW();
+export async function upsertOverride(productId: string, fields: Partial<DbOverride> & { updated_by: string }) {
+  // Build dynamic UPSERT — only set provided fields.
+  const cols = ['product_id', 'updated_by', 'updated_at'];
+  const vals: any[] = [productId, fields.updated_by, 'NOW()'];
+  const placeholders = ['$1', '$2', 'NOW()'];
+  let i = 3;
+  for (const [k, v] of Object.entries(fields)) {
+    if (k === 'updated_by' || k === 'product_id' || k === 'updated_at') continue;
+    if (v === undefined) continue;
+    cols.push(k);
+    if (k === 'images_json' || k === 'tags_json' || k === 'variants_json') {
+      vals.push(v === null ? null : JSON.stringify(v));
+      placeholders.push(`$${i++}::jsonb`);
+    } else {
+      vals.push(v);
+      placeholders.push(`$${i++}`);
+    }
+  }
+  const updateCols = cols.filter((c) => c !== 'product_id').map((c) => `${c} = EXCLUDED.${c}`).join(', ');
+  const query = `
+    INSERT INTO product_overrides (${cols.join(', ')})
+    VALUES (${placeholders.join(', ')})
+    ON CONFLICT (product_id) DO UPDATE SET ${updateCols};
   `;
+  // @ts-ignore raw query
+  await sql.query(query, vals);
 }
 
 export async function clearOverride(productId: string) {
@@ -300,13 +337,14 @@ export async function insertCustomProduct(p: Omit<DbCustomProduct, 'created_at' 
   await sql`
     INSERT INTO custom_products
       (id, slug, name, short_description, description, seo_description, price, compare_at_price,
-       image, images, category, tags, rating, reviews_count,
+       image, images, category, tags, variants_json, rating, reviews_count,
        in_stock, best_seller, visible, cj_product_id, cj_variant_id, created_by)
     VALUES
       (${p.id}, ${p.slug}, ${p.name}, ${p.short_description}, ${p.description},
        ${p.seo_description ?? null}, ${p.price}, ${p.compare_at_price ?? null},
        ${p.image}, ${p.images ? JSON.stringify(p.images) : null}::jsonb,
        ${p.category}, ${p.tags ? JSON.stringify(p.tags) : null}::jsonb,
+       ${p.variants_json ? JSON.stringify(p.variants_json) : null}::jsonb,
        ${p.rating ?? 5.0}, ${p.reviews_count ?? 0},
        ${p.in_stock}, ${p.best_seller}, ${p.visible},
        ${p.cj_product_id ?? null}, ${p.cj_variant_id ?? null}, ${p.created_by});
@@ -319,15 +357,19 @@ export async function updateCustomProduct(id: string, fields: Partial<DbCustomPr
   let i = 1;
   for (const [k, v] of Object.entries(fields)) {
     if (v === undefined) continue;
-    if (k === 'created_at' || k === 'created_by') continue;
+    if (k === 'created_at' || k === 'created_by' || k === 'id') continue;
     sets.push(`${k} = $${i++}`);
-    vals.push(k === 'images' || k === 'tags' ? JSON.stringify(v) : v);
+    if (k === 'images' || k === 'tags' || k === 'variants_json') {
+      vals.push(v === null ? null : JSON.stringify(v));
+    } else {
+      vals.push(v);
+    }
   }
   sets.push(`updated_at = NOW()`);
   if (sets.length === 1) return;
   vals.push(id);
   const query = `UPDATE custom_products SET ${sets.join(', ')} WHERE id = $${i};`;
-  // @ts-ignore — raw query
+  // @ts-ignore raw query
   await sql.query(query, vals);
 }
 
@@ -335,7 +377,7 @@ export async function deleteCustomProduct(id: string) {
   await sql`DELETE FROM custom_products WHERE id = ${id};`;
 }
 
-// ─── Site config (homepage etc.) ───
+// ─── Site config (homepage + page content) ───
 export async function getConfig(key: string): Promise<string | null> {
   try {
     const r = await sql<{ value: string }>`SELECT value FROM site_config WHERE key = ${key};`;

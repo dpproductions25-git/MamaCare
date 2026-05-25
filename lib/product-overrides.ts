@@ -1,27 +1,30 @@
 import { products as staticProducts } from './products';
-import { Product, Category } from './types';
+import { Product, Category, ProductVariant } from './types';
 import { getAllOverrides, listCustomProducts, DbOverride, DbCustomProduct } from './db';
 
-/**
- * Merge logic for the live catalog:
- *
- *   final = (static products + DB overrides) ∪ (custom DB products)
- *
- * - Static products get their fields overridden by `product_overrides` row.
- * - Hidden products (visible=false in override OR in custom) are filtered out
- *   for PUBLIC consumers but stay visible to admin.
- * - Custom products are entirely DB-backed (created via /admin/products/new).
- */
+function val<T>(v: T | null | undefined, fallback: T): T {
+  return v != null ? v : fallback;
+}
 
 function applyOverrideToStatic(p: Product, o?: DbOverride): Product {
   if (!o) return p;
   return {
     ...p,
+    name: val(o.name, p.name),
+    shortDescription: val(o.short_description, p.shortDescription),
+    description: val(o.description, p.description),
+    seoDescription: val(o.seo_description, p.seoDescription),
     price: o.price != null ? Number(o.price) : p.price,
     compareAtPrice: o.compare_at_price != null ? Number(o.compare_at_price) : p.compareAtPrice,
-    shortDescription: o.short_description != null ? o.short_description : p.shortDescription,
-    inStock: o.in_stock != null ? o.in_stock : p.inStock,
-    bestSeller: o.best_seller != null ? o.best_seller : p.bestSeller
+    image: val(o.image, p.image),
+    images: o.images_json != null ? o.images_json : p.images,
+    category: val(o.category as Category, p.category),
+    tags: val(o.tags_json, p.tags),
+    cjProductId: val(o.cj_product_id, p.cjProductId),
+    cjVariantId: val(o.cj_variant_id, p.cjVariantId),
+    variants: o.variants_json != null ? o.variants_json : p.variants,
+    inStock: val(o.in_stock, p.inStock),
+    bestSeller: val(o.best_seller, p.bestSeller)
   };
 }
 
@@ -45,7 +48,8 @@ function customToProduct(c: DbCustomProduct): Product {
     inStock: c.in_stock,
     bestSeller: c.best_seller,
     cjProductId: c.cj_product_id || undefined,
-    cjVariantId: c.cj_variant_id || undefined
+    cjVariantId: c.cj_variant_id || undefined,
+    variants: c.variants_json || undefined
   };
 }
 
@@ -55,7 +59,6 @@ export type AdminListing = {
   visible: boolean;
 };
 
-/** All products including hidden ones (for admin pages). */
 export async function getAllProductsForAdmin(): Promise<AdminListing[]> {
   const [overrides, customs] = await Promise.all([getAllOverrides(), listCustomProducts()]);
 
@@ -77,7 +80,11 @@ export async function getAllProductsForAdmin(): Promise<AdminListing[]> {
   return [...staticListings, ...customListings];
 }
 
-/** Products for PUBLIC pages — hidden ones filtered out. */
+export async function getAdminProduct(id: string): Promise<AdminListing | null> {
+  const all = await getAllProductsForAdmin();
+  return all.find((l) => l.product.id === id) || null;
+}
+
 export async function getMergedProducts(): Promise<Product[]> {
   const listings = await getAllProductsForAdmin();
   return listings.filter((l) => l.visible).map((l) => l.product);
@@ -110,22 +117,12 @@ export function applyOverridesToProducts(
 }
 
 // ─── CJ URL parsing ───
-
-/**
- * Parse a CJ Dropshipping product URL and extract the product ID.
- * Examples:
- *   https://www.cjdropshipping.com/product/cute-product-p-2001551585737940994.html
- *      → "2001551585737940994"
- *   https://www.cjdropshipping.com/product/another-p-CDD1C382-6B37-4FCE-BF8A-DD604986F4E1.html
- *      → "CDD1C382-6B37-4FCE-BF8A-DD604986F4E1"
- */
 export function parseCjUrl(url: string): { pid?: string } {
   if (!url) return {};
   const m = url.match(/-p-([A-Za-z0-9-]+)\.html/i);
   return m ? { pid: m[1] } : {};
 }
 
-/** Generate a URL-friendly slug from a name. */
 export function slugify(input: string): string {
   return input
     .toLowerCase()
