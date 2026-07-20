@@ -44,9 +44,15 @@ export async function GET(req: Request) {
   if (process.env.CJ_API_KEY && process.env.CJ_API_EMAIL && pid) {
     try {
       const data: any = await getProductDetails(pid);
-      return NextResponse.json(parseApiResponse(pid, data));
-    } catch {
-      // Fall through
+      const result = parseApiResponse(pid, data);
+      if (result.productImages.length > 0) return NextResponse.json(result);
+      // Auth worked but no images — fall through to scraping
+    } catch (e: any) {
+      // Credentials are set but auth/query failed — return the real error
+      return NextResponse.json(
+        { error: `CJ API error: ${e.message}` },
+        { status: 502 }
+      );
     }
   }
 
