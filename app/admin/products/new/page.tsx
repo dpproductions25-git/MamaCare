@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { categories } from '@/lib/products';
+import CjImagePicker from '@/components/CjImagePicker';
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -72,6 +73,44 @@ export default function NewProductPage() {
       </p>
 
       <form onSubmit={submit} className="mt-8 space-y-6">
+        {/* ── CJ image picker ───────────────────────────────────────── */}
+        <div className="card p-6 space-y-4">
+          <div>
+            <p className="font-display text-xl text-ink-900 mb-1">Photos</p>
+            <p className="text-xs text-ink-500">
+              Paste the CJ product URL to pull all images automatically — then pick and order the ones you want.
+            </p>
+          </div>
+          <CjImagePicker
+            onApply={(main, gallery) => {
+              up('image', main);
+              up('extra_images', gallery.join(', '));
+              // Auto-fill CJ URL → product ID from the URL if entered in the picker
+            }}
+          />
+          <div className="border-t border-ink-900/10 pt-4">
+            <p className="text-xs text-ink-500 mb-3">Or enter URLs manually:</p>
+            <Field label="Main image URL *" hint="Right-click a CJ photo → Copy image address. Or Google Drive / Dropbox link.">
+              <input
+                type="url" required value={form.image}
+                onChange={(e) => up('image', e.target.value)}
+                placeholder="https://cf.cjdropshipping.com/.../photo.jpg"
+                className="input"
+              />
+            </Field>
+            <div className="mt-3">
+              <Field label="Additional image URLs" hint="Separate multiple URLs with commas.">
+                <textarea
+                  rows={2} value={form.extra_images}
+                  onChange={(e) => up('extra_images', e.target.value)}
+                  placeholder="https://cf.cjdropshipping.com/.../photo2.jpg, https://.../photo3.jpg"
+                  className="input"
+                />
+              </Field>
+            </div>
+          </div>
+        </div>
+
         <Field label="CJ Dropshipping URL (optional)" hint="We'll extract the product ID for fulfillment.">
           <input
             type="url" value={form.cj_url}
@@ -161,24 +200,6 @@ export default function NewProductPage() {
             </select>
           </Field>
         </div>
-
-        <Field label="Main image URL *" hint="Right-click a CJ photo → Copy image address. Paste here.">
-          <input
-            type="url" required value={form.image}
-            onChange={(e) => up('image', e.target.value)}
-            placeholder="https://cf.cjdropshipping.com/.../photo.jpg"
-            className="input"
-          />
-        </Field>
-
-        <Field label="Additional image URLs" hint="Optional. Separate multiple URLs with commas.">
-          <textarea
-            rows={2} value={form.extra_images}
-            onChange={(e) => up('extra_images', e.target.value)}
-            placeholder="https://cf.cjdropshipping.com/.../photo2.jpg, https://.../photo3.jpg"
-            className="input"
-          />
-        </Field>
 
         <Field label="CJ Variant ID (optional)" hint="The specific SKU. Without it, you'll manually create the CJ order.">
           <input

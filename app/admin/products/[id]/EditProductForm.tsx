@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Product, ProductVariant } from '@/lib/types';
 import { categories } from '@/lib/products';
 import { normalizeImageUrl } from '@/lib/image-url';
+import CjImagePicker from '@/components/CjImagePicker';
 
 type Props = { initial: Product; isCustom: boolean; visible: boolean };
 
@@ -179,15 +180,28 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
       </Section>
 
       {/* Images */}
-      <Section title="Images" hint="Supports Google Drive share links (set sharing to 'Anyone with link can view' first). Dropbox links also work.">
-        <Field label="Main image URL *">
-          <input type="text" required value={form.image} onChange={(e) => up('image', e.target.value)} className="input"
-            placeholder="https://drive.google.com/file/d/..." />
-        </Field>
-        <Field label="Additional images (comma-separated)" hint="Each becomes a gallery thumbnail.">
-          <textarea rows={3} value={form.images} onChange={(e) => up('images', e.target.value)} className="input"
-            placeholder="https://drive.google.com/file/d/..., https://cf.cjdropshipping.com/..." />
-        </Field>
+      <Section title="Images" hint="Paste a CJ product URL to auto-fetch all photos. Or enter URLs manually below. Google Drive and Dropbox share links are supported.">
+        {/* CJ image picker */}
+        <CjImagePicker
+          initialMain={form.image}
+          initialGallery={form.images.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)}
+          onApply={(main, gallery) => {
+            up('image', main);
+            up('images', gallery.join(', '));
+          }}
+        />
+
+        <div className="border-t border-ink-900/10 pt-4 mt-2">
+          <p className="text-xs text-ink-500 mb-3">Or edit URLs manually:</p>
+          <Field label="Main image URL *">
+            <input type="text" required value={form.image} onChange={(e) => up('image', e.target.value)} className="input"
+              placeholder="https://cf.cjdropshipping.com/... or Google Drive link" />
+          </Field>
+          <Field label="Additional images (comma-separated)" hint="Each becomes a gallery thumbnail on the product page.">
+            <textarea rows={3} value={form.images} onChange={(e) => up('images', e.target.value)} className="input"
+              placeholder="https://cf.cjdropshipping.com/.../photo2.jpg, https://..." />
+          </Field>
+        </div>
       </Section>
 
       {/* Variants */}
