@@ -224,6 +224,10 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
             up('image', main);
             up('images', gallery.join(', '));
           }}
+          onApplyVariants={(imported) => {
+            if (!confirm(`Replace your current ${variants.length} variant(s) with ${imported.length} imported from CJ?`)) return;
+            setVariants(imported);
+          }}
         />
 
         <div className="border-t border-ink-900/10 pt-4 mt-2">

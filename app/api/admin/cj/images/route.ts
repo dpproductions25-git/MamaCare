@@ -7,6 +7,17 @@ export const dynamic = 'force-dynamic';
 
 type VariantImg = { vid: string; color: string; image: string; sku?: string };
 
+/** Full variant detail returned to the frontend for import. */
+type VariantDetail = {
+  vid: string;
+  sku?: string;
+  name: string;
+  color?: string;
+  size?: string;
+  price?: number;
+  image?: string;
+};
+
 const BROWSER_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
@@ -101,7 +112,7 @@ export async function GET(req: Request) {
 // CJ's own frontend fetches product details from this endpoint (no merchant auth).
 async function fetchFromCjInternalApi(
   pid: string
-): Promise<{ pid: string; productImages: string[]; variantImages: VariantImg[] }> {
+): Promise<{ pid: string; productImages: string[]; variantImages: VariantImg[]; variantDetails: VariantDetail[] }> {
   // Try multiple known internal endpoint patterns
   const endpoints = [
     `https://www.cjdropshipping.com/api/product/v1/productDetail?productId=${pid}`,
@@ -129,7 +140,7 @@ async function fetchFromCjInternalApi(
     }
   }
 
-  return { pid, productImages: [], variantImages: [] };
+  return { pid, productImages: [], variantImages: [], variantDetails: [] };
 }
 
 // ── Parse the CJ API / internal API response ──────────────────────────
@@ -158,32 +169,75 @@ function parseApiResponse(pid: string, data: any) {
     [];
   if (Array.isArray(imgSet)) imgSet.forEach(addImg);
 
-  const variants: any[] =
+  const rawVariants: any[] =
     data?.variants ?? data?.variantList ?? data?.skus ?? data?.variantDetails ?? [];
 
   const variantImages: VariantImg[] = [];
-  if (Array.isArray(variants)) {
-    variants.forEach((v: any) => {
-      const img = (v.variantImage || v.image || v.imageSrc || '').trim();
-      if (!img) return;
-      variantImages.push({
-        vid:   v.vid || v.variantId || v.id || '',
-        color: v.variantName || v.variantNameEn || v.name || v.color || '',
-        sku:   v.variantSku || v.sku || '',
-        image: img
+  const variantDetails: VariantDetail[] = [];
+
+  if (Array.isArray(rawVariants)) {
+    rawVariants.forEach((v: any) => {
+      const vid   = v.vid || v.variantId || v.id || `v-${Math.random().toString(36).slice(2)}`;
+      const sku   = (v.variantSku || v.sku || '').trim() || undefined;
+      const img   = (v.variantImage || v.image || v.imageSrc || '').trim() || undefined;
+      const rawPrice = v.variantSellPrice ?? v.sellPrice ?? v.price ?? v.salePrice;
+      const price = rawPrice != null ? (parseFloat(String(rawPrice)) || undefined) : undefined;
+
+      // ── Extract color + size from variantProperty / attrs ──
+      let color: string | undefined;
+      let size: string | undefined;
+
+      const props: any[] = v.variantProperty || v.properties || v.attrs || v.specifications || [];
+      props.forEach((p: any) => {
+        const title = (p.title || p.titleEn || p.key || p.name || '').toLowerCase();
+        const val   = (p.value || p.name || p.nameEn || '').trim();
+        if (!val) return;
+        if (/colo(u?)r|颜色|색상/.test(title)) color = val;
+        else if (/size|尺|型|サイズ|taille/.test(title)) size = val;
       });
-      addImg(img);
+
+      // ── Fallback: parse the variant name string ──
+      if (!color && !size) {
+        const raw = (v.variantNameEn || v.variantName || v.name || '').trim();
+        if (raw) {
+          const parts = raw.split(/[\/\-,]/).map((s: string) => s.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            color = parts[0];
+            size  = parts.slice(1).join(' ');
+          } else if (parts.length === 1) {
+            const p = parts[0];
+            // Heuristic: standard size labels → size; everything else → color
+            if (/^(XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|\d+M|\d+Y|\d+T|\d+\s*(cm|in|kg|oz))$/i.test(p)) {
+              size = p;
+            } else {
+              color = p;
+            }
+          }
+        }
+      }
+
+      const name = (v.variantNameEn || v.variantName || v.name ||
+        [color, size].filter(Boolean).join(' / ') || '').trim();
+
+      // ── Collect image for the image-picker section ──
+      if (img) {
+        const existingColor = color || v.variantName || v.variantNameEn || v.name || '';
+        variantImages.push({ vid, color: existingColor, sku: sku || '', image: img });
+        addImg(img);
+      }
+
+      variantDetails.push({ vid, sku, name, color, size, price, image: img });
     });
   }
 
-  return { pid, productImages, variantImages };
+  return { pid, productImages, variantImages, variantDetails };
 }
 
 // ── Scrape a CJ product page for image URLs ──────────────────────────
 async function scrapeFromPage(
   pageUrl: string,
   pid: string
-): Promise<{ pid: string; productImages: string[]; variantImages: VariantImg[] }> {
+): Promise<{ pid: string; productImages: string[]; variantImages: VariantImg[]; variantDetails: VariantDetail[] }> {
   const res = await fetch(pageUrl, {
     headers: BROWSER_HEADERS,
     signal: AbortSignal.timeout(12_000),
@@ -196,6 +250,7 @@ async function scrapeFromPage(
   const seen = new Set<string>();
   const productImages: string[] = [];
   const variantImages: VariantImg[] = [];
+  let variantDetails: VariantDetail[] = [];
 
   function addImg(u: string) {
     const trimmed = u.trim();
@@ -218,11 +273,12 @@ async function scrapeFromPage(
         null;
 
       if (product) {
-        const { productImages: pi, variantImages: vi } = parseApiResponse(pid, product);
+        const { productImages: pi, variantImages: vi, variantDetails: vd } = parseApiResponse(pid, product);
         pi.forEach((u) => addImg(u));
         vi.forEach((v) => {
           if (!variantImages.some((x) => x.image === v.image)) variantImages.push(v);
         });
+        if (vd.length > 0) variantDetails = vd;
       }
     } catch {
       // Fall through
@@ -275,5 +331,5 @@ async function scrapeFromPage(
     for (const u of html.match(re) || []) addImg(u);
   }
 
-  return { pid, productImages, variantImages };
+  return { pid, productImages, variantImages, variantDetails };
 }
