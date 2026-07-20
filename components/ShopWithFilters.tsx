@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Product, Category } from '@/lib/types';
 import { categories } from '@/lib/products';
+import { colorSwatchStyle } from '@/lib/colors';
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest';
 
@@ -76,7 +77,7 @@ export default function ShopWithFilters({
       case 'price-desc': list.sort((a, b) => b.price - a.price); break;
       case 'rating':     list.sort((a, b) => b.rating - a.rating); break;
       case 'newest':     list.reverse(); break;
-      default: /* featured: best-sellers first, then default order */ {
+      default: {
         list.sort((a, b) => (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0));
       }
     }
@@ -153,25 +154,38 @@ export default function ShopWithFilters({
         </div>
       </fieldset>
 
-      {/* Color */}
+      {/* Color — swatch + name list */}
       {availableColors.length > 0 && (
         <fieldset>
           <legend className="font-medium text-ink-900 mb-3">Color</legend>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-1">
             {availableColors.map((c) => {
               const active = selectedColors.has(c);
+              const swatch = colorSwatchStyle(c);
               return (
                 <button
                   key={c}
                   type="button"
                   onClick={() => toggleSet(selectedColors, c, setSelectedColors)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  className={`flex items-center gap-3 text-sm px-2 py-1.5 rounded-xl transition-colors text-left w-full ${
                     active
-                      ? 'bg-blush-400 text-white border-blush-400'
-                      : 'bg-white text-ink-700 border-ink-900/10 hover:border-blush-200'
+                      ? 'bg-blush-50 text-ink-900 font-medium'
+                      : 'text-ink-700 hover:bg-cream-100'
                   }`}
                 >
-                  {c}
+                  {/* Color swatch circle */}
+                  <span
+                    className={`w-5 h-5 rounded-full flex-shrink-0 border-2 shadow-sm transition-all ${
+                      active ? 'border-blush-400 ring-2 ring-blush-200' : 'border-white'
+                    }`}
+                    style={swatch}
+                  />
+                  <span className="flex-1 capitalize">{c}</span>
+                  {active && (
+                    <svg className="w-3.5 h-3.5 text-blush-400 flex-shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M2.5 8.5L6 12L13.5 4" />
+                    </svg>
+                  )}
                 </button>
               );
             })}
@@ -179,11 +193,11 @@ export default function ShopWithFilters({
         </fieldset>
       )}
 
-      {/* Size */}
+      {/* Size — compact pill grid */}
       {availableSizes.length > 0 && (
         <fieldset>
           <legend className="font-medium text-ink-900 mb-3">Size</legend>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {availableSizes.map((s) => {
               const active = selectedSizes.has(s);
               return (
@@ -191,10 +205,10 @@ export default function ShopWithFilters({
                   key={s}
                   type="button"
                   onClick={() => toggleSet(selectedSizes, s, setSelectedSizes)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  className={`text-xs py-2 px-1 rounded-lg border-2 font-medium text-center transition-colors ${
                     active
-                      ? 'bg-blush-400 text-white border-blush-400'
-                      : 'bg-white text-ink-700 border-ink-900/10 hover:border-blush-200'
+                      ? 'border-blush-400 bg-blush-50 text-blush-600'
+                      : 'border-ink-900/10 bg-white text-ink-700 hover:border-blush-200'
                   }`}
                 >
                   {s}
@@ -205,7 +219,7 @@ export default function ShopWithFilters({
         </fieldset>
       )}
 
-      {/* Toggles */}
+      {/* Quick filters */}
       <fieldset className="space-y-2">
         <legend className="font-medium text-ink-900 mb-3">Quick filters</legend>
         <label className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer">
@@ -301,16 +315,23 @@ export default function ShopWithFilters({
                 </button>
               );
             })}
-            {Array.from(selectedColors).map((c) => (
-              <button
-                key={`col-${c}`}
-                type="button"
-                onClick={() => toggleSet(selectedColors, c, setSelectedColors)}
-                className="text-xs px-3 py-1 rounded-full bg-blush-100 text-blush-500 hover:bg-blush-200"
-              >
-                {c} ✕
-              </button>
-            ))}
+            {Array.from(selectedColors).map((c) => {
+              const swatch = colorSwatchStyle(c);
+              return (
+                <button
+                  key={`col-${c}`}
+                  type="button"
+                  onClick={() => toggleSet(selectedColors, c, setSelectedColors)}
+                  className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blush-100 text-blush-500 hover:bg-blush-200"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0 border border-blush-200"
+                    style={swatch}
+                  />
+                  {c} ✕
+                </button>
+              );
+            })}
             {Array.from(selectedSizes).map((s) => (
               <button
                 key={`s-${s}`}

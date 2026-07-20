@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Product, ProductVariant } from '@/lib/types';
 import { categories } from '@/lib/products';
 import { normalizeImageUrl } from '@/lib/image-url';
+import { colorSwatchStyle } from '@/lib/colors';
 import CjImagePicker from '@/components/CjImagePicker';
 
 type Props = { initial: Product; isCustom: boolean; visible: boolean };
@@ -206,49 +207,22 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
 
       {/* Variants */}
       <Section title="Variants" hint="Colors, sizes, or any combination. Customers pick one before adding to cart. Leave empty if the product has no variants.">
-        {variants.length === 0 ? (
-          <p className="text-sm text-ink-500 italic">No variants yet.</p>
-        ) : (
-          <div className="overflow-x-auto -mx-2">
-            <table className="min-w-full text-sm">
-              <thead className="text-xs uppercase tracking-wider text-ink-500">
-                <tr>
-                  <th className="px-2 py-2 text-left">Name (shown to customer)</th>
-                  <th className="px-2 py-2 text-left">Color</th>
-                  <th className="px-2 py-2 text-left">Size</th>
-                  <th className="px-2 py-2 text-left">Price override</th>
-                  <th className="px-2 py-2 text-left">Image URL (for color swatch)</th>
-                  <th className="px-2 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {variants.map((v, i) => (
-                  <tr key={i}>
-                    <td className="px-2 py-1">
-                      <input value={v.name} onChange={(e) => updateVariant(i, 'name', e.target.value)} className="input text-xs" placeholder="e.g. Pink / 3M" />
-                    </td>
-                    <td className="px-2 py-1">
-                      <input value={v.color || ''} onChange={(e) => updateVariant(i, 'color', e.target.value)} className="input text-xs" placeholder="Pink" />
-                    </td>
-                    <td className="px-2 py-1">
-                      <input value={v.size || ''} onChange={(e) => updateVariant(i, 'size', e.target.value)} className="input text-xs" placeholder="3M" />
-                    </td>
-                    <td className="px-2 py-1">
-                      <input type="number" step="0.01" min="0" value={v.price ?? ''} onChange={(e) => updateVariant(i, 'price', e.target.value ? Number(e.target.value) : undefined)} className="input text-xs" placeholder="—" />
-                    </td>
-                    <td className="px-2 py-1">
-                      <input value={v.image || ''} onChange={(e) => updateVariant(i, 'image', e.target.value)} className="input text-xs" placeholder="https://..." />
-                    </td>
-                    <td className="px-2 py-1">
-                      <button type="button" onClick={() => removeVariant(i)} className="text-xs text-blush-500 hover:underline">Remove</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <button type="button" onClick={addVariant} className="mt-3 btn-secondary text-sm py-2 px-4">+ Add variant</button>
+        <div className="space-y-3">
+          {variants.length === 0 && (
+            <p className="text-sm text-ink-500 italic py-2">No variants yet. Click below to add one.</p>
+          )}
+          {variants.map((v, i) => (
+            <VariantCard
+              key={i}
+              variant={v}
+              onChange={(key, val) => updateVariant(i, key, val)}
+              onRemove={() => removeVariant(i)}
+            />
+          ))}
+        </div>
+        <button type="button" onClick={addVariant} className="mt-3 btn-secondary text-sm py-2 px-4">
+          + Add variant
+        </button>
       </Section>
 
       {/* CJ + tags */}
@@ -309,6 +283,110 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
         textarea.input { border-radius: 1rem; }
       `}</style>
     </form>
+  );
+}
+
+// ── Variant card ─────────────────────────────────────────────────────────────
+function VariantCard({
+  variant,
+  onChange,
+  onRemove,
+}: {
+  variant: ProductVariant;
+  onChange: (key: keyof ProductVariant, value: any) => void;
+  onRemove: () => void;
+}) {
+  const swatch = colorSwatchStyle(variant.color || '');
+  const hasImg = !!variant.image;
+  const imgSrc = hasImg ? (() => { try { return normalizeImageUrl(variant.image!); } catch { return variant.image!; } })() : '';
+
+  return (
+    <div className="relative rounded-2xl border border-ink-900/10 bg-white p-4 space-y-3">
+      {/* Remove button */}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remove variant"
+        className="absolute top-3 right-3 w-7 h-7 rounded-full hover:bg-blush-50 text-ink-400 hover:text-blush-500 flex items-center justify-center transition-colors text-xl leading-none"
+      >
+        ×
+      </button>
+
+      {/* Row 1: color swatch + color + size + price */}
+      <div className="flex gap-3 items-start pr-8">
+        {/* Live color swatch dot */}
+        <div
+          className="w-8 h-8 rounded-full flex-shrink-0 mt-5 border-2 border-white shadow-sm"
+          style={swatch}
+          title={variant.color || 'no color'}
+        />
+
+        <div className="flex-1 grid sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-ink-500 mb-1 block">Color</label>
+            <input
+              value={variant.color || ''}
+              onChange={(e) => onChange('color', e.target.value)}
+              className="input text-sm"
+              placeholder="e.g. Pink"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-ink-500 mb-1 block">Size</label>
+            <input
+              value={variant.size || ''}
+              onChange={(e) => onChange('size', e.target.value)}
+              className="input text-sm"
+              placeholder="e.g. 3M, S, XL"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-ink-500 mb-1 block">Price override</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={variant.price ?? ''}
+              onChange={(e) => onChange('price', e.target.value ? Number(e.target.value) : undefined)}
+              className="input text-sm"
+              placeholder="Leave blank to use base price"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: image thumbnail + URL */}
+      <div className="flex gap-3 items-start pl-11">
+        {hasImg && imgSrc && (
+          <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-cream-100 flex-shrink-0 border border-ink-900/10">
+            <Image src={imgSrc} alt="" fill sizes="56px" className="object-cover" />
+          </div>
+        )}
+        <div className="flex-1">
+          <label className="text-xs text-ink-500 mb-1 block">Variant image URL</label>
+          <input
+            value={variant.image || ''}
+            onChange={(e) => onChange('image', e.target.value)}
+            className="input text-sm"
+            placeholder="https://... (used as color swatch preview)"
+          />
+        </div>
+      </div>
+
+      {/* Row 3: display name (auto-generated hint) */}
+      <div className="pl-11">
+        <label className="text-xs text-ink-500 mb-1 block">
+          Display name{' '}
+          <span className="italic">(auto-fills from color + size if left blank)</span>
+        </label>
+        <input
+          value={variant.name || ''}
+          onChange={(e) => onChange('name', e.target.value)}
+          className="input text-sm"
+          placeholder={`${variant.color || ''}${variant.color && variant.size ? ' / ' : ''}${variant.size || ''}` || 'e.g. Pink / 3M'}
+        />
+      </div>
+    </div>
   );
 }
 
