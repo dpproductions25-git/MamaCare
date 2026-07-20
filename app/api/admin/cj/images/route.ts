@@ -201,17 +201,37 @@ function parseApiResponse(pid: string, data: any) {
       if (!color && !size) {
         const raw = (v.variantNameEn || v.variantName || v.name || '').trim();
         if (raw) {
-          const parts = raw.split(/[\/\-,]/).map((s: string) => s.trim()).filter(Boolean);
+          const sizeRe = /^(XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|One\s*Size|\d+M|\d+Y|\d+T|\d+\s*(cm|in|kg|oz))$/i;
+          const skipWords = /^(and|or|in|of|for|the|a|an|with|long|short|sleeve|women|men|baby|maternity|nursing|style|fashion|autumn|winter|spring|summer)$/i;
+
+          // Try slash or comma separator first (e.g. "Camel/XXL" or "Camel, XXL")
+          const parts = raw.split(/[\/,]/).map((s: string) => s.trim()).filter(Boolean);
           if (parts.length >= 2) {
-            color = parts[0];
-            size  = parts.slice(1).join(' ');
-          } else if (parts.length === 1) {
-            const p = parts[0];
-            // Heuristic: standard size labels → size; everything else → color
-            if (/^(XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|\d+M|\d+Y|\d+T|\d+\s*(cm|in|kg|oz))$/i.test(p)) {
-              size = p;
+            const last = parts[parts.length - 1];
+            if (sizeRe.test(last)) {
+              size = last;
+              // Color = last meaningful word of the previous part
+              const prevWords = parts[parts.length - 2].split(/\s+/);
+              color = prevWords[prevWords.length - 1];
             } else {
-              color = p;
+              color = parts[0];
+              size  = parts.slice(1).join(' ');
+            }
+          } else {
+            // Single long string (e.g. "...Hoodie Camel XXL") — scan from the end
+            const words = raw.split(/\s+/);
+            const last  = words[words.length - 1];
+            const prev  = words.length >= 2 ? words[words.length - 2] : '';
+
+            if (sizeRe.test(last)) {
+              size = last;
+              // Use second-to-last word as color if it looks like a color name
+              if (prev && !skipWords.test(prev)) color = prev;
+            } else if (sizeRe.test(raw)) {
+              size = raw;
+            } else {
+              // Use last word as the most specific descriptor (often color)
+              color = words[words.length - 1];
             }
           }
         }

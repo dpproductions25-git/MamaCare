@@ -7,7 +7,22 @@ import { useCart } from '@/lib/cart';
 import { colorSwatchStyle } from '@/lib/colors';
 
 export default function ProductGallery({ product }: { product: Product }) {
-  const variants = product.variants || [];
+  const rawVariants = product.variants || [];
+
+  // Normalize variants: if color field has an embedded size code at the end
+  // (e.g. "Camel XXL" with no separate size), split them apart.
+  const SIZE_RE = /\s+(XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|One\s*Size|\d+[A-Z]*)$/i;
+  const variants = useMemo(() =>
+    rawVariants.map((v) => {
+      if (v.color && !v.size) {
+        const m = v.color.match(SIZE_RE);
+        if (m) return { ...v, color: v.color.replace(SIZE_RE, '').trim(), size: m[1] };
+      }
+      return v;
+    }),
+    [rawVariants]
+  );
+
   const hasVariants = variants.length > 0;
 
   const colors = useMemo(
