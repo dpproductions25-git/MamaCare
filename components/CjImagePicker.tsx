@@ -47,6 +47,10 @@ export default function CjImagePicker({ initialMain = '', initialGallery = [], o
     setError(null);
     const trimmed = cjUrl.trim();
     if (!trimmed) { setError('Paste a CJ product URL first.'); return; }
+    if (!trimmed.includes('cjdropshipping.com')) {
+      setError('Please paste a full CJ Dropshipping product URL (cjdropshipping.com/product/...).');
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(
