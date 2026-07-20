@@ -21,10 +21,8 @@ export default function ProductGallery({ product }: { product: Product }) {
 
   const initial = hasVariants ? variants[0] : null;
   const [selectedColor, setSelectedColor] = useState<string | undefined>(initial?.color);
-  const [selectedSize, setSelectedSize] = useState<string | undefined>(
-    // Only auto-select size if there are no colors (pure size-only variants)
-    colors.length === 0 ? initial?.size : undefined
-  );
+  // Auto-select the first size for the initial color (or first size overall)
+  const [selectedSize, setSelectedSize] = useState<string | undefined>(initial?.size);
 
   // Which sizes are actually available for the currently selected color
   const sizesForColor = useMemo(() => {
@@ -58,9 +56,12 @@ export default function ProductGallery({ product }: { product: Product }) {
 
   function pickColor(c: string) {
     setSelectedColor(c);
-    // Reset size if not available for new color
-    const newSizes = new Set(variants.filter((v) => v.color === c).map((v) => v.size).filter(Boolean));
-    if (selectedSize && !newSizes.has(selectedSize)) setSelectedSize(undefined);
+    // Auto-select first available size for the new color
+    const sizesForNewColor = variants
+      .filter((v) => v.color === c)
+      .map((v) => v.size)
+      .filter(Boolean) as string[];
+    setSelectedSize(sizesForNewColor[0]);
     // Switch main image to this color's variant image
     const match = variants.find((v) => v.color === c);
     if (match?.image) setActiveImage(match.image);
