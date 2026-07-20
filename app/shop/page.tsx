@@ -1,6 +1,8 @@
 import ShopWithFilters from '@/components/ShopWithFilters';
-import { products } from '@/lib/products';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { buildMetadata } from '@/lib/seo';
+
+export const revalidate = 30;
 
 export const metadata = buildMetadata({
   title: 'Shop all — Baby Gear, Sleep, Feeding, Nursery & Toys',
@@ -9,7 +11,9 @@ export const metadata = buildMetadata({
   path: '/shop'
 });
 
-export default function ShopPage() {
+export default async function ShopPage() {
+  const products = await getMergedProducts();
+
   return (
     <section className="container-page py-10 sm:py-14">
       <header className="mb-8">
