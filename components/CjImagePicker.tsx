@@ -61,6 +61,8 @@ export default function CjImagePicker({
     return list;
   });
   const [main, setMain] = useState<string>(initialMain);
+  const [photosApplied, setPhotosApplied] = useState(false);
+  const [variantsApplied, setVariantsApplied] = useState(false);
 
   // ── Variant selection ────────────────────────────────────────────────
   const [selectedVids, setSelectedVids] = useState<Set<string>>(new Set());
@@ -81,6 +83,16 @@ export default function CjImagePicker({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Fetch failed');
       setFetched(data as FetchedData);
+      // Auto-select ALL fetched photos
+      const allImgs: string[] = data.productImages || [];
+      setSelected((prev) => {
+        const merged = [...prev];
+        allImgs.forEach((u: string) => { if (!merged.includes(u)) merged.push(u); });
+        return merged;
+      });
+      setMain((m) => m || allImgs[0] || '');
+      setPhotosApplied(false);
+      setVariantsApplied(false);
       // Auto-select all variants
       setSelectedVids(new Set((data.variantDetails || []).map((v: VariantDetail) => v.vid)));
       // Switch to variants tab if we got any
@@ -288,17 +300,23 @@ export default function CjImagePicker({
               )}
 
               {/* Apply photos button */}
-              <button
-                type="button"
-                disabled={selected.length === 0}
-                onClick={() => {
-                  const m = main || selected[0] || '';
-                  onApply(m, selected.filter((u) => u !== m));
-                }}
-                className="btn-primary text-sm disabled:opacity-50"
-              >
-                Apply {selected.length > 0 ? `${selected.length} photo${selected.length !== 1 ? 's' : ''}` : 'photos'} to product
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={selected.length === 0}
+                  onClick={() => {
+                    const m = main || selected[0] || '';
+                    onApply(m, selected.filter((u) => u !== m));
+                    setPhotosApplied(true);
+                  }}
+                  className="btn-primary text-sm disabled:opacity-50"
+                >
+                  Apply {selected.length > 0 ? `${selected.length} photo${selected.length !== 1 ? 's' : ''}` : 'photos'} to product
+                </button>
+                {photosApplied && (
+                  <span className="text-sage-600 text-sm font-medium">✓ Photos applied!</span>
+                )}
+              </div>
             </div>
           )}
 
@@ -405,27 +423,33 @@ export default function CjImagePicker({
                   <p className="text-xs text-ink-400 mb-3">
                     Importing will replace your current variants. You can reorder and edit them in the Variants section below.
                   </p>
-                  <button
-                    type="button"
-                    disabled={selectedCount === 0}
-                    onClick={() => {
-                      const toImport = (fetched.variantDetails || [])
-                        .filter((v) => selectedVids.has(v.vid))
-                        .map((v): ProductVariant => ({
-                          vid:   v.vid,
-                          sku:   v.sku,
-                          name:  v.name,
-                          color: v.color,
-                          size:  v.size,
-                          price: v.price,
-                          image: v.image,
-                        }));
-                      onApplyVariants(toImport);
-                    }}
-                    className="btn-primary text-sm disabled:opacity-50"
-                  >
-                    Import {selectedCount} variant{selectedCount !== 1 ? 's' : ''} into product
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={selectedCount === 0}
+                      onClick={() => {
+                        const toImport = (fetched.variantDetails || [])
+                          .filter((v) => selectedVids.has(v.vid))
+                          .map((v): ProductVariant => ({
+                            vid:   v.vid,
+                            sku:   v.sku,
+                            name:  v.name,
+                            color: v.color,
+                            size:  v.size,
+                            price: v.price,
+                            image: v.image,
+                          }));
+                        onApplyVariants(toImport);
+                        setVariantsApplied(true);
+                      }}
+                      className="btn-primary text-sm disabled:opacity-50"
+                    >
+                      Import {selectedCount} variant{selectedCount !== 1 ? 's' : ''} into product
+                    </button>
+                    {variantsApplied && (
+                      <span className="text-sage-600 text-sm font-medium">✓ Variants imported!</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
