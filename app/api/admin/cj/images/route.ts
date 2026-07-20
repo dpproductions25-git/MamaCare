@@ -187,7 +187,8 @@ function parseApiResponse(pid: string, data: any) {
       let color: string | undefined;
       let size: string | undefined;
 
-      const props: any[] = v.variantProperty || v.properties || v.attrs || v.specifications || [];
+      const rawProps = v.variantProperty ?? v.properties ?? v.attrs ?? v.specifications;
+      const props: any[] = Array.isArray(rawProps) ? rawProps : [];
       props.forEach((p: any) => {
         const title = (p.title || p.titleEn || p.key || p.name || '').toLowerCase();
         const val   = (p.value || p.name || p.nameEn || '').trim();
