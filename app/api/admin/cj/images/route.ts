@@ -201,7 +201,7 @@ function parseApiResponse(pid: string, data: any) {
       if (!color && !size) {
         const raw = (v.variantNameEn || v.variantName || v.name || '').trim();
         if (raw) {
-          const sizeRe = /^(XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|One\s*Size|\d+M|\d+Y|\d+T|\d+\s*(cm|in|kg|oz))$/i;
+          const sizeRe = /^(XXS|XS|S|M|L|X{1,8}L|\d+XL|One\s*Size|Free\s*Size|\d+M|\d+Y|\d+T|\d+\s*(cm|in|kg|oz))$/i;
           const skipWords = /^(and|or|in|of|for|the|a|an|with|long|short|sleeve|women|men|baby|maternity|nursing|style|fashion|autumn|winter|spring|summer)$/i;
 
           // Try slash or comma separator first (e.g. "Camel/XXL" or "Camel, XXL")

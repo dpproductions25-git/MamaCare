@@ -11,7 +11,7 @@ export default function ProductGallery({ product }: { product: Product }) {
 
   // Normalize variants: if color field has an embedded size code at the end
   // (e.g. "Camel XXL" with no separate size), split them apart.
-  const SIZE_RE = /\s+(XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|One\s*Size|\d+[A-Z]*)$/i;
+  const SIZE_RE = /\s+(XXS|XS|S|M|L|X{1,8}L|\d+XL|One\s*Size|Free\s*Size|\d+[A-Z]*)$/i;
   const variants = useMemo(() =>
     rawVariants.map((v) => {
       if (v.color && !v.size) {
