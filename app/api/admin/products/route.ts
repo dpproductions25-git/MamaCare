@@ -61,6 +61,12 @@ export async function POST(req: Request) {
     ? body.tags.split(',').map((s: string) => s.trim()).filter(Boolean)
     : [body.category, 'new'];
 
+  // Parse variants if provided
+  const variantsJson =
+    Array.isArray(body.variants_json) && body.variants_json.length > 0
+      ? body.variants_json
+      : null;
+
   try {
     await insertCustomProduct({
       id,
@@ -75,6 +81,7 @@ export async function POST(req: Request) {
       images: allImages,
       category: body.category as Category,
       tags,
+      variants_json: variantsJson,
       rating: 5.0,
       reviews_count: 0,
       in_stock: body.in_stock !== false,

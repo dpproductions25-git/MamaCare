@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { categories } from '@/lib/products';
 import CjImagePicker from '@/components/CjImagePicker';
+import type { ProductVariant } from '@/lib/types';
 
 export default function NewProductPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
 
   const [form, setForm] = useState({
     name: '',
@@ -46,7 +48,10 @@ export default function NewProductPage() {
       const res = await fetch('/api/admin/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          variants_json: variants.length > 0 ? variants : null
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Create failed');
@@ -85,9 +90,16 @@ export default function NewProductPage() {
             onApply={(main, gallery) => {
               up('image', main);
               up('extra_images', gallery.join(', '));
-              // Auto-fill CJ URL → product ID from the URL if entered in the picker
+            }}
+            onApplyVariants={(imported) => {
+              setVariants(imported);
             }}
           />
+          {variants.length > 0 && (
+            <p className="text-xs text-sage-600 font-medium">
+              ✓ {variants.length} variant{variants.length !== 1 ? 's' : ''} imported from CJ
+            </p>
+          )}
           <div className="border-t border-ink-900/10 pt-4">
             <p className="text-xs text-ink-500 mb-3">Or enter URLs manually:</p>
             <Field label="Main image URL *" hint="Right-click a CJ photo → Copy image address. Or Google Drive / Dropbox link.">
