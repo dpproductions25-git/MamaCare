@@ -60,7 +60,7 @@ export default function CjImagePicker({ initialMain = '', initialGallery = [], o
       if (!res.ok) throw new Error(data.error || 'Fetch failed');
       setFetched(data);
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message === 'CJ_API_REQUIRED' ? 'CJ_API_REQUIRED' : e.message);
     } finally {
       setLoading(false);
     }
@@ -140,7 +140,28 @@ export default function CjImagePicker({ initialMain = '', initialGallery = [], o
             {loading ? 'Fetching…' : 'Fetch photos'}
           </button>
         </div>
-        {error && <p className="text-xs text-blush-500 mt-1">{error}</p>}
+        {error && error !== 'CJ_API_REQUIRED' && (
+          <p className="text-xs text-blush-500 mt-1">{error}</p>
+        )}
+        {error === 'CJ_API_REQUIRED' && (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm space-y-2">
+            <p className="font-medium text-amber-800">CJ API credentials needed</p>
+            <p className="text-amber-700 text-xs leading-relaxed">
+              CJ blocks automated image fetching from cloud servers. To enable this feature, add your free CJ API credentials to Vercel:
+            </p>
+            <ol className="text-xs text-amber-700 space-y-1 list-decimal list-inside leading-relaxed">
+              <li>Go to <strong>developers.cjdropshipping.com</strong> and sign in with your CJ account</li>
+              <li>Create an API key — it's free for CJ store members</li>
+              <li>In your <strong>Vercel project → Settings → Environment Variables</strong>, add:<br />
+                <code className="font-mono bg-amber-100 rounded px-1">CJ_API_EMAIL</code> and <code className="font-mono bg-amber-100 rounded px-1">CJ_API_KEY</code>
+              </li>
+              <li>Redeploy — photo fetching will work instantly</li>
+            </ol>
+            <p className="text-xs text-amber-600 pt-1">
+              In the meantime, right-click images on the CJ product page → <em>Copy image address</em> → paste in the URL fields below.
+            </p>
+          </div>
+        )}
       </div>
 
       {fetched && (
