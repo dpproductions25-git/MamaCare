@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -36,6 +36,9 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
   });
 
   const [variants, setVariants] = useState<ProductVariant[]>(initial.variants || []);
+  // Drag-and-drop reorder state
+  const dragIdx = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   function up<K extends keyof typeof form>(k: K, v: any) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -44,7 +47,7 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
   function addVariant() {
     setVariants((v) => [
       ...v,
-      { vid: `${initial.id}-v${v.length + 1}`, name: '', color: '', size: '', image: '' }
+      { vid: `${initial.id}-v${Date.now()}`, name: '', color: '', size: '', image: '' }
     ]);
   }
   function updateVariant(idx: number, key: keyof ProductVariant, value: any) {
@@ -52,6 +55,37 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
   }
   function removeVariant(idx: number) {
     setVariants((v) => v.filter((_, i) => i !== idx));
+  }
+  function duplicateVariant(idx: number) {
+    setVariants((v) => {
+      const copy = [...v];
+      const dupe = { ...copy[idx], vid: `${initial.id}-v${Date.now()}` };
+      copy.splice(idx + 1, 0, dupe);
+      return copy;
+    });
+  }
+  function moveVariant(from: number, to: number) {
+    if (from === to) return;
+    setVariants((v) => {
+      const copy = [...v];
+      const [moved] = copy.splice(from, 1);
+      copy.splice(to, 0, moved);
+      return copy;
+    });
+  }
+  function handleDragStart(idx: number) { dragIdx.current = idx; }
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault();
+    setDragOver(idx);
+  }
+  function handleDrop(idx: number) {
+    if (dragIdx.current !== null) moveVariant(dragIdx.current, idx);
+    dragIdx.current = null;
+    setDragOver(null);
+  }
+  function handleDragEnd() {
+    dragIdx.current = null;
+    setDragOver(null);
   }
 
   async function save(e: React.FormEvent) {
@@ -206,23 +240,43 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
       </Section>
 
       {/* Variants */}
-      <Section title="Variants" hint="Colors, sizes, or any combination. Customers pick one before adding to cart. Leave empty if the product has no variants.">
-        <div className="space-y-3">
+      <Section
+        title="Variants"
+        hint="Drag the ⠿ handle to reorder. Use ↑↓ arrows or drag to sort sizes (S → M → L → XL). Leave empty if the product has no variants."
+      >
+        <div className="space-y-2">
           {variants.length === 0 && (
             <p className="text-sm text-ink-500 italic py-2">No variants yet. Click below to add one.</p>
           )}
           {variants.map((v, i) => (
             <VariantCard
-              key={i}
+              key={v.vid || i}
               variant={v}
+              index={i}
+              total={variants.length}
+              isDragOver={dragOver === i}
               onChange={(key, val) => updateVariant(i, key, val)}
               onRemove={() => removeVariant(i)}
+              onDuplicate={() => duplicateVariant(i)}
+              onMoveUp={() => moveVariant(i, i - 1)}
+              onMoveDown={() => moveVariant(i, i + 1)}
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDrop={() => handleDrop(i)}
+              onDragEnd={handleDragEnd}
             />
           ))}
         </div>
-        <button type="button" onClick={addVariant} className="mt-3 btn-secondary text-sm py-2 px-4">
-          + Add variant
-        </button>
+        <div className="mt-3 flex gap-2 flex-wrap">
+          <button type="button" onClick={addVariant} className="btn-secondary text-sm py-2 px-4">
+            + Add variant
+          </button>
+          {variants.length > 0 && (
+            <p className="text-xs text-ink-400 self-center">
+              {variants.length} variant{variants.length !== 1 ? 's' : ''} · drag ⠿ to reorder
+            </p>
+          )}
+        </div>
       </Section>
 
       {/* CJ + tags */}
@@ -289,36 +343,122 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
 // ── Variant card ─────────────────────────────────────────────────────────────
 function VariantCard({
   variant,
+  index,
+  total,
+  isDragOver,
   onChange,
   onRemove,
+  onDuplicate,
+  onMoveUp,
+  onMoveDown,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   variant: ProductVariant;
+  index: number;
+  total: number;
+  isDragOver: boolean;
   onChange: (key: keyof ProductVariant, value: any) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
 }) {
   const swatch = colorSwatchStyle(variant.color || '');
   const hasImg = !!variant.image;
-  const imgSrc = hasImg ? (() => { try { return normalizeImageUrl(variant.image!); } catch { return variant.image!; } })() : '';
+  const imgSrc = hasImg
+    ? (() => { try { return normalizeImageUrl(variant.image!); } catch { return variant.image!; } })()
+    : '';
 
   return (
-    <div className="relative rounded-2xl border border-ink-900/10 bg-white p-4 space-y-3">
-      {/* Remove button */}
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label="Remove variant"
-        className="absolute top-3 right-3 w-7 h-7 rounded-full hover:bg-blush-50 text-ink-400 hover:text-blush-500 flex items-center justify-center transition-colors text-xl leading-none"
-      >
-        ×
-      </button>
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={`relative rounded-2xl border bg-white p-4 space-y-3 transition-all ${
+        isDragOver
+          ? 'border-blush-400 shadow-md ring-2 ring-blush-100'
+          : 'border-ink-900/10'
+      }`}
+    >
+      {/* Top bar: drag handle + order controls + action buttons */}
+      <div className="flex items-center gap-2 mb-1">
+        {/* Drag handle */}
+        <span
+          className="cursor-grab active:cursor-grabbing text-ink-300 hover:text-ink-500 select-none flex-shrink-0 px-1 text-lg leading-none"
+          title="Drag to reorder"
+        >
+          ⠿
+        </span>
+
+        {/* Index badge */}
+        <span className="text-xs text-ink-400 font-mono w-5 text-center flex-shrink-0">
+          {index + 1}
+        </span>
+
+        {/* Up / Down arrows */}
+        <div className="flex gap-0.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={index === 0}
+            aria-label="Move up"
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-ink-400 hover:text-ink-700 hover:bg-cream-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-xs"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={index === total - 1}
+            aria-label="Move down"
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-ink-400 hover:text-ink-700 hover:bg-cream-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-xs"
+          >
+            ↓
+          </button>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Duplicate */}
+        <button
+          type="button"
+          onClick={onDuplicate}
+          aria-label="Duplicate variant"
+          title="Duplicate this variant"
+          className="text-xs px-2.5 py-1 rounded-lg border border-ink-900/10 text-ink-500 hover:text-ink-700 hover:bg-cream-100 transition-colors"
+        >
+          Copy
+        </button>
+
+        {/* Remove */}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove variant"
+          title="Delete this variant"
+          className="text-xs px-2.5 py-1 rounded-lg border border-blush-200 text-blush-400 hover:bg-blush-50 hover:text-blush-600 transition-colors"
+        >
+          Remove
+        </button>
+      </div>
 
       {/* Row 1: color swatch + color + size + price */}
-      <div className="flex gap-3 items-start pr-8">
+      <div className="flex gap-3 items-start">
         {/* Live color swatch dot */}
         <div
           className="w-8 h-8 rounded-full flex-shrink-0 mt-5 border-2 border-white shadow-sm"
           style={swatch}
-          title={variant.color || 'no color'}
+          title={variant.color || 'no color set'}
         />
 
         <div className="flex-1 grid sm:grid-cols-3 gap-3">
@@ -337,7 +477,7 @@ function VariantCard({
               value={variant.size || ''}
               onChange={(e) => onChange('size', e.target.value)}
               className="input text-sm"
-              placeholder="e.g. 3M, S, XL"
+              placeholder="e.g. S, M, L, XL, 3M"
             />
           </div>
           <div>
@@ -349,7 +489,7 @@ function VariantCard({
               value={variant.price ?? ''}
               onChange={(e) => onChange('price', e.target.value ? Number(e.target.value) : undefined)}
               className="input text-sm"
-              placeholder="Leave blank to use base price"
+              placeholder="Blank = base price"
             />
           </div>
         </div>
@@ -373,7 +513,7 @@ function VariantCard({
         </div>
       </div>
 
-      {/* Row 3: display name (auto-generated hint) */}
+      {/* Row 3: display name */}
       <div className="pl-11">
         <label className="text-xs text-ink-500 mb-1 block">
           Display name{' '}
@@ -383,7 +523,9 @@ function VariantCard({
           value={variant.name || ''}
           onChange={(e) => onChange('name', e.target.value)}
           className="input text-sm"
-          placeholder={`${variant.color || ''}${variant.color && variant.size ? ' / ' : ''}${variant.size || ''}` || 'e.g. Pink / 3M'}
+          placeholder={
+            [variant.color, variant.size].filter(Boolean).join(' / ') || 'e.g. Pink / S'
+          }
         />
       </div>
     </div>
