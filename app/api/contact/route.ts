@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,11 +19,20 @@ export async function POST(req: Request) {
   const source = String(form.get('source') || 'contact-page').trim();
   const ref = req.headers.get('referer') || '/contact';
 
+  // Rate limit: 3 contact form submissions per IP per 15 minutes
+  const ip = getClientIp(req);
+  if (!rateLimit(`contact:${ip}`, 3, 15 * 60 * 1000)) {
+    return NextResponse.redirect(new URL('/contact?error=rate_limited', req.url), 303);
+  }
+
   if (!name || !email || !message) {
     return NextResponse.json({ error: 'Name, email, and message are required.' }, { status: 400 });
   }
-  if (!/^\S+@\S+\.\S+$/.test(email)) {
+  if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 320) {
     return NextResponse.json({ error: 'Please enter a valid email.' }, { status: 400 });
+  }
+  if (name.length > 200 || subject.length > 500 || message.length > 5000) {
+    return NextResponse.json({ error: 'Input too long.' }, { status: 400 });
   }
 
   const html = `

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,7 +45,14 @@ export async function POST(req: Request) {
     email = String(form.get('email') || '').trim();
   }
 
-  if (!email || !email.includes('@')) {
+  // Rate limit: 5 subscribe attempts per IP per 10 minutes
+  const ip = getClientIp(req);
+  if (!rateLimit(`subscribe:${ip}`, 5, 10 * 60 * 1000)) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+  }
+
+  // Validate email server-side (never trust the client)
+  if (!email || email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
   }
 

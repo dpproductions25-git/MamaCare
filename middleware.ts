@@ -19,6 +19,20 @@ import type { NextRequest } from 'next/server';
 
 type AdminAccount = { user: string; password: string; name: string };
 
+/**
+ * Constant-time byte comparison — prevents timing attacks on password checks.
+ * Both buffers are padded to the longer length before XOR-ing so the loop
+ * always runs the same number of iterations regardless of content.
+ */
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length === b.length ? 0 : 1; // length mismatch = fail
+  for (let i = 0; i < len; i++) {
+    diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+  }
+  return diff === 0;
+}
+
 function loadAdmins(): AdminAccount[] {
   const list: AdminAccount[] = [];
 
@@ -65,20 +79,33 @@ export function middleware(req: NextRequest) {
 
   const auth = req.headers.get('authorization') || '';
   if (auth.startsWith('Basic ')) {
-    const [u, p] = atob(auth.slice(6)).split(':');
-    const match = admins.find((a) => a.user === u && a.password === p);
-    if (match) {
-      const res = NextResponse.next();
-      // Pass admin identity downstream so pages/APIs can audit it.
-      res.headers.set('x-admin-name', match.name);
-      // Also forward into the request headers for server components.
-      const reqHeaders = new Headers(req.headers);
-      reqHeaders.set('x-admin-name', match.name);
-      return NextResponse.next({ request: { headers: reqHeaders } });
+    let decoded = '';
+    try { decoded = atob(auth.slice(6)); } catch { /* malformed base64 */ }
+
+    const colonIdx = decoded.indexOf(':');
+    if (colonIdx > 0) {
+      const u = decoded.slice(0, colonIdx);
+      const p = decoded.slice(colonIdx + 1);
+      const enc = new TextEncoder();
+
+      // Timing-safe comparison: prevents attackers measuring response time
+      // to guess valid usernames/passwords character by character.
+      const matchedAdmin = admins.find((a) => {
+        const userMatch = timingSafeEqual(enc.encode(a.user), enc.encode(u));
+        const passMatch = timingSafeEqual(enc.encode(a.password), enc.encode(p));
+        return userMatch && passMatch;
+      });
+
+      if (matchedAdmin) {
+        const reqHeaders = new Headers(req.headers);
+        reqHeaders.set('x-admin-name', matchedAdmin.name);
+        return NextResponse.next({ request: { headers: reqHeaders } });
+      }
     }
   }
 
-  return new NextResponse('Auth required', {
+  // Generic message — don't reveal whether user or password was wrong
+  return new NextResponse('Unauthorized', {
     status: 401,
     headers: { 'WWW-Authenticate': 'Basic realm="MamaCare Admin"' }
   });

@@ -104,24 +104,75 @@ export const DEFAULTS: Record<PageId, PageContent> = {
 `
   },
   privacy: {
-    title: 'Privacy Policy',
-    meta: 'How MamaCare collects, uses, and protects your data.',
+    title: 'Privacy Policy — MamaCare',
+    meta: 'How MamaCare collects, uses, stores, and protects your personal data. GDPR and CCPA compliant.',
     heading: 'Privacy Policy',
     body: `
-<p class="muted">Last updated: May 2026</p>
-<h2>What we collect</h2>
-<p>To fulfill your order we collect: your name, email, shipping address, phone (optional), and payment confirmation.</p>
-<p>Payments are processed by Stripe and PayPal — we never see or store your full card details.</p>
-<h2>How we use it</h2>
-<p>To process orders, send tracking updates, and respond to support requests. We never sell your data to third parties.</p>
-<h2>Email marketing</h2>
-<p>If you subscribe to our newsletter, we use your email to send occasional product updates. You can unsubscribe at any time using the link in any of our emails.</p>
-<h2>Your rights</h2>
-<p>You can request access to your data, correction of inaccurate data, or deletion at any time by emailing us at <a href="mailto:mamaacaree@gmail.com">mamaacaree@gmail.com</a>.</p>
-<h2>Cookies</h2>
-<p>We use minimal cookies to keep your cart between sessions and (optionally) measure traffic via Google Analytics. No personally-identifiable data is collected by these cookies.</p>
-<h2>Contact</h2>
-<p>Privacy questions? Email <a href="mailto:mamaacaree@gmail.com">mamaacaree@gmail.com</a>.</p>
+<p class="muted">Last updated: July 2026</p>
+
+<h2>1. Who we are</h2>
+<p>MamaCare ("we", "us", "our") operates the website mamacare.us. We are a curated dropshipping retailer. Questions about this policy can be directed to <a href="mailto:mamaacaree@gmail.com">mamaacaree@gmail.com</a>.</p>
+
+<h2>2. What data we collect and why — our data map</h2>
+<ul>
+  <li><strong>Order data</strong> — name, email, shipping address, phone (optional). Collected to fulfill your purchase and send tracking updates. Stored in our order database (Vercel Postgres) and our fulfillment partner (CJ Dropshipping).</li>
+  <li><strong>Payment data</strong> — processed entirely by Stripe or PayPal. We never see, receive, or store your card number, CVV, or bank details.</li>
+  <li><strong>Email address (newsletter)</strong> — collected only if you explicitly subscribe. Used to send product updates and your discount code. Stored in our database. Never sold or shared with advertisers.</li>
+  <li><strong>Contact form submissions</strong> — name, email, and message. Used only to respond to your inquiry. Sent to our inbox via Resend and not stored long-term.</li>
+  <li><strong>Usage analytics</strong> — anonymous traffic data (pages visited, device type, country) via Google Analytics 4. No personally-identifiable data is sent to Google. You can opt out via browser settings or a GA opt-out extension.</li>
+  <li><strong>Session cookies</strong> — a minimal cookie keeps your shopping cart between page loads. No advertising cookies are used.</li>
+</ul>
+
+<h2>3. How we use your data</h2>
+<p>We use your data only for the purpose it was collected: fulfilling orders, sending tracking and transactional emails, responding to support requests, and (with your consent) sending marketing emails. We do not sell, rent, or share your personal data with third parties for their marketing purposes.</p>
+
+<h2>4. Who we share data with</h2>
+<ul>
+  <li><strong>CJ Dropshipping</strong> — your name and shipping address are shared to fulfill your order.</li>
+  <li><strong>Stripe / PayPal</strong> — payment processors who handle your card data under their own PCI-DSS certified infrastructure.</li>
+  <li><strong>Resend</strong> — transactional email delivery service. Receives your email address to deliver order confirmations and support replies.</li>
+  <li><strong>Google Analytics</strong> — receives anonymized traffic data. No names, emails, or order details are shared.</li>
+  <li><strong>Vercel</strong> — our hosting provider. Function logs may temporarily contain request data.</li>
+</ul>
+<p>No other third parties receive your personal data.</p>
+
+<h2>5. Your rights (GDPR — EU/UK residents)</h2>
+<p>If you are located in the European Union or United Kingdom, you have the following rights under the General Data Protection Regulation (GDPR):</p>
+<ul>
+  <li><strong>Right of access</strong> — request a copy of the personal data we hold about you.</li>
+  <li><strong>Right to rectification</strong> — request correction of inaccurate data.</li>
+  <li><strong>Right to erasure</strong> — request deletion of your personal data ("right to be forgotten").</li>
+  <li><strong>Right to restrict processing</strong> — request that we limit how we use your data.</li>
+  <li><strong>Right to data portability</strong> — request your data in a machine-readable format.</li>
+  <li><strong>Right to object</strong> — object to processing based on legitimate interests or for direct marketing.</li>
+  <li><strong>Right to withdraw consent</strong> — unsubscribe from marketing emails at any time using the link in any email, or by contacting us.</li>
+</ul>
+<p>To exercise any of these rights, email <a href="mailto:mamaacaree@gmail.com">mamaacaree@gmail.com</a>. We will respond within 30 days.</p>
+
+<h2>6. Your rights (CCPA — California residents)</h2>
+<p>If you are a California resident, the California Consumer Privacy Act (CCPA) gives you the following rights:</p>
+<ul>
+  <li><strong>Right to know</strong> — request disclosure of the categories and specific pieces of personal information we have collected about you in the past 12 months.</li>
+  <li><strong>Right to delete</strong> — request deletion of personal information we have collected about you, subject to certain exceptions.</li>
+  <li><strong>Right to opt out of sale</strong> — we do not sell personal information. You do not need to opt out.</li>
+  <li><strong>Right to non-discrimination</strong> — we will not discriminate against you for exercising your CCPA rights.</li>
+</ul>
+<p>To submit a verifiable consumer request, email <a href="mailto:mamaacaree@gmail.com">mamaacaree@gmail.com</a> with "CCPA Request" in the subject line.</p>
+
+<h2>7. Data retention</h2>
+<p>Order data is retained for 7 years to comply with financial record-keeping requirements. Newsletter email addresses are retained until you unsubscribe or request deletion. Contact form messages are retained in our email inbox for up to 2 years.</p>
+
+<h2>8. Security</h2>
+<p>We use HTTPS (TLS) on all connections, enforce HTTP security headers (including Content-Security-Policy and HSTS), apply rate limiting on form submissions, and use timing-safe authentication for administrative access. Passwords are never stored in plain text.</p>
+
+<h2>9. Children's privacy</h2>
+<p>Our site is not directed at children under 13. We do not knowingly collect personal data from children under 13. If you believe a child has provided us data, please contact us and we will delete it promptly.</p>
+
+<h2>10. Changes to this policy</h2>
+<p>We may update this policy. The "last updated" date above will reflect any changes. Continued use of the site after changes constitutes acceptance.</p>
+
+<h2>11. Contact</h2>
+<p>Privacy questions, data requests, or concerns: <a href="mailto:mamaacaree@gmail.com">mamaacaree@gmail.com</a></p>
 `
   },
   terms: {
