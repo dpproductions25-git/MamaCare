@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     sameAs: [
-      'https://www.instagram.com/mamacare',
+      'https://www.instagram.com/mamaacaree_',
       'https://www.facebook.com/mamacare',
       'https://www.tiktok.com/@mamacare',
       'https://www.pinterest.com/mamacare'

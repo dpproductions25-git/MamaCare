@@ -2,29 +2,33 @@
 
 import { useState, useEffect } from 'react';
 
-const STORAGE_KEY = 'mc_popup_dismissed';
-const DELAY_MS = 8_000; // show after 8 s of browsing
+// Bump this key any time you want to reset dismissal for all users
+const STORAGE_KEY = 'mc_popup_v2';
+const DELAY_MS = 8_000;
 
 export default function EmailPopup() {
-  // mounted guards against any SSR/hydration mismatch
-  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
   useEffect(() => {
-    setMounted(true);
-    // Already dismissed — never show again
-    if (localStorage.getItem(STORAGE_KEY)) return;
+    // Already dismissed — skip
+    try {
+      if (localStorage.getItem(STORAGE_KEY)) return;
+    } catch {
+      return; // localStorage blocked (private mode edge case)
+    }
+
+    const show = () => setVisible(true);
 
     // Time-on-page trigger
-    const timer = setTimeout(() => setVisible(true), DELAY_MS);
+    const timer = setTimeout(show, DELAY_MS);
 
-    // Exit-intent trigger: cursor moves toward browser chrome (top of viewport)
+    // Exit-intent: cursor moves toward browser chrome
     function onLeave(e: MouseEvent) {
-      if (e.clientY <= 0 && !localStorage.getItem(STORAGE_KEY)) {
+      if (e.clientY <= 0) {
         clearTimeout(timer);
-        setVisible(true);
+        show();
       }
     }
     document.addEventListener('mouseleave', onLeave);
@@ -36,7 +40,7 @@ export default function EmailPopup() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(STORAGE_KEY, '1');
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* ignore */ }
     setVisible(false);
   }
 
@@ -52,7 +56,7 @@ export default function EmailPopup() {
       });
       if (res.ok) {
         setStatus('done');
-        localStorage.setItem(STORAGE_KEY, '1');
+        try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* ignore */ }
         setTimeout(() => setVisible(false), 2800);
       } else {
         setStatus('error');
@@ -62,25 +66,22 @@ export default function EmailPopup() {
     }
   }
 
-  // Don't render anything until client has hydrated, or if not visible
-  if (!mounted || !visible) return null;
+  if (!visible) return null;
 
   return (
-    <>
-      {/* ── Backdrop — z-50, covers the page ── */}
-      <div
-        role="presentation"
-        aria-hidden="true"
-        className="fixed inset-0 bg-ink-900/50 z-50"
-        onClick={dismiss}
-      />
-
-      {/* ── Modal — z-[60] so it sits above the backdrop and receives all clicks ── */}
+    /* Backdrop — clicking outside the card dismisses */
+    <div
+      role="presentation"
+      aria-hidden="true"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/50"
+      onClick={dismiss}
+    >
+      {/* Card — stopPropagation so clicks inside don't hit the backdrop */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Get 10% off your first order"
-        className="fixed z-[60] inset-x-4 bottom-6 sm:inset-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:max-w-md bg-cream-50 rounded-4xl shadow-card overflow-hidden animate-fadeUp"
+        className="relative w-full max-w-md bg-cream-50 rounded-3xl shadow-card overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close ✕ */}
@@ -88,9 +89,9 @@ export default function EmailPopup() {
           type="button"
           onClick={dismiss}
           aria-label="Close"
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-cream-100 text-ink-500 transition-colors z-10"
+          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-cream-100 hover:bg-cream-200 text-ink-500 transition-colors"
         >
-          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2">
             <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
           </svg>
         </button>
@@ -98,7 +99,7 @@ export default function EmailPopup() {
         {/* Blush accent stripe */}
         <div className="h-1.5 bg-gradient-to-r from-blush-300 via-blush-400 to-blush-300" />
 
-        <div className="p-8 sm:p-10 text-center">
+        <div className="px-8 py-9 text-center">
           <div className="mx-auto w-14 h-14 rounded-full bg-blush-50 flex items-center justify-center mb-5 text-2xl select-none">
             🌸
           </div>
@@ -106,10 +107,10 @@ export default function EmailPopup() {
           <h2 className="font-display text-3xl text-ink-900 leading-tight">
             Welcome to MamaCare
           </h2>
-          <p className="text-ink-600 mt-3 leading-relaxed text-sm">
+          <p className="text-ink-600 mt-3 text-sm leading-relaxed">
             Join the MamaCare circle and get{' '}
             <strong className="text-blush-500">10% off your first order</strong>
-            {' '}— plus mama-approved picks, new arrivals, and pregnancy tips straight to your inbox.
+            {' '}— plus mama-approved picks and new arrivals straight to your inbox.
           </p>
 
           {status === 'done' ? (
@@ -146,12 +147,12 @@ export default function EmailPopup() {
           <button
             type="button"
             onClick={dismiss}
-            className="mt-4 text-xs text-ink-400 hover:text-ink-600 underline underline-offset-2"
+            className="mt-5 text-xs text-ink-400 hover:text-ink-600 underline underline-offset-2"
           >
             No thanks, I&apos;ll pay full price
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

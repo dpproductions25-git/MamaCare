@@ -3,7 +3,7 @@ import Link from 'next/link';
 const SOCIAL = [
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/mamacare',
+    href: 'https://www.instagram.com/mamaacaree_',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-5 h-5" aria-hidden>
         <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
