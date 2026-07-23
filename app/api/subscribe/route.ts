@@ -114,6 +114,11 @@ export async function POST(req: Request) {
   const isXhr = ct.includes('application/x-www-form-urlencoded') && req.headers.get('x-requested-with') === 'XMLHttpRequest';
   const acceptsJson = (req.headers.get('accept') || '').includes('application/json') || ct.includes('application/x-www-form-urlencoded');
 
-  // The popup uses fetch() with x-www-form-urlencoded — return JSON
+  // Plain browser form submissions send Accept: text/html → redirect back to homepage.
+  // The popup uses fetch() → return JSON so it can show the success state.
+  const accept = req.headers.get('accept') || '';
+  if (accept.includes('text/html')) {
+    return NextResponse.redirect(new URL('/?subscribed=1', req.url), 303);
+  }
   return NextResponse.json({ ok: true });
 }
