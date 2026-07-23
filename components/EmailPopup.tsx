@@ -3,37 +3,40 @@
 import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'mc_popup_dismissed';
-const DELAY_MS = 30_000; // show after 30 s
+const DELAY_MS = 8_000; // show after 8 s of browsing
 
 export default function EmailPopup() {
+  // mounted guards against any SSR/hydration mismatch
+  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
   useEffect(() => {
-    // Don't show if already dismissed this session (or ever, if you want persistent)
-    if (sessionStorage.getItem(STORAGE_KEY)) return;
+    setMounted(true);
+    // Already dismissed — never show again
+    if (localStorage.getItem(STORAGE_KEY)) return;
 
-    // Delay trigger
+    // Time-on-page trigger
     const timer = setTimeout(() => setVisible(true), DELAY_MS);
 
-    // Exit-intent trigger (mouse leaves viewport upward)
-    function onMouseOut(e: MouseEvent) {
-      if (e.clientY <= 0 && !sessionStorage.getItem(STORAGE_KEY)) {
+    // Exit-intent trigger: cursor moves toward browser chrome (top of viewport)
+    function onLeave(e: MouseEvent) {
+      if (e.clientY <= 0 && !localStorage.getItem(STORAGE_KEY)) {
         clearTimeout(timer);
         setVisible(true);
       }
     }
-    document.addEventListener('mouseleave', onMouseOut);
+    document.addEventListener('mouseleave', onLeave);
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mouseleave', onMouseOut);
+      document.removeEventListener('mouseleave', onLeave);
     };
   }, []);
 
   function dismiss() {
-    sessionStorage.setItem(STORAGE_KEY, '1');
+    localStorage.setItem(STORAGE_KEY, '1');
     setVisible(false);
   }
 
@@ -45,11 +48,11 @@ export default function EmailPopup() {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email })
+        body: new URLSearchParams({ email }),
       });
       if (res.ok) {
         setStatus('done');
-        sessionStorage.setItem(STORAGE_KEY, '1');
+        localStorage.setItem(STORAGE_KEY, '1');
         setTimeout(() => setVisible(false), 2800);
       } else {
         setStatus('error');
@@ -59,57 +62,61 @@ export default function EmailPopup() {
     }
   }
 
-  if (!visible) return null;
+  // Don't render anything until client has hydrated, or if not visible
+  if (!mounted || !visible) return null;
 
   return (
     <>
-      {/* Backdrop */}
+      {/* ── Backdrop — z-50, covers the page ── */}
       <div
-        className="fixed inset-0 bg-ink-900/40 z-50 backdrop-blur-sm"
+        role="presentation"
+        aria-hidden="true"
+        className="fixed inset-0 bg-ink-900/50 z-50"
         onClick={dismiss}
-        aria-hidden
       />
 
-      {/* Modal */}
+      {/* ── Modal — z-[60] so it sits above the backdrop and receives all clicks ── */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Get 10% off your first order"
-        className="fixed z-50 inset-x-4 bottom-6 sm:inset-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:max-w-md bg-cream-50 rounded-4xl shadow-card overflow-hidden animate-fadeUp"
+        className="fixed z-[60] inset-x-4 bottom-6 sm:inset-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:max-w-md bg-cream-50 rounded-4xl shadow-card overflow-hidden animate-fadeUp"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
+        {/* Close ✕ */}
         <button
+          type="button"
           onClick={dismiss}
           aria-label="Close"
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-cream-100 text-ink-500 transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-cream-100 text-ink-500 transition-colors z-10"
         >
           <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round"/>
+            <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
           </svg>
         </button>
 
-        {/* Blush accent bar */}
+        {/* Blush accent stripe */}
         <div className="h-1.5 bg-gradient-to-r from-blush-300 via-blush-400 to-blush-300" />
 
         <div className="p-8 sm:p-10 text-center">
-          <div className="mx-auto w-14 h-14 rounded-full bg-blush-50 flex items-center justify-center mb-5 text-2xl">
+          <div className="mx-auto w-14 h-14 rounded-full bg-blush-50 flex items-center justify-center mb-5 text-2xl select-none">
             🌸
           </div>
 
           <h2 className="font-display text-3xl text-ink-900 leading-tight">
             Welcome to MamaCare
           </h2>
-          <p className="text-ink-600 mt-3 leading-relaxed">
+          <p className="text-ink-600 mt-3 leading-relaxed text-sm">
             Join the MamaCare circle and get{' '}
-            <strong className="text-blush-500">10% off your first order</strong>{' '}
-            — plus pregnancy tips, new arrivals, and mama-approved picks, straight to your inbox.
+            <strong className="text-blush-500">10% off your first order</strong>
+            {' '}— plus mama-approved picks, new arrivals, and pregnancy tips straight to your inbox.
           </p>
 
           {status === 'done' ? (
             <div className="mt-8 py-5 px-6 rounded-2xl bg-sage-50 border border-sage-200">
-              <p className="font-display text-xl text-sage-600">You're in! 🎉</p>
+              <p className="font-display text-xl text-sage-600">You&apos;re in! 🎉</p>
               <p className="text-sm text-ink-600 mt-1">
-                Your 10% discount code is on its way to <strong>{email}</strong>.
+                Your 10% code is on its way to <strong>{email}</strong>.
               </p>
             </div>
           ) : (
@@ -131,16 +138,17 @@ export default function EmailPopup() {
                 {status === 'sending' ? 'Subscribing…' : 'Get 10% off my first order'}
               </button>
               {status === 'error' && (
-                <p className="text-xs text-blush-500">Something went wrong — please try again.</p>
+                <p className="text-xs text-blush-500 mt-1">Something went wrong — please try again.</p>
               )}
             </form>
           )}
 
           <button
+            type="button"
             onClick={dismiss}
             className="mt-4 text-xs text-ink-400 hover:text-ink-600 underline underline-offset-2"
           >
-            No thanks, I'll pay full price
+            No thanks, I&apos;ll pay full price
           </button>
         </div>
       </div>
