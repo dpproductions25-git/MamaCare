@@ -4,6 +4,7 @@ import Script from 'next/script';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import EmailPopup from '@/components/EmailPopup';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -94,6 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <EmailPopup />
 
         <Script
           id="schema-organization"

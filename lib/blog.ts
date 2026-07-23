@@ -279,6 +279,121 @@ export const posts: BlogPost[] = [
 <h2>The "always packed" trick</h2>
 <p>Keep your diaper bag stocked with the basics at all times, and refill it the moment you get home. Don't wait until you're heading out the door. Future-you will thank present-you.</p>
 `
+  },
+
+  {
+    slug: 'complete-guide-to-nursing-bras',
+    title: "The Complete Guide to Nursing Bras: What to Buy, When to Buy It, and What to Skip",
+    excerpt:
+      "Wire-free, pumping-compatible, or sleeping bra — which nursing bra do you actually need? We break down every style, when to get fitted, and the features worth paying for.",
+    coverImage: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-07-01',
+    readingMinutes: 7,
+    tags: ['nursing', 'breastfeeding', 'maternity', 'buying guide'],
+    bodyHtml: `
+<p>If you're breastfeeding, a nursing bra isn't optional — it's the piece of clothing you'll wear more than anything else for the next year. And yet most mamas either buy too early (before the body has changed), buy the wrong style, or skip it entirely and regret it by week two. This guide covers everything.</p>
+
+<h2>When to buy your first nursing bra</h2>
+<p>The honest answer: not until 36–37 weeks of pregnancy. Your breasts can change up to two cup sizes after birth when your milk comes in — any bra bought in the second trimester may not fit at all. A good approach: buy 2–3 bras in your last month of pregnancy, then re-evaluate at 4–6 weeks postpartum once supply has stabilized.</p>
+
+<h2>The four styles — and when each makes sense</h2>
+<p><strong>Wire-free everyday bra.</strong> The workhorse. Designed for all-day wear during the nursing months. Look for drop-away cups (the cup unclips with one hand while the other holds baby), wide soft straps, and a snug band. This is the one you'll wear most.</p>
+<p><strong>Sleep/lounge bra.</strong> A soft, stretchy bra for overnight feeding and lazy days at home. No clasps, no hardware — just pull the cup down. If you're leaking overnight, you'll want this plus nursing pads.</p>
+<p><strong>Pumping bra / hands-free pumping bra.</strong> A specialized bra that holds pump flanges in place, leaving your hands free. Essential if you're pumping regularly — without it, you'll hold the flanges for 20 minutes per session. Some hybrid bras combine nursing and pumping in one.</p>
+<p><strong>Sports/active bra.</strong> If you're returning to exercise, a nursing sports bra lets you feed before or after a workout without changing. Look for racerback with a front clasp or pullaway cups.</p>
+
+<h2>What makes a good nursing bra — the non-negotiables</h2>
+<ul>
+  <li><strong>One-hand drop cup.</strong> You'll be holding a baby with the other hand. If the clasp requires two hands, you'll hate it by day three.</li>
+  <li><strong>Soft band without underwire.</strong> Underwire can restrict milk ducts and contribute to mastitis, especially in the first months. Wire-free is the safe default for the first 3 months minimum.</li>
+  <li><strong>Full coverage cups.</strong> Stretch-lace cups that cover the full breast and don't crinkle after feeding.</li>
+  <li><strong>Multiple hook-and-eye settings on the band.</strong> Your ribcage expands during pregnancy and contracts after birth. Three settings give you room to adjust.</li>
+  <li><strong>Machine washable.</strong> You will need to wash this bra constantly. A hand-wash-only nursing bra is a mistake.</li>
+</ul>
+
+<h2>How to measure your nursing size</h2>
+<p>Measure at 36–37 weeks. Wrap a soft tape around the fullest part of your bust (don't compress). Your cup size will likely be 1–2 sizes bigger than your pre-pregnancy size. When in doubt, size up in the cup — you can always use a smaller hook setting on the band. Get re-fitted at 6 weeks postpartum if the fit feels off.</p>
+
+<h2>How many nursing bras do you need?</h2>
+<p>Three is the minimum: one on, one in the wash, one clean. Four gives you a comfortable rotation. Don't overbuy early — fit changes dramatically in the first 6 weeks.</p>
+
+<h2>What to skip</h2>
+<p><strong>Underwire nursing bras</strong> in the early months — the wires can compress milk ducts. <strong>Padded push-up styles</strong> — padding traps heat and moisture, which promotes mastitis. <strong>Anything with a complicated clasp</strong> — if you need two hands, it's not the right nursing bra.</p>
+
+<h2>A note on sizing for different body types</h2>
+<p>Full-bust mamas (D cup and above) should look for bras with structured (not stretch) cups for actual support. Petite mamas often find that wireless bralette styles work well — they're soft, adjustable, and don't gap. If you're between sizes, size up in the cup.</p>
+`
+  },
+
+  {
+    slug: 'what-to-pack-in-your-hospital-bag',
+    title: "What to Pack in Your Hospital Bag: The Only Checklist You'll Need",
+    excerpt:
+      "First-time mama or second — the hospital bag is one of those things everyone overpacks. Here's what you actually need for labor, delivery, and recovery.",
+    coverImage: 'https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-06-15',
+    readingMinutes: 6,
+    tags: ['hospital bag', 'birth prep', 'newborn', 'maternity'],
+    bodyHtml: `
+<p>Somewhere around week 35, every mama opens a tab titled "hospital bag checklist" and immediately feels overwhelmed. Most lists tell you to pack 47 items. The reality: hospitals supply a lot, you won't use half of it, and you can send your partner for anything you forget. Here is the trimmed, realistic version.</p>
+
+<h2>Pack your bag by week 36</h2>
+<p>Not because you'll go early — most first-time mamas don't — but because labor can start without much warning and having a ready bag removes one decision from a day that will already have too many.</p>
+
+<h2>For labor (the "going in" bag)</h2>
+<ul>
+  <li><strong>Your ID, insurance card, and hospital forms.</strong> Pre-register online at your hospital if possible — it cuts paperwork on the day.</li>
+  <li><strong>Birth plan.</strong> One page, bullet points. Bring 4 copies: one for your bag, one for your partner, two for the nursing staff.</li>
+  <li><strong>Phone + charger.</strong> Your hospital room will have one outlet near the bed. Bring a long cord.</li>
+  <li><strong>A comfort item.</strong> A pillow from home with a colorful pillowcase (so it doesn't get lost), a favorite blanket, a small speaker.</li>
+  <li><strong>Snacks for your support person.</strong> They may be there 24 hours. The vending machine will get old.</li>
+  <li><strong>Lip balm.</strong> Labor is dehydrating. You'll thank yourself.</li>
+  <li><strong>Hair ties.</strong> Multiple.</li>
+</ul>
+
+<h2>For postpartum recovery (your first 24–48 hours)</h2>
+<ul>
+  <li><strong>Loose, dark-colored pajamas or a nightgown.</strong> Hospital gowns work but something from home feels better. Look for front-button or wrap styles for skin-to-skin and nursing access.</li>
+  <li><strong>A nursing bra or soft bralette.</strong> Bring 2. Your milk won't come in immediately, but colostrum will, and you'll want something on.</li>
+  <li><strong>Nursing pads.</strong> For when milk does come in, especially overnight.</li>
+  <li><strong>Your own toiletries.</strong> Hospital soap is fine but your own shampoo and face wash will feel like a luxury at 5 a.m.</li>
+  <li><strong>Non-slip socks or slippers.</strong> You'll be walking to the bathroom in the middle of the night.</li>
+  <li><strong>Going-home clothes.</strong> Something loose at the waist — you'll still look about 5 months pregnant. Maternity leggings are perfect.</li>
+</ul>
+
+<h2>For baby</h2>
+<ul>
+  <li><strong>A going-home outfit.</strong> One or two options. Newborn or 0–3 month size depending on your baby's estimated weight. Footies with a zip front are easiest.</li>
+  <li><strong>A swaddle or sleep sack.</strong> Hospitals provide blankets but your own is warmer and familiar for the ride home.</li>
+  <li><strong>The car seat.</strong> Installed before you go in. You won't be discharged without it.</li>
+</ul>
+
+<h2>For your partner or support person</h2>
+<ul>
+  <li>A change of clothes and toiletries (if staying overnight)</li>
+  <li>Phone charger and earbuds</li>
+  <li>Cash (parking, vending machines)</li>
+  <li>Snacks — see above</li>
+</ul>
+
+<h2>What the hospital provides (so you don't need to pack)</h2>
+<p>Most hospitals provide: mesh underwear (bring some home — they're extraordinary), postpartum pads (the big ones), peri bottle, newborn diapers and wipes, formula samples if formula feeding, a bulb syringe, basic toiletries. Ask your specific hospital what's included at your pre-birth tour.</p>
+
+<h2>What to leave home</h2>
+<ul>
+  <li>Jewelry, valuables</li>
+  <li>A full postpartum recovery kit — you can unpack it when you get home</li>
+  <li>Multiple changes of clothes for baby — one or two is plenty for 48 hours</li>
+  <li>Your laptop (you won't use it)</li>
+  <li>A full candle or diffuser setup — most hospitals don't allow open flames or strong scents</li>
+</ul>
+
+<h2>One practical tip from every mama who's done this</h2>
+<p>Pack a small "quick access" bag inside your main bag — the lip balm, phone charger, hair ties, and snacks you'll need immediately. When you arrive in labor, you don't want to dig through a full suitcase to find the charger.</p>
+<p>And remember: the one thing you cannot forget — yourself. Everything else is replaceable in a 2-hour Amazon order.</p>
+`
   }
 ];
 

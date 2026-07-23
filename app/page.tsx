@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
@@ -5,6 +6,63 @@ import { categories } from '@/lib/products';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllConfig } from '@/lib/db';
 import { buildMetadata } from '@/lib/seo';
+
+// One unique icon per category slug
+const CATEGORY_ICONS: Record<string, ReactNode> = {
+  gear: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
+      <path d="M12 3C8.5 3 6 5.5 6 8c0 2.2 1.5 4 3 5l-1 4h8l-1-4c1.5-1 3-2.8 3-5 0-2.5-2.5-5-6-5z" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M9 17h6" strokeLinecap="round"/>
+    </svg>
+  ),
+  baby: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round"/>
+    </svg>
+  ),
+  sleep: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  feeding: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
+      <path d="M8 3v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V3" strokeLinecap="round"/>
+      <path d="M12 9v12M10 21h4" strokeLinecap="round"/>
+    </svg>
+  ),
+  nursery: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
+      <path d="M3 21V7l9-4 9 4v14" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M9 21v-8h6v8" strokeLinecap="round"/>
+      <path d="M12 3v4" strokeLinecap="round"/>
+    </svg>
+  ),
+  toys: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+};
+
+const TESTIMONIALS = [
+  {
+    quote: "The sleep sack is honestly the best thing we bought for our newborn. She went from waking every 45 minutes to sleeping 4-hour stretches. Worth every penny.",
+    name: "Jessica M.",
+    detail: "Mom of a 3-month-old"
+  },
+  {
+    quote: "I was skeptical about ordering baby gear online but MamaCare had the best carrier I've tried. Arrived in 6 days and the quality is exactly as described.",
+    name: "Priya L.",
+    detail: "First-time mama, NYC"
+  },
+  {
+    quote: "Ordered the bouncer and the diaper bag together. Both are incredible — and customer support answered my question on a Sunday evening. Genuinely impressed.",
+    name: "Sarah K.",
+    detail: "Mom of 2, Texas"
+  }
+];
 
 export const revalidate = 30;
 
@@ -88,7 +146,7 @@ export default async function HomePage() {
           {categories.map((c) => (
             <Link key={c.slug} href={`/shop/${c.slug}`} className="group card p-5 hover:-translate-y-0.5 hover:shadow-soft transition-all">
               <div className="w-12 h-12 rounded-2xl bg-blush-50 flex items-center justify-center mb-3 group-hover:bg-blush-100 transition-colors">
-                <span aria-hidden className="text-blush-500">♥</span>
+                {CATEGORY_ICONS[c.slug] ?? <span aria-hidden className="text-blush-500">♥</span>}
               </div>
               <h3 className="font-display text-lg text-ink-900">{c.label}</h3>
               <p className="text-sm text-ink-500 mt-1 line-clamp-2">{c.description}</p>
@@ -129,6 +187,28 @@ export default async function HomePage() {
             <h3 className="font-display text-xl text-ink-900">Care-first support</h3>
             <p className="text-ink-500 mt-2 max-w-xs mx-auto">Real humans (and mamas) ready to help — 7 days a week.</p>
           </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="container-page py-12 sm:py-16">
+        <div className="text-center mb-10">
+          <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium">What mamas are saying</p>
+          <h2 className="font-display text-3xl sm:text-4xl text-ink-900 mt-2">Loved by 10,000+ families</h2>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {TESTIMONIALS.map((t) => (
+            <div key={t.name} className="card p-7 flex flex-col gap-4">
+              <div className="flex gap-0.5 text-blush-400 text-sm">
+                {'★★★★★'}
+              </div>
+              <p className="text-ink-700 leading-relaxed flex-1">"{t.quote}"</p>
+              <div>
+                <p className="font-medium text-ink-900 text-sm">{t.name}</p>
+                <p className="text-xs text-ink-500 mt-0.5">{t.detail}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
