@@ -9,15 +9,6 @@ import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllConfig } from '@/lib/db';
 import { buildMetadata } from '@/lib/seo';
 
-// Lifestyle photo for each category — rich, dark-toned images for text legibility
-const CATEGORY_IMAGES: Record<string, string> = {
-  gear:    'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=85',
-  baby:    'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=800&q=85',
-  sleep:   'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=800&q=85',
-  feeding: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=800&q=85',
-  nursery: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=85',
-  toys:    'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=85',
-};
 
 const TESTIMONIALS = [
   {
@@ -66,6 +57,19 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
   const featuredProduct = [...all]
     .filter((p) => p.id !== 'mc-test')
     .sort((a, b) => featuredScore(b) - featuredScore(a))[0];
+
+  // Pick the best product image per category (best seller first, then highest rating)
+  const categoryHeroImages: Record<string, string> = {};
+  for (const cat of categories) {
+    const pick = all
+      .filter((p) => p.category === cat.slug && p.id !== 'mc-test' && p.image)
+      .sort((a, b) => {
+        if (a.bestSeller && !b.bestSeller) return -1;
+        if (!a.bestSeller && b.bestSeller) return 1;
+        return b.rating - a.rating;
+      })[0];
+    if (pick) categoryHeroImages[cat.slug] = pick.image;
+  }
 
   const hero = {
     image: config.hero_image || DEFAULTS.hero_image,
@@ -167,15 +171,15 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
             >
               {/* Photo */}
               <Image
-                src={CATEGORY_IMAGES[c.slug] ?? DEFAULTS.hero_image}
+                src={categoryHeroImages[c.slug] ?? DEFAULTS.hero_image}
                 alt={c.label}
                 fill
                 sizes="(max-width: 640px) 70vw, (max-width: 1024px) 38vw, 17vw"
                 className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
               />
 
-              {/* Heavy gradient — bottom 60% to ensure text always pops */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/0" />
+              {/* Gradient — covers full card, heaviest at bottom for text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/10" />
 
               {/* Blush tint on hover */}
               <div className="absolute inset-0 bg-blush-500/0 group-hover:bg-blush-500/15 transition-colors duration-500" />
