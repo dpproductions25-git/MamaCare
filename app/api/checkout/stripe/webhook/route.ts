@@ -4,7 +4,7 @@ import { createOrder as createCjOrder } from '@/lib/cj';
 import { products } from '@/lib/products';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
 import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
-import { markItemPurchased, findRegistryById, ensureRegistrySchema } from '@/lib/db-registry';
+import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -126,41 +126,50 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4) Mark registry items as purchased and notify the registry owner
-    type RegSnapshotItem = { registryId: string; itemId: number; qty: number; productId: string };
-    const registrySnap: RegSnapshotItem[] = JSON.parse(session.metadata?.registrySnapshot || '[]');
-    if (registrySnap.length) {
+    // 4) Mark registry items as purchased and notify the registry owner.
+    // Compact metadata format: registryId~itemId:qty,itemId:qty;registryId2~itemId:qty
+    const registrySnapRaw = session.metadata?.registrySnapshot || '';
+    if (registrySnapRaw.trim()) {
       try {
         await ensureRegistrySchema();
 
-        // Group by registry so we send one email per registry
-        const byRegistry = new Map<string, RegSnapshotItem[]>();
-        for (const ri of registrySnap) {
-          if (!byRegistry.has(ri.registryId)) byRegistry.set(ri.registryId, []);
-          byRegistry.get(ri.registryId)!.push(ri);
-        }
+        for (const group of registrySnapRaw.split(';').filter(Boolean)) {
+          const [registryId, pairsRaw] = group.split('~');
+          if (!registryId || !pairsRaw) continue;
 
-        for (const [registryId, regItems] of byRegistry) {
-          // Mark each item purchased (capped at qty_wanted in DB)
-          for (const ri of regItems) {
-            await markItemPurchased(ri.itemId, ri.qty);
+          const pairs = pairsRaw
+            .split(',')
+            .map((s) => {
+              const [id, q] = s.split(':');
+              return { itemId: Number(id), qty: Number(q) };
+            })
+            .filter((p) => Number.isFinite(p.itemId) && Number.isFinite(p.qty) && p.qty > 0);
+
+          if (!pairs.length) continue;
+
+          // Mark each item purchased (DB caps the value at qty_wanted)
+          for (const p of pairs) {
+            await markItemPurchased(p.itemId, p.qty);
           }
 
-          // Notify the registry owner
+          // Resolve product names from the registry rows, then notify the owner
           const registry = await findRegistryById(registryId);
-          if (registry) {
-            const giftedItems = regItems.map((ri) => ({
-              productName: products.find((p) => p.id === ri.productId)?.name ?? 'Item',
-              qty: ri.qty,
-            }));
-            await sendRegistryGiftNotification({
-              to: registry.email,
-              ownerName: registry.owner_name,
-              registryTitle: registry.title,
-              registryId,
-              giftedItems,
-            });
-          }
+          if (!registry) continue;
+
+          const rows = await getRegistryItems(registryId);
+          const giftedItems = pairs.map((p) => {
+            const row = rows.find((r) => r.id === p.itemId);
+            const prod = row ? products.find((x) => x.id === row.product_id) : undefined;
+            return { productName: prod?.name ?? 'Item', qty: p.qty };
+          });
+
+          await sendRegistryGiftNotification({
+            to: registry.email,
+            ownerName: registry.owner_name,
+            registryTitle: registry.title,
+            registryId,
+            giftedItems,
+          });
         }
       } catch (e) {
         console.error('Registry purchase processing failed (Stripe)', e);

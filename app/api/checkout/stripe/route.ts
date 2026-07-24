@@ -24,7 +24,13 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const items: { productId: string; qty: number; variantId?: string }[] = body.items || [];
+    const items: {
+      productId: string;
+      qty: number;
+      variantId?: string;
+      registryId?: string;
+      registryItemId?: number;
+    }[] = body.items || [];
     const shippingAddress = body.shippingAddress;
     const couponCode: string | undefined = body.couponCode || undefined;
 
@@ -67,15 +73,20 @@ export async function POST(req: Request) {
       });
     }
 
-    // Collect registry metadata from cart items (set when adding from a registry page)
-    const registrySnapshot = items
-      .filter((it) => it.registryId && it.registryItemId != null)
-      .map((it) => ({
-        registryId: it.registryId!,
-        itemId: it.registryItemId!,
-        qty: it.qty,
-        productId: it.productId,
-      }));
+    // Collect registry metadata from cart items (set when adding from a registry page).
+    // Stripe metadata values are capped at 500 chars, so we use a compact encoding
+    // grouped by registry:  registryId~itemId:qty,itemId:qty;registryId2~itemId:qty
+    // Product names are resolved from the DB in the webhook, not carried here.
+    const regGroups = new Map<string, string[]>();
+    for (const it of items) {
+      if (!it.registryId || it.registryItemId == null) continue;
+      if (!regGroups.has(it.registryId)) regGroups.set(it.registryId, []);
+      regGroups.get(it.registryId)!.push(`${it.registryItemId}:${it.qty}`);
+    }
+    const registrySnapshot = Array.from(regGroups.entries())
+      .map(([rid, pairs]) => `${rid}~${pairs.join(',')}`)
+      .join(';')
+      .slice(0, 490); // hard safety cap under Stripe's 500-char limit
 
     const { coupon, discount, shipping } = calculateTotals(subtotal, couponCode);
 
@@ -113,7 +124,7 @@ export async function POST(req: Request) {
         productSnapshot: JSON.stringify(items),
         shippingAddress: JSON.stringify(shippingAddress || {}),
         couponCode: coupon?.code || '',
-        registrySnapshot: JSON.stringify(registrySnapshot),
+        registrySnapshot,
       }
     });
 

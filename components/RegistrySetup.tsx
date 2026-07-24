@@ -89,6 +89,7 @@ export default function RegistrySetup({
         title: data.registry.title,
       });
       setItems(mapItems(itemsData.items || []));
+      onSuccess?.(data.registry.id, fPin);
       open();
       onClose();
     } catch {

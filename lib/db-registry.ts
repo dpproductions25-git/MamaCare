@@ -168,3 +168,50 @@ export async function markItemPurchased(itemId: number, qty: number): Promise<vo
     WHERE id = ${itemId};
   `;
 }
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export type AdminRegistryRow = DbRegistry & {
+  item_count: number;
+  total_wanted: number;
+  total_purchased: number;
+};
+
+/** All registries with aggregate item stats — newest first. */
+export async function listAllRegistries(limit = 500): Promise<AdminRegistryRow[]> {
+  await ensureRegistrySchema();
+  const r = await sql<AdminRegistryRow>`
+    SELECT
+      r.id, r.email, r.owner_name, r.title, r.created_at,
+      COUNT(i.id)::int                        AS item_count,
+      COALESCE(SUM(i.qty_wanted), 0)::int     AS total_wanted,
+      COALESCE(SUM(i.qty_purchased), 0)::int  AS total_purchased
+    FROM registries r
+    LEFT JOIN registry_items i ON i.registry_id = r.id
+    GROUP BY r.id, r.email, r.owner_name, r.title, r.created_at
+    ORDER BY r.created_at DESC
+    LIMIT ${limit};
+  `;
+  return r.rows;
+}
+
+/** Full item list for one registry (admin view — no PIN required). */
+export async function adminGetRegistryDetail(id: string) {
+  await ensureRegistrySchema();
+  const registry = await findRegistryById(id);
+  if (!registry) return null;
+  const items = await getRegistryItems(id);
+  return { registry, items };
+}
+
+/** Permanently delete a registry. registry_items cascade automatically. */
+export async function deleteRegistry(id: string): Promise<void> {
+  await ensureRegistrySchema();
+  await sql`DELETE FROM registries WHERE id = ${id};`;
+}
+
+/** Admin PIN reset — lets support help a mom who forgot her PIN. */
+export async function adminResetRegistryPin(id: string, newPin: string): Promise<void> {
+  await ensureRegistrySchema();
+  await sql`UPDATE registries SET pin_hash = ${makeStoredPin(newPin)} WHERE id = ${id};`;
+}
