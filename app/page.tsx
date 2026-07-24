@@ -9,14 +9,14 @@ import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllConfig } from '@/lib/db';
 import { buildMetadata } from '@/lib/seo';
 
-// Lifestyle photo for each category — swap URLs in admin or here to refresh the look
+// Lifestyle photo for each category — rich, dark-toned images for text legibility
 const CATEGORY_IMAGES: Record<string, string> = {
-  gear:    'https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=800&q=80',
-  baby:    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
-  sleep:   'https://images.unsplash.com/photo-1566909914520-7ddbc01d4f12?auto=format&fit=crop&w=800&q=80',
-  feeding: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&w=800&q=80',
-  nursery: 'https://images.unsplash.com/photo-1586105251261-72a756497a11?auto=format&fit=crop&w=800&q=80',
-  toys:    'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=800&q=80',
+  gear:    'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=85',
+  baby:    'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=800&q=85',
+  sleep:   'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=800&q=85',
+  feeding: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=800&q=85',
+  nursery: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=85',
+  toys:    'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=85',
 };
 
 const TESTIMONIALS = [
@@ -139,67 +139,71 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
       {/* ── Featured Product Spotlight ── */}
       {featuredProduct && <FeaturedProduct product={featuredProduct} />}
 
-      {/* ── Shop by need — photo grid ── */}
-      <section className="container-page py-12 sm:py-16">
-        <div className="flex items-end justify-between mb-8 sm:mb-10">
+      {/* ── Shop by need — horizontal scroll carousel ── */}
+      <section className="py-12 sm:py-16">
+        {/* Header — inside normal container */}
+        <div className="container-page flex items-end justify-between mb-8 sm:mb-10">
           <div>
             <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium mb-2">Collections</p>
             <h2 className="font-display text-3xl sm:text-4xl text-ink-900">Shop by need</h2>
           </div>
-          <Link href="/shop" className="hidden sm:inline-flex btn-ghost">View all →</Link>
+          <Link href="/shop" className="btn-ghost hidden sm:inline-flex">View all →</Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
+        {/* Scroll track — bleeds to edges on mobile, padded on desktop */}
+        <div
+          className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory
+                     px-4 sm:px-6 lg:px-8
+                     pb-4
+                     [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {categories.map((c) => (
             <Link
               key={c.slug}
               href={`/shop/${c.slug}`}
-              className="group relative overflow-hidden rounded-3xl aspect-[3/4] block"
+              className="group relative flex-none overflow-hidden rounded-3xl snap-start
+                         w-[70vw] sm:w-[38vw] lg:w-[calc(16.6667%-14px)]"
+              style={{ aspectRatio: '3/4' }}
             >
-              {/* Category lifestyle photo */}
+              {/* Photo */}
               <Image
                 src={CATEGORY_IMAGES[c.slug] ?? DEFAULTS.hero_image}
                 alt={c.label}
                 fill
-                sizes="(max-width: 640px) 50vw, 33vw"
-                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                sizes="(max-width: 640px) 70vw, (max-width: 1024px) 38vw, 17vw"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
               />
 
-              {/* Permanent gradient so text is always readable */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/20 to-black/0" />
+              {/* Heavy gradient — bottom 60% to ensure text always pops */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/0" />
 
-              {/* Subtle blush tint on hover */}
-              <div className="absolute inset-0 bg-blush-400/0 group-hover:bg-blush-400/12 transition-colors duration-400" />
+              {/* Blush tint on hover */}
+              <div className="absolute inset-0 bg-blush-500/0 group-hover:bg-blush-500/15 transition-colors duration-500" />
 
-              {/* Text block at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
-                {/* Category label — always visible */}
-                <h3 className="font-display text-xl sm:text-2xl text-white leading-tight">
+              {/* Text */}
+              <div className="absolute bottom-0 left-0 right-0 p-5">
+                <h3 className="font-display text-xl text-white leading-tight drop-shadow-sm">
                   {c.label}
                 </h3>
-
-                {/* Description — slides up on hover */}
-                <p className="text-white/70 text-sm mt-1.5 leading-relaxed line-clamp-2
-                              translate-y-3 opacity-0
+                <p className="text-white/75 text-sm mt-1.5 leading-snug line-clamp-2
+                              translate-y-2 opacity-0
                               group-hover:translate-y-0 group-hover:opacity-100
                               transition-all duration-300 ease-out">
                   {c.description}
                 </p>
-
-                {/* "Shop now" CTA — slides up slightly after description */}
-                <span className="inline-flex items-center gap-1.5 text-blush-300 text-sm font-semibold mt-2
-                                translate-y-3 opacity-0
+                <span className="inline-flex items-center gap-1 text-blush-300 text-sm font-semibold mt-2
+                                translate-y-2 opacity-0
                                 group-hover:translate-y-0 group-hover:opacity-100
                                 transition-all duration-300 ease-out delay-75">
-                  Shop now <span aria-hidden>→</span>
+                  Shop now →
                 </span>
               </div>
             </Link>
           ))}
         </div>
 
-        {/* Mobile "View all" link */}
-        <div className="mt-6 text-center sm:hidden">
+        {/* Mobile view-all */}
+        <div className="mt-5 text-center sm:hidden">
           <Link href="/shop" className="btn-ghost">View all categories →</Link>
         </div>
       </section>
