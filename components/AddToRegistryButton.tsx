@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRegistry } from '@/lib/registry-store';
 import RegistrySetup from './RegistrySetup';
 
@@ -16,27 +16,21 @@ export default function AddToRegistryButton({ productId, variantId, qty = 1 }: P
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState('');
+  // Tracks that the user clicked "Add" before having a registry — will auto-add once one is created
+  const [pendingAdd, setPendingAdd] = useState(false);
 
   const alreadyIn = items.some(
     (i) => i.productId === productId && (i.variantId || null) === (variantId || null)
   );
 
-  async function handleClick() {
-    setError('');
-    if (!registryId || !pin) {
-      setShowSetup(true);
-      return;
-    }
-    if (alreadyIn) {
-      open();
-      return;
-    }
+  const doAdd = useCallback(async (rid: string, p: string) => {
     setLoading(true);
+    setError('');
     try {
-      const res = await fetch(`/api/registry/${registryId}/items`, {
+      const res = await fetch(`/api/registry/${rid}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, productId, variantId: variantId || null, qtyWanted: qty }),
+        body: JSON.stringify({ pin: p, productId, variantId: variantId || null, qtyWanted: qty }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -52,7 +46,7 @@ export default function AddToRegistryButton({ productId, variantId, qty = 1 }: P
         );
         setAdded(true);
         open();
-        setTimeout(() => setAdded(false), 2000);
+        setTimeout(() => setAdded(false), 2500);
       } else {
         setError(data.error || 'Could not add to registry.');
         setTimeout(() => setError(''), 4000);
@@ -63,18 +57,40 @@ export default function AddToRegistryButton({ productId, variantId, qty = 1 }: P
     } finally {
       setLoading(false);
     }
+  }, [productId, variantId, qty, setItems, open]);
+
+  // After setup creates/finds a registry, auto-complete the add the user originally clicked
+  useEffect(() => {
+    if (pendingAdd && registryId && pin && !alreadyIn) {
+      setPendingAdd(false);
+      doAdd(registryId, pin);
+    }
+  }, [pendingAdd, registryId, pin, alreadyIn, doAdd]);
+
+  function handleClick() {
+    setError('');
+    if (!registryId || !pin) {
+      setPendingAdd(true);
+      setShowSetup(true);
+      return;
+    }
+    if (alreadyIn) {
+      open();
+      return;
+    }
+    doAdd(registryId, pin);
   }
 
   let label = alreadyIn ? '✓ In registry' : 'Add to registry';
   if (added) label = '✓ Added to registry!';
-  if (loading) label = 'Adding…';
+  if (loading || (pendingAdd && !registryId)) label = 'Adding…';
 
   return (
     <>
       <div className="flex flex-col gap-1">
         <button
           onClick={handleClick}
-          disabled={loading}
+          disabled={loading || (pendingAdd && !registryId)}
           className={`flex items-center gap-2 border-2 rounded-full py-3 px-6 font-medium text-sm transition-all disabled:opacity-60 ${
             alreadyIn
               ? 'border-sage-400 text-sage-600 bg-sage-50'
