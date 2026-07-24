@@ -9,43 +9,14 @@ import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllConfig } from '@/lib/db';
 import { buildMetadata } from '@/lib/seo';
 
-// One unique icon per category slug
-const CATEGORY_ICONS: Record<string, ReactNode> = {
-  gear: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
-      <path d="M12 3C8.5 3 6 5.5 6 8c0 2.2 1.5 4 3 5l-1 4h8l-1-4c1.5-1 3-2.8 3-5 0-2.5-2.5-5-6-5z" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M9 17h6" strokeLinecap="round"/>
-    </svg>
-  ),
-  baby: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
-      <circle cx="12" cy="8" r="4"/>
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round"/>
-    </svg>
-  ),
-  sleep: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-  feeding: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
-      <path d="M8 3v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V3" strokeLinecap="round"/>
-      <path d="M12 9v12M10 21h4" strokeLinecap="round"/>
-    </svg>
-  ),
-  nursery: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
-      <path d="M3 21V7l9-4 9 4v14" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M9 21v-8h6v8" strokeLinecap="round"/>
-      <path d="M12 3v4" strokeLinecap="round"/>
-    </svg>
-  ),
-  toys: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6 text-blush-500" aria-hidden>
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
+// Lifestyle photo for each category — swap URLs in admin or here to refresh the look
+const CATEGORY_IMAGES: Record<string, string> = {
+  gear:    'https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=800&q=80',
+  baby:    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
+  sleep:   'https://images.unsplash.com/photo-1566909914520-7ddbc01d4f12?auto=format&fit=crop&w=800&q=80',
+  feeding: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&w=800&q=80',
+  nursery: 'https://images.unsplash.com/photo-1586105251261-72a756497a11?auto=format&fit=crop&w=800&q=80',
+  toys:    'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=800&q=80',
 };
 
 const TESTIMONIALS = [
@@ -168,24 +139,68 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
       {/* ── Featured Product Spotlight ── */}
       {featuredProduct && <FeaturedProduct product={featuredProduct} />}
 
+      {/* ── Shop by need — photo grid ── */}
       <section className="container-page py-12 sm:py-16">
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-end justify-between mb-8 sm:mb-10">
           <div>
+            <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium mb-2">Collections</p>
             <h2 className="font-display text-3xl sm:text-4xl text-ink-900">Shop by need</h2>
-            <p className="text-ink-500 mt-1">Find what fits your stage.</p>
           </div>
           <Link href="/shop" className="hidden sm:inline-flex btn-ghost">View all →</Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
           {categories.map((c) => (
-            <Link key={c.slug} href={`/shop/${c.slug}`} className="group card p-5 hover:-translate-y-0.5 hover:shadow-soft transition-all">
-              <div className="w-12 h-12 rounded-2xl bg-blush-50 flex items-center justify-center mb-3 group-hover:bg-blush-100 transition-colors">
-                {CATEGORY_ICONS[c.slug] ?? <span aria-hidden className="text-blush-500">♥</span>}
+            <Link
+              key={c.slug}
+              href={`/shop/${c.slug}`}
+              className="group relative overflow-hidden rounded-3xl aspect-[3/4] block"
+            >
+              {/* Category lifestyle photo */}
+              <Image
+                src={CATEGORY_IMAGES[c.slug] ?? DEFAULTS.hero_image}
+                alt={c.label}
+                fill
+                sizes="(max-width: 640px) 50vw, 33vw"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              />
+
+              {/* Permanent gradient so text is always readable */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/20 to-black/0" />
+
+              {/* Subtle blush tint on hover */}
+              <div className="absolute inset-0 bg-blush-400/0 group-hover:bg-blush-400/12 transition-colors duration-400" />
+
+              {/* Text block at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+                {/* Category label — always visible */}
+                <h3 className="font-display text-xl sm:text-2xl text-white leading-tight">
+                  {c.label}
+                </h3>
+
+                {/* Description — slides up on hover */}
+                <p className="text-white/70 text-sm mt-1.5 leading-relaxed line-clamp-2
+                              translate-y-3 opacity-0
+                              group-hover:translate-y-0 group-hover:opacity-100
+                              transition-all duration-300 ease-out">
+                  {c.description}
+                </p>
+
+                {/* "Shop now" CTA — slides up slightly after description */}
+                <span className="inline-flex items-center gap-1.5 text-blush-300 text-sm font-semibold mt-2
+                                translate-y-3 opacity-0
+                                group-hover:translate-y-0 group-hover:opacity-100
+                                transition-all duration-300 ease-out delay-75">
+                  Shop now <span aria-hidden>→</span>
+                </span>
               </div>
-              <h3 className="font-display text-lg text-ink-900">{c.label}</h3>
-              <p className="text-sm text-ink-500 mt-1 line-clamp-2">{c.description}</p>
             </Link>
           ))}
+        </div>
+
+        {/* Mobile "View all" link */}
+        <div className="mt-6 text-center sm:hidden">
+          <Link href="/shop" className="btn-ghost">View all categories →</Link>
         </div>
       </section>
 
