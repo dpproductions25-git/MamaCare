@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRegistry, verifyRegistryByEmail, findRegistryByEmail } from '@/lib/db-registry';
+import { createRegistry, verifyRegistryByEmail, findRegistryByEmail, ensureRegistrySchema } from '@/lib/db-registry';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     if (!email || !pin || !/^\d{4}$/.test(String(pin))) {
       return NextResponse.json({ error: 'email and a 4-digit PIN are required.' }, { status: 400 });
     }
+    await ensureRegistrySchema();
     // Prevent duplicate registries for same email
     const existing = await findRegistryByEmail(email);
     if (existing) {
@@ -45,6 +46,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'email and pin are required.' }, { status: 400 });
   }
   try {
+    await ensureRegistrySchema();
     const registry = await verifyRegistryByEmail(email, pin);
     if (!registry) {
       return NextResponse.json({ error: 'Invalid email or PIN.' }, { status: 401 });
