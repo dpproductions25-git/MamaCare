@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
-  addRegistryItem, removeRegistryItem, verifyRegistryPin, getRegistryItems
+  addRegistryItem, removeRegistryItem, verifyRegistryPin, getRegistryItems, ensureRegistrySchema
 } from '@/lib/db-registry';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -14,6 +14,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
   }
   try {
+    await ensureRegistrySchema();
     const { pin, productId, variantId, qtyWanted, note } = await req.json();
     if (!pin || !productId) {
       return NextResponse.json({ error: 'pin and productId are required.' }, { status: 400 });
