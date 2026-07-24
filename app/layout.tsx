@@ -7,6 +7,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import EmailPopup from '@/components/EmailPopup';
+import RegistryDrawer from '@/components/RegistryDrawer';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { getMergedProducts } from '@/lib/product-overrides';
 
@@ -112,6 +113,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="flex-1">{children}</main>
         <Footer />
         <EmailPopup />
+        <RegistryDrawer />
         <Analytics />
         <SpeedInsights />
 

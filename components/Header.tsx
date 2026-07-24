@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useCart } from '@/lib/cart';
+import { useRegistry } from '@/lib/registry-store';
 import { categories, getProductsByCategory, getBestSellers } from '@/lib/products';
 
 type NavProduct = { slug: string; name: string; image: string; price: number };
@@ -13,6 +14,8 @@ export default function Header({ featuredProduct }: { featuredProduct?: NavProdu
   const [shopMegaOpen, setShopMegaOpen] = useState(false);
   const [count, setCount] = useState(0);
   const items = useCart((s) => s.items);
+  const openRegistry = useRegistry((s) => s.open);
+  const registryItemCount = useRegistry((s) => s.items.length);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -69,6 +72,22 @@ export default function Header({ featuredProduct }: { featuredProduct?: NavProdu
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* Registry icon */}
+          <button
+            onClick={openRegistry}
+            aria-label={`Registry with ${registryItemCount} items`}
+            className="relative inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-cream-100"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {registryItemCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blush-400 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center">
+                {registryItemCount}
+              </span>
+            )}
+          </button>
+
           <Link
             href="/cart"
             className="relative inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-cream-100"

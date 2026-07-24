@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Product, ProductVariant } from '@/lib/types';
 import { useCart } from '@/lib/cart';
 import { colorSwatchStyle } from '@/lib/colors';
+import AddToRegistryButton from './AddToRegistryButton';
 
 export default function ProductGallery({ product }: { product: Product }) {
   const rawVariants = product.variants || [];
@@ -239,7 +240,7 @@ export default function ProductGallery({ product }: { product: Product }) {
           </div>
         )}
 
-        {/* ── Qty + Add to cart ── */}
+        {/* ── Qty + Add to cart + Registry ── */}
         <div className="mt-8 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <div className="inline-flex items-center bg-white border border-ink-900/10 rounded-full">
             <button type="button" aria-label="Decrease quantity" className="w-10 h-10 text-ink-700 hover:text-blush-500" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
@@ -253,6 +254,11 @@ export default function ProductGallery({ product }: { product: Product }) {
           >
             {cartLabel}
           </button>
+          <AddToRegistryButton
+            productId={product.id}
+            variantId={selectedVariant?.vid}
+            qty={qty}
+          />
         </div>
 
         <ul className="mt-8 grid grid-cols-2 gap-4 text-sm text-ink-700">
