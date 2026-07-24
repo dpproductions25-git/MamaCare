@@ -40,19 +40,30 @@ export default function FeaturedProduct({ product }: Props) {
   const soldK = Math.floor((product.reviewsCount * 11) / 100) * 100;
   const soldLabel = soldK >= 1000 ? `${(soldK / 1000).toFixed(1)}k+` : `${soldK}+`;
 
-  // Unique colors from variants (preserving insertion order)
-  const colorMap = new Map<string, string>();
+  // Build color → imageIndex mapping.
+  // Use base-URL comparison (strip query params) to avoid any serialization
+  // mismatch between server-side product prop and client-side images array.
+  const colorOrder: string[] = [];
+  const colorToIdx = new Map<string, number>(); // color → index in `images`
+
   product.variants?.forEach((v) => {
-    if (v.color && v.image && !colorMap.has(v.color)) colorMap.set(v.color, v.image);
+    if (v.color && v.image && !colorToIdx.has(v.color)) {
+      const base = v.image.split('?')[0];
+      const idx = images.findIndex((img) => img.split('?')[0] === base);
+      colorToIdx.set(v.color, idx >= 0 ? idx : 0);
+      colorOrder.push(v.color);
+    }
   });
-  const colorEntries = [...colorMap.entries()];
+
+  // Which color corresponds to the currently displayed image?
+  // Derived from state — always in sync with thumbnails.
+  const activeColor = colorOrder.find((c) => colorToIdx.get(c) === activeImg) ?? colorOrder[0];
 
   // Pick 3 selling-point bullets dynamically
   const uniqueSizes = [...new Set(product.variants?.map((v) => v.size).filter(Boolean))];
-  const uniqueColors = [...new Set(product.variants?.map((v) => v.color).filter(Boolean))];
   const bullets: string[] = [];
-  if (uniqueColors.length > 1 && uniqueSizes.length > 1) {
-    bullets.push(`${uniqueColors.length} colors × ${uniqueSizes.length} sizes to choose from`);
+  if (colorOrder.length > 1 && uniqueSizes.length > 1) {
+    bullets.push(`${colorOrder.length} colors × ${uniqueSizes.length} sizes to choose from`);
   }
   bullets.push(product.shortDescription);
   if (product.bestSeller) bullets.push('Mama-approved — our #1 best seller this season');
@@ -166,23 +177,25 @@ export default function FeaturedProduct({ product }: Props) {
           </div>
 
           {/* Color swatches */}
-          {colorEntries.length > 0 && (
+          {colorOrder.length > 0 && (
             <div className="mt-6">
               <p className="text-xs text-ink-500 uppercase tracking-widest mb-2.5">
-                Color — {[...colorMap.keys()].length} options
+                Color — <span className="normal-case font-medium text-ink-700">{activeColor}</span>
               </p>
               <div className="flex gap-2.5 flex-wrap">
-                {colorEntries.map(([color, img]) => {
-                  const imgIdx = images.indexOf(img);
-                  const isActive = imgIdx >= 0 && imgIdx === activeImg;
+                {colorOrder.map((color) => {
+                  const idx = colorToIdx.get(color) ?? 0;
+                  const isActive = color === activeColor;
                   return (
                     <button
                       key={color}
                       type="button"
                       title={color}
-                      onClick={() => imgIdx >= 0 && setActiveImg(imgIdx)}
+                      onClick={() => setActiveImg(idx)}
                       className={`w-8 h-8 rounded-full transition-all duration-150 ${
-                        isActive ? 'ring-2 ring-blush-400 ring-offset-2 scale-110' : 'hover:scale-110 ring-1 ring-ink-200'
+                        isActive
+                          ? 'ring-2 ring-blush-400 ring-offset-2 scale-110'
+                          : 'hover:scale-110 ring-1 ring-ink-200'
                       }`}
                       style={{ backgroundColor: COLOR_HEX[color] ?? '#ccc' }}
                       aria-label={color}
