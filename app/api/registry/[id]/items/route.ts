@@ -20,7 +20,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'pin and productId are required.' }, { status: 400 });
     }
     const valid = await verifyRegistryPin(params.id, String(pin));
-    if (!valid) return NextResponse.json({ error: 'Invalid PIN.' }, { status: 401 });
+    if (!valid) {
+      console.error(`[registry/items POST] PIN verification failed for registry ${params.id}`);
+      return NextResponse.json({ error: 'Invalid PIN.' }, { status: 401 });
+    }
 
     const item = await addRegistryItem({
       registryId: params.id, productId, variantId: variantId || null,

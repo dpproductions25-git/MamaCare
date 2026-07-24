@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRegistry } from '@/lib/registry-store';
 import RegistrySetup from './RegistrySetup';
 
@@ -11,13 +11,11 @@ type Props = {
 };
 
 export default function AddToRegistryButton({ productId, variantId, qty = 1 }: Props) {
-  const { registryId, pin, items, setItems, open } = useRegistry();
+  const { registryId, pin, items, setItems, open, clearRegistry } = useRegistry();
   const [showSetup, setShowSetup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState('');
-  // Tracks that the user clicked "Add" before having a registry — will auto-add once one is created
-  const [pendingAdd, setPendingAdd] = useState(false);
 
   const alreadyIn = items.some(
     (i) => i.productId === productId && (i.variantId || null) === (variantId || null)
@@ -47,30 +45,27 @@ export default function AddToRegistryButton({ productId, variantId, qty = 1 }: P
         setAdded(true);
         open();
         setTimeout(() => setAdded(false), 2500);
+      } else if (res.status === 401) {
+        // Stale registry state — clear it and let the user sign in again
+        clearRegistry();
+        setError('Registry session expired. Please sign in again.');
+        setShowSetup(true);
+        setTimeout(() => setError(''), 5000);
       } else {
         setError(data.error || 'Could not add to registry.');
-        setTimeout(() => setError(''), 4000);
+        setTimeout(() => setError(''), 5000);
       }
     } catch {
       setError('Network error — please try again.');
-      setTimeout(() => setError(''), 4000);
+      setTimeout(() => setError(''), 5000);
     } finally {
       setLoading(false);
     }
-  }, [productId, variantId, qty, setItems, open]);
-
-  // After setup creates/finds a registry, auto-complete the add the user originally clicked
-  useEffect(() => {
-    if (pendingAdd && registryId && pin && !alreadyIn) {
-      setPendingAdd(false);
-      doAdd(registryId, pin);
-    }
-  }, [pendingAdd, registryId, pin, alreadyIn, doAdd]);
+  }, [productId, variantId, qty, setItems, open, clearRegistry]);
 
   function handleClick() {
     setError('');
     if (!registryId || !pin) {
-      setPendingAdd(true);
       setShowSetup(true);
       return;
     }
@@ -81,16 +76,23 @@ export default function AddToRegistryButton({ productId, variantId, qty = 1 }: P
     doAdd(registryId, pin);
   }
 
+  // Called by RegistrySetup immediately after creation/access — fires doAdd directly
+  // without relying on Zustand state propagation or useEffect timing.
+  function handleRegistryReady(rid: string, p: string) {
+    if (!alreadyIn) doAdd(rid, p);
+    else open();
+  }
+
   let label = alreadyIn ? '✓ In registry' : 'Add to registry';
   if (added) label = '✓ Added to registry!';
-  if (loading || (pendingAdd && !registryId)) label = 'Adding…';
+  if (loading) label = 'Adding…';
 
   return (
     <>
       <div className="flex flex-col gap-1">
         <button
           onClick={handleClick}
-          disabled={loading || (pendingAdd && !registryId)}
+          disabled={loading}
           className={`flex items-center gap-2 border-2 rounded-full py-3 px-6 font-medium text-sm transition-all disabled:opacity-60 ${
             alreadyIn
               ? 'border-sage-400 text-sage-600 bg-sage-50'
@@ -102,9 +104,18 @@ export default function AddToRegistryButton({ productId, variantId, qty = 1 }: P
           </svg>
           {label}
         </button>
-        {error && <p className="text-xs text-red-500 px-2">{error}</p>}
+        {error && (
+          <p className="text-xs font-medium text-red-500 px-2 py-1 bg-red-50 rounded-lg">
+            {error}
+          </p>
+        )}
       </div>
-      {showSetup && <RegistrySetup onClose={() => setShowSetup(false)} />}
+      {showSetup && (
+        <RegistrySetup
+          onClose={() => setShowSetup(false)}
+          onSuccess={handleRegistryReady}
+        />
+      )}
     </>
   );
 }

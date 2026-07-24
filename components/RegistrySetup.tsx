@@ -16,7 +16,13 @@ function mapItems(raw: any[]): RegistryItem[] {
   }));
 }
 
-export default function RegistrySetup({ onClose }: { onClose: () => void }) {
+export default function RegistrySetup({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess?: (registryId: string, pin: string) => void;
+}) {
   const { setRegistry, setItems, open } = useRegistry();
   const [mode, setMode] = useState<Mode>('choose');
   const [loading, setLoading] = useState(false);
@@ -53,6 +59,7 @@ export default function RegistrySetup({ onClose }: { onClose: () => void }) {
         title: data.registry.title,
       });
       setItems([]);
+      onSuccess?.(data.registry.id, cPin);
       open();
       onClose();
     } catch {
