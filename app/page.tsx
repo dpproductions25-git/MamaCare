@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
+import FeaturedProduct, { featuredScore } from '@/components/FeaturedProduct';
 import { categories } from '@/lib/products';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllConfig } from '@/lib/db';
@@ -87,6 +88,13 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
   const [all, config] = await Promise.all([getMergedProducts(), getAllConfig()]);
   const bestSellers = all.filter((p) => p.bestSeller).slice(0, 8);
 
+  // Pick the highest-scoring product for the featured spotlight.
+  // Algorithm: reviewsCount × rating × (1 + discountPct) × bestSellerBonus
+  // Exclude the test product.
+  const featuredProduct = [...all]
+    .filter((p) => p.id !== 'mc-test')
+    .sort((a, b) => featuredScore(b) - featuredScore(a))[0];
+
   const hero = {
     image: config.hero_image || DEFAULTS.hero_image,
     eyebrow: config.hero_eyebrow || DEFAULTS.hero_eyebrow,
@@ -134,6 +142,9 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
         <div className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-blush-50 blur-3xl opacity-70 -z-10" />
         <div className="pointer-events-none absolute -bottom-32 -left-20 w-[380px] h-[380px] rounded-full bg-sage-50 blur-3xl opacity-70 -z-10" />
       </section>
+
+      {/* ── Featured Product Spotlight ── */}
+      {featuredProduct && <FeaturedProduct product={featuredProduct} />}
 
       <section className="container-page py-12 sm:py-16">
         <div className="flex items-end justify-between mb-8">
