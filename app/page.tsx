@@ -190,14 +190,14 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
                   {c.label}
                 </h3>
                 <p className="text-white/75 text-sm mt-1.5 leading-snug line-clamp-2
-                              translate-y-2 opacity-0
-                              group-hover:translate-y-0 group-hover:opacity-100
+                              sm:translate-y-2 sm:opacity-0
+                              sm:group-hover:translate-y-0 sm:group-hover:opacity-100
                               transition-all duration-300 ease-out">
                   {c.description}
                 </p>
                 <span className="inline-flex items-center gap-1 text-blush-300 text-sm font-semibold mt-2
-                                translate-y-2 opacity-0
-                                group-hover:translate-y-0 group-hover:opacity-100
+                                sm:translate-y-2 sm:opacity-0
+                                sm:group-hover:translate-y-0 sm:group-hover:opacity-100
                                 transition-all duration-300 ease-out delay-75">
                   Shop now →
                 </span>
