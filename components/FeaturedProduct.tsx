@@ -5,16 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Product } from '@/lib/types';
 
-/** Score a product for "featured" worthiness.
- *  Higher review count × rating × discount boost → wins. */
-export function featuredScore(p: Product): number {
-  const discountBoost =
-    p.compareAtPrice && p.compareAtPrice > p.price
-      ? (p.compareAtPrice - p.price) / p.compareAtPrice
-      : 0;
-  return p.reviewsCount * p.rating * (1 + discountBoost) * (p.bestSeller ? 1.15 : 1);
-}
-
 const COLOR_HEX: Record<string, string> = {
   Cream: '#F5F0E8',
   Sand: '#D4BC94',
