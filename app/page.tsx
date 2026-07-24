@@ -76,7 +76,7 @@ export const metadata = buildMetadata({
 });
 
 const DEFAULTS = {
-  hero_image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1400&q=80',
+  hero_image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=2400&q=85',
   hero_eyebrow: 'Lovingly made for every mama',
   hero_headline: 'Soft, supportive essentials for every season of motherhood.',
   hero_subhead: 'From bump to baby and beyond — discover thoughtfully curated baby gear, sleep, feeding, and nursery products designed to feel as good as they look.',
@@ -107,41 +107,62 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
 
   return (
     <>
-      <section className="relative overflow-hidden">
-        <div className="container-page py-14 sm:py-20 lg:py-28 grid lg:grid-cols-2 gap-10 items-center">
-          <div className="animate-fadeUp">
-            <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium">
-              {hero.eyebrow}
-            </p>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-ink-900 leading-[1.05] mt-4">
-              {hero.headline}
-            </h1>
-            <p className="text-ink-700 mt-5 max-w-lg text-lg">
-              {hero.subhead}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={hero.ctaLink} className="btn-primary">{hero.ctaText}</Link>
-              <Link href="/about" className="btn-secondary">Our story</Link>
-            </div>
-            <div className="mt-10 flex items-center gap-6 text-sm text-ink-500">
-              <span>★ 4.8 / 5 from 7,400+ mamas</span>
-              <span className="hidden sm:inline">•</span>
-              <span className="hidden sm:inline">Free U.S. shipping over $50</span>
-            </div>
-          </div>
+      {/* ── Full-bleed hero banner ── */}
+      <section className="relative w-full overflow-hidden" style={{ minHeight: '88vh' }}>
+        {/* Background image — full bleed, no border radius */}
+        <Image
+          src={hero.image}
+          alt={hero.headline}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[center_30%]"
+        />
 
-          <div className="relative aspect-[4/5] sm:aspect-[5/6] rounded-4xl overflow-hidden shadow-card animate-fadeUp">
-            <Image
-              src={hero.image}
-              alt={hero.headline}
-              fill priority
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-            />
+        {/* Left-to-right gradient — dark on left for text, fades out on right */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/5" />
+        {/* Bottom vignette for depth + smooth page transition */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+        {/* Bottom fade into page background */}
+        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#FBF5EE] to-transparent" />
+
+        {/* Content */}
+        <div className="relative z-10 flex items-center" style={{ minHeight: '88vh' }}>
+          <div className="container-page py-24 lg:py-36">
+            <div className="max-w-2xl">
+              <p className="uppercase tracking-[0.22em] text-blush-300 text-xs font-semibold mb-5">
+                {hero.eyebrow}
+              </p>
+              <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl xl:text-[5.25rem] text-white leading-[1.02] tracking-tight">
+                {hero.headline}
+              </h1>
+              <p className="text-white/75 mt-6 max-w-lg text-lg leading-relaxed">
+                {hero.subhead}
+              </p>
+              <div className="mt-10 flex flex-wrap gap-4 items-center">
+                <Link href={hero.ctaLink} className="btn-primary text-base px-8 py-4">
+                  {hero.ctaText}
+                </Link>
+                <Link
+                  href="/about"
+                  className="inline-flex items-center gap-2 text-white border border-white/40 hover:border-white hover:bg-white/10 rounded-full px-7 py-3.5 text-sm font-medium transition-all duration-200"
+                >
+                  Our story
+                </Link>
+              </div>
+              <div className="mt-12 flex flex-wrap items-center gap-5 text-sm text-white/60">
+                <span className="flex items-center gap-2">
+                  <span className="text-blush-300 text-base tracking-tight">★★★★★</span>
+                  4.8 from 7,400+ mamas
+                </span>
+                <span className="w-px h-4 bg-white/25 hidden sm:block" />
+                <span className="hidden sm:inline">Free U.S. shipping over $50</span>
+                <span className="w-px h-4 bg-white/25 hidden sm:block" />
+                <span className="hidden sm:inline">14-day returns</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-blush-50 blur-3xl opacity-70 -z-10" />
-        <div className="pointer-events-none absolute -bottom-32 -left-20 w-[380px] h-[380px] rounded-full bg-sage-50 blur-3xl opacity-70 -z-10" />
       </section>
 
       {/* ── Featured Product Spotlight ── */}
