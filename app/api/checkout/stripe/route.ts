@@ -67,6 +67,16 @@ export async function POST(req: Request) {
       });
     }
 
+    // Collect registry metadata from cart items (set when adding from a registry page)
+    const registrySnapshot = items
+      .filter((it) => it.registryId && it.registryItemId != null)
+      .map((it) => ({
+        registryId: it.registryId!,
+        itemId: it.registryItemId!,
+        qty: it.qty,
+        productId: it.productId,
+      }));
+
     const { coupon, discount, shipping } = calculateTotals(subtotal, couponCode);
 
     if (coupon && discount > 0) {
@@ -102,7 +112,8 @@ export async function POST(req: Request) {
       metadata: {
         productSnapshot: JSON.stringify(items),
         shippingAddress: JSON.stringify(shippingAddress || {}),
-        couponCode: coupon?.code || ''
+        couponCode: coupon?.code || '',
+        registrySnapshot: JSON.stringify(registrySnapshot),
       }
     });
 

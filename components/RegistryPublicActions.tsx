@@ -11,35 +11,22 @@ type Props = {
   slug: string;
 };
 
-export default function RegistryPublicActions({ registryId, itemId, productId, variantId, slug }: Props) {
+export default function RegistryPublicActions({ registryId, itemId, productId, variantId }: Props) {
   const addToCart = useCart((s) => s.add);
-  const [marking, setMarking] = useState(false);
-  const [marked, setMarked] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
+  const [added, setAdded] = useState(false);
 
-  async function handleAddToCart() {
-    addToCart(productId, 1, variantId || undefined);
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
-
-    // Optimistically mark as purchased on the registry
-    setMarking(true);
-    try {
-      await fetch(`/api/registry/${registryId}/purchase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId, qty: 1 }),
-      });
-      setMarked(true);
-    } finally {
-      setMarking(false);
-    }
+  function handleAddToCart() {
+    // Pass registry metadata into the cart item so the checkout webhook can
+    // mark the item as purchased and email the registry owner automatically.
+    addToCart(productId, 1, variantId || undefined, registryId, itemId);
+    setAdded(true);
   }
 
-  if (marked) {
+  if (added) {
     return (
-      <div className="mt-3 text-center text-xs text-sage-500 font-medium py-2 border border-sage-200 rounded-full bg-sage-50">
-        ✓ Added to cart!
+      <div className="mt-3 text-center py-2.5 px-4 rounded-full bg-sage-50 border border-sage-200">
+        <p className="text-xs font-medium text-sage-600">✓ In your cart</p>
+        <p className="text-[11px] text-sage-500 mt-0.5">Registry updates automatically after purchase</p>
       </div>
     );
   }
@@ -47,10 +34,9 @@ export default function RegistryPublicActions({ registryId, itemId, productId, v
   return (
     <button
       onClick={handleAddToCart}
-      disabled={marking}
-      className="mt-3 w-full btn-primary text-sm py-2.5 disabled:opacity-60"
+      className="mt-3 w-full btn-primary text-sm py-2.5"
     >
-      {addedToCart ? '✓ Added to cart!' : marking ? 'Adding…' : 'Add to cart'}
+      Add to cart 🎁
     </button>
   );
 }

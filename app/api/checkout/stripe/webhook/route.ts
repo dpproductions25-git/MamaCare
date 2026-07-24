@@ -3,7 +3,8 @@ import Stripe from 'stripe';
 import { createOrder as createCjOrder } from '@/lib/cj';
 import { products } from '@/lib/products';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
-import { sendOrderConfirmation } from '@/lib/email';
+import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
+import { markItemPurchased, findRegistryById, ensureRegistrySchema } from '@/lib/db-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -122,6 +123,47 @@ export async function POST(req: Request) {
         if ((cj as any)?.orderId) await setCjOrderId(session.id, String((cj as any).orderId));
       } catch (e) {
         console.error('CJ fulfillment failed', e);
+      }
+    }
+
+    // 4) Mark registry items as purchased and notify the registry owner
+    type RegSnapshotItem = { registryId: string; itemId: number; qty: number; productId: string };
+    const registrySnap: RegSnapshotItem[] = JSON.parse(session.metadata?.registrySnapshot || '[]');
+    if (registrySnap.length) {
+      try {
+        await ensureRegistrySchema();
+
+        // Group by registry so we send one email per registry
+        const byRegistry = new Map<string, RegSnapshotItem[]>();
+        for (const ri of registrySnap) {
+          if (!byRegistry.has(ri.registryId)) byRegistry.set(ri.registryId, []);
+          byRegistry.get(ri.registryId)!.push(ri);
+        }
+
+        for (const [registryId, regItems] of byRegistry) {
+          // Mark each item purchased (capped at qty_wanted in DB)
+          for (const ri of regItems) {
+            await markItemPurchased(ri.itemId, ri.qty);
+          }
+
+          // Notify the registry owner
+          const registry = await findRegistryById(registryId);
+          if (registry) {
+            const giftedItems = regItems.map((ri) => ({
+              productName: products.find((p) => p.id === ri.productId)?.name ?? 'Item',
+              qty: ri.qty,
+            }));
+            await sendRegistryGiftNotification({
+              to: registry.email,
+              ownerName: registry.owner_name,
+              registryTitle: registry.title,
+              registryId,
+              giftedItems,
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Registry purchase processing failed (Stripe)', e);
       }
     }
   } catch (e) {

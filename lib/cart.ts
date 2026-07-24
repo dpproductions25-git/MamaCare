@@ -8,7 +8,7 @@ import { products } from './products';
 type CartState = {
   items: CartItem[];
   couponCode: string | null;
-  add: (productId: string, qty?: number, variantId?: string) => void;
+  add: (productId: string, qty?: number, variantId?: string, registryId?: string, registryItemId?: number) => void;
   remove: (productId: string, variantId?: string) => void;
   setQty: (productId: string, qty: number, variantId?: string) => void;
   applyCoupon: (code: string) => void;
@@ -27,17 +27,25 @@ export const useCart = create<CartState>()(
       items: [],
       couponCode: null,
 
-      add: (productId, qty = 1, variantId) =>
+      add: (productId, qty = 1, variantId, registryId, registryItemId) =>
         set((state) => {
           const existing = state.items.find((i) => sameLine(i, productId, variantId));
           if (existing) {
             return {
               items: state.items.map((i) =>
-                sameLine(i, productId, variantId) ? { ...i, qty: i.qty + qty } : i
+                sameLine(i, productId, variantId)
+                  ? {
+                      ...i,
+                      qty: i.qty + qty,
+                      // Attach registry metadata if not already present
+                      registryId: i.registryId ?? registryId,
+                      registryItemId: i.registryItemId ?? registryItemId,
+                    }
+                  : i
               )
             };
           }
-          return { items: [...state.items, { productId, qty, variantId }] };
+          return { items: [...state.items, { productId, qty, variantId, registryId, registryItemId }] };
         }),
 
       remove: (productId, variantId) =>

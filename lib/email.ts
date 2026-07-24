@@ -87,6 +87,49 @@ export async function sendOrderConfirmation(opts: {
   });
 }
 
+export async function sendRegistryGiftNotification(opts: {
+  to: string;
+  ownerName: string;
+  registryTitle: string;
+  registryId: string;
+  giftedItems: { productName: string; qty: number }[];
+}) {
+  const c = client();
+  if (!c) { console.warn('Resend not configured — skipping registry gift email'); return; }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mamacare.us';
+  const registryUrl = `${siteUrl}/registry/${opts.registryId}`;
+
+  const itemRows = opts.giftedItems
+    .map((i) => `
+      <tr>
+        <td style="padding:8px 0;">🎁 ${i.productName}</td>
+        <td style="padding:8px 0;text-align:right;color:#7A7A87;">× ${i.qty}</td>
+      </tr>`)
+    .join('');
+
+  const plural = opts.giftedItems.length > 1 ? 'gifts were' : 'a gift was';
+
+  const body = `
+    <p>Great news, ${opts.ownerName}! ${plural.charAt(0).toUpperCase() + plural.slice(1)} just purchased from your <strong>${opts.registryTitle}</strong>! 🥰</p>
+    <table width="100%" style="border-top:1px solid #eee;border-bottom:1px solid #eee;margin:16px 0;">
+      ${itemRows}
+    </table>
+    <p>Your registry has been updated automatically to reflect what's been purchased.</p>
+    <p style="margin-top:20px;">
+      <a href="${registryUrl}" style="background:#E68197;color:#fff;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:600;">
+        View your registry →
+      </a>
+    </p>`;
+
+  await c.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: `🎁 Someone bought from your baby registry!`,
+    html: shell(`Someone bought from ${opts.registryTitle}!`, body),
+  });
+}
+
 export async function sendShippingUpdate(opts: {
   to: string;
   orderId: string;

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createOrder as createCjOrder } from '@/lib/cj';
 import { products } from '@/lib/products';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
-import { sendOrderConfirmation } from '@/lib/email';
+import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
+import { markItemPurchased, findRegistryById, ensureRegistrySchema } from '@/lib/db-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -103,6 +104,46 @@ export async function POST(req: Request) {
       }
     } catch (e) {
       console.error('CJ fulfillment after PayPal capture failed', e);
+    }
+
+    // 4) Mark registry items as purchased and notify the registry owner
+    // Cart items carry registryId + registryItemId when added from a registry page.
+    try {
+      type CartItemWithReg = { productId: string; qty: number; registryId?: string; registryItemId?: number };
+      const cartItems = items as CartItemWithReg[];
+      const registrySnap = cartItems.filter((i) => i.registryId && i.registryItemId != null);
+
+      if (registrySnap.length) {
+        await ensureRegistrySchema();
+
+        const byRegistry = new Map<string, CartItemWithReg[]>();
+        for (const ri of registrySnap) {
+          if (!byRegistry.has(ri.registryId!)) byRegistry.set(ri.registryId!, []);
+          byRegistry.get(ri.registryId!)!.push(ri);
+        }
+
+        for (const [registryId, regItems] of byRegistry) {
+          for (const ri of regItems) {
+            await markItemPurchased(ri.registryItemId!, ri.qty);
+          }
+          const registry = await findRegistryById(registryId);
+          if (registry) {
+            const giftedItems = regItems.map((ri) => ({
+              productName: products.find((p) => p.id === ri.productId)?.name ?? 'Item',
+              qty: ri.qty,
+            }));
+            await sendRegistryGiftNotification({
+              to: registry.email,
+              ownerName: registry.owner_name,
+              registryTitle: registry.title,
+              registryId,
+              giftedItems,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Registry purchase processing failed (PayPal)', e);
     }
 
     return NextResponse.json({ ok: true });

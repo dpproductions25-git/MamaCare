@@ -49,6 +49,10 @@ export type CartItem = {
   productId: string;
   variantId?: string;
   qty: number;
+  /** Set when this item was added from a registry page */
+  registryId?: string;
+  /** The registry_items.id row — used to mark purchased after checkout */
+  registryItemId?: number;
 };
 
 export type ShippingAddress = {
