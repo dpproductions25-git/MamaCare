@@ -23,9 +23,10 @@ export default function FeaturedProduct({ product }: Props) {
   (product.images ?? []).forEach(addUrl);
   const displayGallery = gallery.slice(0, 6);
 
-  // Active image is a URL string — same approach as ProductGallery.
-  // Initialise to the first variant's image (or main product image).
-  const [activeImage, setActiveImage] = useState<string>(variants[0]?.image || product.image);
+  // Active image: URL string. Starts as the product's main image — no color pre-selected.
+  const [activeImage, setActiveImage] = useState<string>(product.image);
+  // Selected color: undefined until the user explicitly clicks a swatch.
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
 
   // Unique ordered color list
   const colorOrder: string[] = [];
@@ -37,10 +38,8 @@ export default function FeaturedProduct({ product }: Props) {
     }
   });
 
-  // Which color is active? Derived from activeImage — always in sync.
-  const activeColor = colorOrder.find((c) => colorToVariantImg.get(c) === activeImage);
-
   function pickColor(color: string) {
+    setSelectedColor(color);
     const img = colorToVariantImg.get(color);
     if (img) setActiveImage(img);
   }
@@ -167,12 +166,12 @@ export default function FeaturedProduct({ product }: Props) {
           {colorOrder.length > 0 && (
             <div className="mt-6">
               <p className="text-xs text-ink-500 uppercase tracking-widest mb-2.5">
-                Color{activeColor && <span className="normal-case font-medium text-ink-700 ml-1">— {activeColor}</span>}
+                Color{selectedColor && <span className="normal-case font-medium text-ink-700 ml-1">— {selectedColor}</span>}
               </p>
               <div className="flex gap-2 flex-wrap">
                 {colorOrder.map((color) => {
                   const variantImg = colorToVariantImg.get(color)!;
-                  const isActive = color === activeColor;
+                  const isActive = color === selectedColor;
                   return (
                     <button
                       key={color}
