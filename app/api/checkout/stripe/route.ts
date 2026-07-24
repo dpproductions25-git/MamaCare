@@ -5,6 +5,7 @@ import { getAllOverrides } from '@/lib/db';
 import { applyOverridesToProducts } from '@/lib/product-overrides';
 import { SITE_URL } from '@/lib/seo';
 import { calculateTotals } from '@/lib/coupons';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,11 @@ function getStripe() {
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  if (!rateLimit(`checkout:stripe:${ip}`, 10, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
+  }
+
   try {
     const body = await req.json();
     const items: { productId: string; qty: number; variantId?: string }[] = body.items || [];

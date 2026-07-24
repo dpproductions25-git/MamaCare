@@ -3,6 +3,7 @@ import { products as staticProducts } from '@/lib/products';
 import { getAllOverrides } from '@/lib/db';
 import { applyOverridesToProducts } from '@/lib/product-overrides';
 import { calculateTotals } from '@/lib/coupons';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,11 @@ async function paypalToken(): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  if (!rateLimit(`checkout:paypal:${ip}`, 10, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
+  }
+
   try {
     const body = await req.json();
     const items: { productId: string; qty: number; variantId?: string }[] = body.items || [];

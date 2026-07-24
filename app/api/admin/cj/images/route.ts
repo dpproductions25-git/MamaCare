@@ -38,10 +38,33 @@ const BROWSER_HEADERS = {
  *   2. CJ internal product API — calls the same JSON endpoint their frontend uses
  *   3. HTML scraping          — __NEXT_DATA__ JSON → og:image meta → regex
  */
+const ALLOWED_CJ_HOSTS = [
+  'www.cjdropshipping.com',
+  'cjdropshipping.com',
+  'app.cjdropshipping.com',
+];
+
+function isCjUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return u.protocol === 'https:' && ALLOWED_CJ_HOSTS.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   let pid = searchParams.get('pid') || '';
   const rawUrl = searchParams.get('url') || '';
+
+  // SSRF guard: reject any ?url= that isn't a known CJ hostname
+  if (rawUrl && !isCjUrl(rawUrl)) {
+    return NextResponse.json(
+      { error: 'Invalid URL — only CJ Dropshipping product URLs are accepted.' },
+      { status: 400 }
+    );
+  }
 
   if (!pid && rawUrl) pid = parseCjUrl(rawUrl).pid || '';
   if (!pid && !rawUrl) {
