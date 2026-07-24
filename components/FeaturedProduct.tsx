@@ -23,10 +23,10 @@ export default function FeaturedProduct({ product }: Props) {
   (product.images ?? []).forEach(addUrl);
   const displayGallery = gallery.slice(0, 6);
 
-  // Active image: URL string. Starts as the product's main image — no color pre-selected.
-  const [activeImage, setActiveImage] = useState<string>(product.image);
-  // Selected color: undefined until the user explicitly clicks a swatch.
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
+  // Active image and selected color both default to the first variant.
+  const firstVariant = variants[0];
+  const [activeImage, setActiveImage] = useState<string>(firstVariant?.image || product.image);
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(firstVariant?.color);
 
   // Unique ordered color list
   const colorOrder: string[] = [];
