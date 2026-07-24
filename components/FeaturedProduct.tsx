@@ -5,69 +5,62 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Product } from '@/lib/types';
 
-const COLOR_HEX: Record<string, string> = {
-  Cream: '#F5F0E8',
-  Sand: '#D4BC94',
-  Blush: '#F3A5B6',
-  Sage: '#A8C5A0',
-  Sky: '#A8C8E8',
-  Charcoal: '#4A4A4A',
-  White: '#F8F8F8',
-  Gray: '#B0B0B0',
-  Navy: '#2D3A5A',
-  Pink: '#F4A7B9',
-  Brown: '#8B6347',
-  Black: '#2A2A33',
-};
 
 interface Props {
   product: Product;
 }
 
 export default function FeaturedProduct({ product }: Props) {
-  const images = (product.images?.length ? product.images : [product.image]).slice(0, 6);
-  const [activeImg, setActiveImg] = useState(0);
+  const variants = product.variants ?? [];
 
-  const onSale = product.compareAtPrice && product.compareAtPrice > product.price;
-  const savingsAmt = onSale
-    ? (product.compareAtPrice! - product.price).toFixed(0)
-    : null;
-  const savingsPct = onSale
-    ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
-    : null;
+  // Build gallery exactly like ProductGallery does:
+  // product.image first, then each variant's unique image, then product.images — deduped.
+  const gallery: string[] = [];
+  const seen = new Set<string>();
+  const addUrl = (url?: string) => { if (url && !seen.has(url)) { seen.add(url); gallery.push(url); } };
+  addUrl(product.image);
+  variants.forEach((v) => addUrl(v.image));
+  (product.images ?? []).forEach(addUrl);
+  const displayGallery = gallery.slice(0, 6);
 
-  // "X+ sold" proxy from review count (10–12× multiplier is industry-standard)
-  const soldK = Math.floor((product.reviewsCount * 11) / 100) * 100;
-  const soldLabel = soldK >= 1000 ? `${(soldK / 1000).toFixed(1)}k+` : `${soldK}+`;
+  // Active image is a URL string — same approach as ProductGallery.
+  // Initialise to the first variant's image (or main product image).
+  const [activeImage, setActiveImage] = useState<string>(variants[0]?.image || product.image);
 
-  // Build color → imageIndex mapping.
-  // Use base-URL comparison (strip query params) to avoid any serialization
-  // mismatch between server-side product prop and client-side images array.
+  // Unique ordered color list
   const colorOrder: string[] = [];
-  const colorToIdx = new Map<string, number>(); // color → index in `images`
-
-  product.variants?.forEach((v) => {
-    if (v.color && v.image && !colorToIdx.has(v.color)) {
-      const base = v.image.split('?')[0];
-      const idx = images.findIndex((img) => img.split('?')[0] === base);
-      colorToIdx.set(v.color, idx >= 0 ? idx : 0);
+  const colorToVariantImg = new Map<string, string>(); // color → variant image URL
+  variants.forEach((v) => {
+    if (v.color && v.image && !colorToVariantImg.has(v.color)) {
+      colorToVariantImg.set(v.color, v.image);
       colorOrder.push(v.color);
     }
   });
 
-  // Which color corresponds to the currently displayed image?
-  // Derived from state — always in sync with thumbnails.
-  const activeColor = colorOrder.find((c) => colorToIdx.get(c) === activeImg) ?? colorOrder[0];
+  // Which color is active? Derived from activeImage — always in sync.
+  const activeColor = colorOrder.find((c) => colorToVariantImg.get(c) === activeImage);
 
-  // Pick 3 selling-point bullets dynamically
-  const uniqueSizes = [...new Set(product.variants?.map((v) => v.size).filter(Boolean))];
+  function pickColor(color: string) {
+    const img = colorToVariantImg.get(color);
+    if (img) setActiveImage(img);
+  }
+
+  const onSale = product.compareAtPrice && product.compareAtPrice > product.price;
+  const savingsAmt = onSale ? (product.compareAtPrice! - product.price).toFixed(0) : null;
+  const savingsPct = onSale
+    ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
+    : null;
+
+  const soldK = Math.floor((product.reviewsCount * 11) / 100) * 100;
+  const soldLabel = soldK >= 1000 ? `${(soldK / 1000).toFixed(1)}k+` : `${soldK}+`;
+
+  const uniqueSizes = [...new Set(variants.map((v) => v.size).filter(Boolean))];
   const bullets: string[] = [];
   if (colorOrder.length > 1 && uniqueSizes.length > 1) {
     bullets.push(`${colorOrder.length} colors × ${uniqueSizes.length} sizes to choose from`);
   }
   bullets.push(product.shortDescription);
   if (product.bestSeller) bullets.push('Mama-approved — our #1 best seller this season');
-  // Trim to 3 unique
   const finalBullets = [...new Set(bullets)].slice(0, 3);
 
   const stars = Math.round(product.rating);
@@ -88,9 +81,8 @@ export default function FeaturedProduct({ product }: Props) {
 
         {/* ── Left: Image panel ── */}
         <div className="relative bg-cream-100 aspect-square lg:aspect-auto lg:min-h-[520px]">
-          {/* Main image */}
           <Image
-            src={images[activeImg]}
+            src={activeImage}
             alt={product.name}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
@@ -98,29 +90,28 @@ export default function FeaturedProduct({ product }: Props) {
             priority
           />
 
-          {/* Sale ribbon */}
           {onSale && (
             <div className="absolute top-5 left-5 bg-blush-400 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
               {savingsPct}% OFF
             </div>
           )}
 
-          {/* Thumbnail strip */}
-          {images.length > 1 && (
+          {/* Thumbnail strip — same URL-equality check as ProductGallery */}
+          {displayGallery.length > 1 && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4">
-              {images.map((img, i) => (
+              {displayGallery.map((url) => (
                 <button
-                  key={i}
+                  key={url}
                   type="button"
-                  onClick={() => setActiveImg(i)}
-                  aria-label={`View image ${i + 1}`}
+                  onClick={() => setActiveImage(url)}
+                  aria-label="View image"
                   className={`relative w-11 h-11 rounded-xl overflow-hidden border-2 transition-all duration-200 flex-shrink-0 ${
-                    i === activeImg
+                    url === activeImage
                       ? 'border-blush-400 shadow-md scale-105'
                       : 'border-white/70 opacity-60 hover:opacity-100 hover:border-white'
                   }`}
                 >
-                  <Image src={img} alt="" fill className="object-cover" sizes="44px" />
+                  <Image src={url} alt="" fill className="object-cover" sizes="44px" />
                 </button>
               ))}
             </div>
@@ -130,7 +121,6 @@ export default function FeaturedProduct({ product }: Props) {
         {/* ── Right: Details panel ── */}
         <div className="bg-white p-8 sm:p-10 lg:p-14 flex flex-col justify-center">
 
-          {/* Badges */}
           <div className="flex flex-wrap gap-2 mb-5">
             {product.bestSeller && (
               <span className="inline-flex items-center gap-1 bg-sage-500 text-white text-xs font-bold px-3 py-1 rounded-full">
@@ -144,12 +134,10 @@ export default function FeaturedProduct({ product }: Props) {
             )}
           </div>
 
-          {/* Title */}
           <h2 className="font-display text-2xl sm:text-3xl text-ink-900 leading-snug">
             {product.name}
           </h2>
 
-          {/* Stars + social proof */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3">
             <span className="text-blush-400 text-sm leading-none" aria-label={`${stars} stars`}>
               {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
@@ -159,7 +147,6 @@ export default function FeaturedProduct({ product }: Props) {
             <span className="text-sm font-semibold text-ink-700">{soldLabel} sold</span>
           </div>
 
-          {/* Price */}
           <div className="mt-6 flex items-baseline gap-3 flex-wrap">
             <span className="font-display text-4xl text-ink-900 tracking-tight">
               ${product.price.toFixed(2)}
@@ -176,37 +163,45 @@ export default function FeaturedProduct({ product }: Props) {
             )}
           </div>
 
-          {/* Color swatches */}
+          {/* Color swatches — use variant image as swatch thumbnail (same as ProductGallery) */}
           {colorOrder.length > 0 && (
             <div className="mt-6">
               <p className="text-xs text-ink-500 uppercase tracking-widest mb-2.5">
-                Color — <span className="normal-case font-medium text-ink-700">{activeColor}</span>
+                Color{activeColor && <span className="normal-case font-medium text-ink-700 ml-1">— {activeColor}</span>}
               </p>
-              <div className="flex gap-2.5 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
                 {colorOrder.map((color) => {
-                  const idx = colorToIdx.get(color) ?? 0;
+                  const variantImg = colorToVariantImg.get(color)!;
                   const isActive = color === activeColor;
                   return (
                     <button
                       key={color}
                       type="button"
                       title={color}
-                      onClick={() => setActiveImg(idx)}
-                      className={`w-8 h-8 rounded-full transition-all duration-150 ${
+                      aria-label={`Color: ${color}`}
+                      aria-pressed={isActive}
+                      onClick={() => pickColor(color)}
+                      className={`relative w-11 h-11 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all duration-150 ${
                         isActive
-                          ? 'ring-2 ring-blush-400 ring-offset-2 scale-110'
-                          : 'hover:scale-110 ring-1 ring-ink-200'
+                          ? 'border-blush-400 ring-2 ring-blush-200 scale-105'
+                          : 'border-transparent hover:border-blush-300 hover:scale-105'
                       }`}
-                      style={{ backgroundColor: COLOR_HEX[color] ?? '#ccc' }}
-                      aria-label={color}
-                    />
+                    >
+                      <Image src={variantImg} alt={color} fill sizes="44px" className="object-cover" />
+                      {isActive && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <svg className="w-4 h-4 drop-shadow" viewBox="0 0 20 20" fill="white">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                          </svg>
+                        </span>
+                      )}
+                    </button>
                   );
                 })}
               </div>
             </div>
           )}
 
-          {/* Bullet points */}
           <ul className="mt-7 space-y-3">
             {finalBullets.map((b) => (
               <li key={b} className="flex items-start gap-2.5 text-sm text-ink-700 leading-relaxed">
@@ -216,23 +211,15 @@ export default function FeaturedProduct({ product }: Props) {
             ))}
           </ul>
 
-          {/* CTA */}
           <div className="mt-9 flex flex-col sm:flex-row gap-3">
-            <Link
-              href={`/products/${product.slug}`}
-              className="btn-primary text-center sm:w-auto"
-            >
+            <Link href={`/products/${product.slug}`} className="btn-primary text-center sm:w-auto">
               Shop now →
             </Link>
-            <Link
-              href="/shop"
-              className="btn-secondary text-center sm:w-auto"
-            >
+            <Link href="/shop" className="btn-secondary text-center sm:w-auto">
               See all products
             </Link>
           </div>
 
-          {/* Trust signals */}
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-ink-500">
             <span>🚚 Free U.S. shipping over $50</span>
             <span>↩ 14-day returns</span>
