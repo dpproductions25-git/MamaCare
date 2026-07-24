@@ -8,6 +8,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import EmailPopup from '@/components/EmailPopup';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
+import { getMergedProducts } from '@/lib/product-overrides';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', display: 'swap' });
@@ -62,7 +63,20 @@ export const viewport: Viewport = {
   maximumScale: 5
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Fetch the override-merged best seller for the nav dropdown featured slot.
+  // Falls back gracefully if the DB is unavailable.
+  let navFeatured: { slug: string; name: string; image: string; price: number } | null = null;
+  try {
+    const all = await getMergedProducts();
+    const pick = all.filter((p) => p.bestSeller && p.inStock && p.id !== 'mc-test')[0]
+      ?? all.find((p) => p.inStock && p.id !== 'mc-test')
+      ?? null;
+    if (pick) navFeatured = { slug: pick.slug, name: pick.name, image: pick.image, price: pick.price };
+  } catch {
+    // DB unavailable — Header will fall back to static getBestSellers()
+  }
+
   const orgJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -94,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="font-sans bg-cream-50 text-ink-900 min-h-screen flex flex-col">
-        <Header />
+        <Header featuredProduct={navFeatured} />
         <main className="flex-1">{children}</main>
         <Footer />
         <EmailPopup />

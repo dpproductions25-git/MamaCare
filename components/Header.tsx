@@ -4,9 +4,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useCart } from '@/lib/cart';
-import { products, categories, getProductsByCategory, getBestSellers } from '@/lib/products';
+import { categories, getProductsByCategory, getBestSellers } from '@/lib/products';
 
-export default function Header() {
+type NavProduct = { slug: string; name: string; image: string; price: number };
+
+export default function Header({ featuredProduct }: { featuredProduct?: NavProduct | null }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [shopMegaOpen, setShopMegaOpen] = useState(false);
   const [count, setCount] = useState(0);
@@ -155,20 +157,23 @@ export default function Header() {
             {/* Featured product */}
             <div className="col-span-3">
               <p className="font-medium text-ink-900 mb-3 text-sm">Featured</p>
-              {getBestSellers().slice(0, 1).map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/products/${p.slug}`}
-                  onClick={() => setShopMegaOpen(false)}
-                  className="block group"
-                >
-                  <div className="relative aspect-square rounded-2xl overflow-hidden bg-cream-100">
-                    <Image src={p.image} alt={p.name} fill sizes="240px" className="object-cover group-hover:scale-105 transition-transform" />
-                  </div>
-                  <p className="font-display text-sm text-ink-900 mt-2 group-hover:text-blush-500 line-clamp-2">{p.name}</p>
-                  <p className="text-sm text-ink-900 font-medium mt-0.5">${p.price.toFixed(2)}</p>
-                </Link>
-              ))}
+              {(() => {
+                const fp: NavProduct | null = featuredProduct ?? (getBestSellers()[0] ?? null);
+                if (!fp) return null;
+                return (
+                  <Link
+                    href={`/products/${fp.slug}`}
+                    onClick={() => setShopMegaOpen(false)}
+                    className="block group"
+                  >
+                    <div className="relative aspect-square rounded-2xl overflow-hidden bg-cream-100">
+                      <Image src={fp.image} alt={fp.name} fill sizes="240px" className="object-cover group-hover:scale-105 transition-transform" />
+                    </div>
+                    <p className="font-display text-sm text-ink-900 mt-2 group-hover:text-blush-500 line-clamp-2">{fp.name}</p>
+                    <p className="text-sm text-ink-900 font-medium mt-0.5">${fp.price.toFixed(2)}</p>
+                  </Link>
+                );
+              })()}
             </div>
           </div>
         </div>
