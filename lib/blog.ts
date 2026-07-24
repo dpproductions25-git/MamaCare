@@ -327,6 +327,277 @@ export const posts: BlogPost[] = [
   },
 
   {
+    slug: 'newborn-sleep-schedule',
+    title: 'Newborn Sleep Schedule: What to Expect in the First 3 Months',
+    excerpt:
+      'No newborn sleeps through the night — but understanding their natural sleep cycles makes the exhaustion easier to navigate. Here is what is normal and what actually helps.',
+    coverImage: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-07-10',
+    readingMinutes: 6,
+    tags: ['newborn sleep', 'baby schedule', 'sleep tips'],
+    relatedProductSlugs: [
+      'soft-fleece-baby-sleep-sack-head-support',
+      'quilted-baby-sleeping-bag-wrap',
+      'smart-electric-rocking-bassinet-bedside',
+    ],
+    bodyHtml: `
+<p>Every new parent hears the same thing: "sleep when the baby sleeps." It sounds simple. It's not — because newborns don't sleep the way adults do, and expecting them to follow a schedule in the first weeks is a recipe for frustration. Here is what their sleep actually looks like, and what you can do to help everyone get more rest.</p>
+
+<h2>Why newborns sleep so differently</h2>
+<p>Newborns spend up to <strong>70% of their sleep in REM (active) sleep</strong> — compared to about 20% for adults. This active sleep looks restless: you'll see fluttering eyelids, twitching, little sounds. This is completely normal and important for brain development. It also means they wake easily.</p>
+<p>They also haven't developed a circadian rhythm yet. That internal clock — the one that tells your body it's dark, so it's time to sleep — takes 3 to 4 months to develop. Until then, day and night genuinely mean nothing to them.</p>
+
+<h2>What "normal" newborn sleep looks like</h2>
+<ul>
+  <li><strong>0–4 weeks:</strong> 14–17 hours of sleep per day in 2–4 hour stretches. No pattern, no schedule. Feed on demand, sleep on demand.</li>
+  <li><strong>1–2 months:</strong> Sleep starts consolidating slightly. You may begin to see a longer stretch (3–4 hours) at the start of the night.</li>
+  <li><strong>2–3 months:</strong> A loose rhythm may emerge — longer night stretches, shorter daytime naps. Still not a "schedule," but more predictable.</li>
+</ul>
+
+<h2>The difference between day and night: how to help</h2>
+<p>You can begin teaching day/night difference from week one — not through a schedule, but through environment cues:</p>
+<ul>
+  <li><strong>Daytime:</strong> Keep it bright and lively. Normal household noise is fine. Don't tiptoe around a napping newborn during the day.</li>
+  <li><strong>Nighttime:</strong> Keep feeds and changes calm, quiet, and dim. No eye contact or stimulation. The message: nighttime is boring, daytime is exciting.</li>
+</ul>
+
+<h2>The 4-hour wake window</h2>
+<p>Newborns can only handle about 45–90 minutes of awake time before they need to sleep again. If baby is awake longer than that, they'll become overtired — and overtired babies are actually harder to settle than tired ones. Watch for yawning, glazed eyes, or turning away from stimulation. Those are your "put me down" signals.</p>
+
+<h2>Setting up the sleep environment</h2>
+<p>Safe sleep guidelines haven't changed: firm, flat surface, on their back, nothing in the sleep space. But you can make that environment more sleep-conducive:</p>
+<ul>
+  <li><strong>White noise</strong> at a consistent volume (about 65 dB — similar to a shower running) helps block household noise and mimics the womb environment.</li>
+  <li><strong>A sleep sack</strong> instead of loose blankets. Our <a href="/products/soft-fleece-baby-sleep-sack-head-support">Soft Fleece Sleep Sack</a> keeps baby warm without any loose fabric in the sleep space.</li>
+  <li><strong>Darkness</strong> — even at 3 a.m. feeds. A dim red-light lamp is less stimulating than overhead lights.</li>
+</ul>
+
+<h2>When to worry (and when not to)</h2>
+<p>Not sleeping through the night at 6 weeks is not a problem. Waking every 2 hours is not a problem. Not settling immediately is not a problem. These are developmentally normal. Talk to your pediatrician if baby is sleeping significantly less than 14 hours total, is consistently hard to wake, or shows signs of breathing irregularities during sleep.</p>
+
+<h2>The one thing that actually helps most</h2>
+<p>Lower your expectations — genuinely. Most babies don't consistently sleep through the night until 4–6 months at the earliest, and many not until later. Accepting that this is a season, not a failure, makes it easier to survive. You are not doing anything wrong. Your baby is doing exactly what newborns do.</p>
+`,
+  },
+
+  {
+    slug: 'when-to-start-tummy-time',
+    title: 'When to Start Tummy Time — And How to Make Baby Actually Enjoy It',
+    excerpt:
+      'Tummy time is one of the most important things you can do for your baby\'s development — and one of the most resisted. Here is when to start, how long, and how to get buy-in from a baby who hates it.',
+    coverImage: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-07-05',
+    readingMinutes: 5,
+    tags: ['tummy time', 'baby development', 'newborn'],
+    relatedProductSlugs: [
+      'folding-baby-bouncer-seat-light-gray',
+      'newborn-cotton-clothing-gift-set',
+    ],
+    bodyHtml: `
+<p>Tummy time is supervised awake time spent on baby's stomach. It builds the neck, shoulder, and core strength babies need to roll, sit, crawl, and eventually walk. And most babies hate it — at least at first. Here is everything you need to know.</p>
+
+<h2>When to start</h2>
+<p>Day one. Seriously. As soon as you're home from the hospital, you can begin tummy time — even if it's just a few minutes at a stretch. Starting early means baby's neck muscles get used to the position before the frustration kicks in.</p>
+<p>The American Academy of Pediatrics recommends starting immediately after birth for healthy, full-term babies.</p>
+
+<h2>How much tummy time per day</h2>
+<ul>
+  <li><strong>0–1 month:</strong> 2–3 sessions of 1–2 minutes each.</li>
+  <li><strong>1–2 months:</strong> Work up to 10 minutes total per day.</li>
+  <li><strong>2–4 months:</strong> 20–30 minutes total, spread throughout the day.</li>
+  <li><strong>4 months+:</strong> As much as baby tolerates during awake play time.</li>
+</ul>
+<p>These are cumulative totals — not single sessions. Three 5-minute sessions equals 15 minutes. That counts.</p>
+
+<h2>Why baby hates it (and why that's okay)</h2>
+<p>In the early weeks, baby's neck muscles aren't strong enough to lift their head comfortably. Tummy time is genuinely hard work for them. The crying is real — they're frustrated. This is normal. You aren't hurting them. Push through 2 minutes and then flip them over. Do it again after the next nap.</p>
+
+<h2>How to make it easier</h2>
+<ul>
+  <li><strong>Get on the floor with them.</strong> Your face at their level is far more motivating than a blank floor.</li>
+  <li><strong>Use a rolled towel or small pillow under their chest</strong> to take some of the pressure off their arms in the early weeks.</li>
+  <li><strong>Try tummy-to-tummy.</strong> Lie on your back, put baby on your chest. This counts as tummy time and most babies love it.</li>
+  <li><strong>Use a mirror.</strong> Babies are fascinated by their own reflection. A small baby-safe mirror on the floor gives them a reason to lift their head.</li>
+  <li><strong>Time it right.</strong> After a nap, after a diaper change — when baby is alert and not hungry. Never right after a feed (spit-up risk).</li>
+</ul>
+
+<h2>What tummy time builds</h2>
+<ul>
+  <li>Neck and shoulder strength for head control</li>
+  <li>Core stability for sitting and standing</li>
+  <li>Arm strength for crawling and pushing up</li>
+  <li>Helps prevent flat head syndrome (positional plagiocephaly) from too much back-lying</li>
+  <li>Motor milestone progression — rolling, crawling, walking all build on tummy time foundations</li>
+</ul>
+
+<h2>Red flags to watch for</h2>
+<p>If baby consistently turns their head to only one side, or you notice their head flattening on one side, mention it to your pediatrician. This can indicate tight neck muscles (torticollis) that respond very well to early physical therapy.</p>
+
+<h2>Consistency beats duration</h2>
+<p>Two minutes three times a day beats one 20-minute session baby screams through. The goal is to build the habit and the strength gradually. Don't skip it — but don't force marathon sessions either.</p>
+`,
+  },
+
+  {
+    slug: 'postpartum-recovery-essentials',
+    title: 'Postpartum Recovery Essentials: What Your Body Needs in the First 6 Weeks',
+    excerpt:
+      'The fourth trimester is real. Here is what actually helps your body heal — and what you can skip.',
+    coverImage: 'https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-06-28',
+    readingMinutes: 7,
+    tags: ['postpartum', 'recovery', 'new mom', 'fourth trimester'],
+    bodyHtml: `
+<p>Every conversation about having a baby focuses on the birth and the newborn. Almost nothing prepares you for what happens to your body in the weeks after. The fourth trimester is real — and it deserves the same attention as the pregnancy itself.</p>
+
+<h2>What's happening in your body the first 6 weeks</h2>
+<p>Your uterus is contracting back to its pre-pregnancy size (you'll feel this as cramps, especially during breastfeeding — this is normal). Your hormone levels are dropping sharply, which can cause mood swings, night sweats, and hair loss. If you had a vaginal birth, your perineum is healing. If you had a C-section, you have a surgical incision healing underneath the skin. Your body is doing extraordinary work.</p>
+
+<h2>The physical essentials</h2>
+<p><strong>Peri bottle.</strong> The hospital will give you one. Use it. Fill it with warm water and use it after every bathroom trip instead of wiping. If yours is the basic squeeze-bottle version, an upside-down peri bottle is a significant upgrade — it lets you spray forward without awkward maneuvering.</p>
+<p><strong>Postpartum pads.</strong> Maxi pads, not tampons. You'll have lochia (postpartum bleeding) for 4–6 weeks. The first days are heavy; it lightens to spotting over time. If bleeding suddenly gets heavier after it was lightening, you've overdone it — rest more.</p>
+<p><strong>Ice packs.</strong> Hospital-grade disposable ice packs for the first 24–48 hours post-birth do more for perineal pain than almost anything else. After the first two days, switch to sitz baths.</p>
+<p><strong>Stool softeners.</strong> No one warns you. The first postpartum bowel movement is one of the most dreaded events of new motherhood. Start stool softeners (like Colace) the day you deliver. Drink water. Eat fiber. Take your time.</p>
+<p><strong>Comfortable, loose clothing.</strong> You'll still look about 5 months pregnant for 4–6 weeks. Your postpartum wardrobe should be: nothing with a waistband for the first two weeks. Wrap dresses, loose nightgowns, button-front shirts for nursing, maternity leggings.</p>
+
+<h2>For C-section recovery</h2>
+<p>The incision site needs to stay dry and clean. Avoid lifting anything heavier than your baby for the first 2 weeks. Don't drive until you can do an emergency stop without pain (usually 4–6 weeks). High-waisted underwear or a postpartum belly band can help support the incision area and reduce discomfort from waistbands rubbing.</p>
+
+<h2>Nutrition and hydration</h2>
+<p>If you're breastfeeding, you need more calories than you did while pregnant — roughly 400–500 extra per day. Hydration is critical: aim for 100+ oz of water a day. Iron-rich foods help replenish what you lost during birth. Omega-3s (found in salmon, walnuts, flaxseed) support mood and postpartum brain function.</p>
+<p>This is not the time to diet. Your body needs fuel to heal, produce milk, and function on broken sleep. Eat nourishing food when you can, accept the meals people offer, and put the scale away for at least 3 months.</p>
+
+<h2>Mental health — the part people skip</h2>
+<p>Baby blues (tearfulness, irritability, sadness) affect up to 80% of new mothers in the first 2 weeks. This is a normal hormonal response. Postpartum depression (PPD) is different: it's persistent, often starts after the first 2 weeks, and affects up to 1 in 5 mothers. Symptoms include persistent sadness, anxiety, feeling disconnected from baby, difficulty functioning, or intrusive thoughts.</p>
+<p>PPD is not a personal failure. It's a medical condition with effective treatment. If you're concerned, talk to your OB or midwife. The Edinburgh Postnatal Depression Scale (EPDS) is a simple screening tool your provider may give you — answer it honestly.</p>
+
+<h2>What you actually need vs. what's marketed to you</h2>
+<p>You don't need: a postpartum belly wrap (unless your provider specifically recommends it for diastasis recti), a push present, a special "postnatal supplement" marketed at new moms, or any device that claims to accelerate recovery. You do need: rest, help, nourishing food, and someone who will hold the baby while you sleep for 3 hours in the middle of the day. Advocate for that.</p>
+
+<h2>One thing that helps more than any product</h2>
+<p>Accepting help. If someone offers to bring food, say yes. If someone offers to hold the baby while you shower, say yes. The cultural myth that new mothers should "bounce back" and "do it all" is one of the most damaging things in modern parenting culture. You just grew a human. Give yourself grace.</p>
+`,
+  },
+
+  {
+    slug: 'best-baby-gear-first-time-moms',
+    title: 'The Best Baby Gear for First-Time Moms: What\'s Worth It and What\'s Not',
+    excerpt:
+      'First-time parents are the most marketed-to people on earth. Here is a clear-eyed breakdown of the gear that earns its place — and what you can skip entirely.',
+    coverImage: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-06-20',
+    readingMinutes: 8,
+    tags: ['baby gear', 'buying guide', 'first-time mom'],
+    relatedProductSlugs: [
+      'folding-baby-bouncer-seat-light-gray',
+      'ergonomic-3-in-1-baby-carrier-hip-seat',
+      'smart-electric-rocking-bassinet-bedside',
+      'mom-diaper-bag-with-folding-stool',
+    ],
+    bodyHtml: `
+<p>The baby gear market is enormous and relentless. By the time you're 30 weeks pregnant, the algorithm has decided you need a $600 stroller, a $400 bassinet, three types of bouncers, and a wipe warmer. Some of it is genuinely useful. A lot of it isn't. Here is the honest breakdown.</p>
+
+<h2>Tier 1: Worth every penny</h2>
+
+<p><strong>A good baby carrier.</strong> This is the single item most first-time moms say they wish they'd bought sooner. A carrier that fits well means you can hold your baby while having two hands free — to cook, fold laundry, grocery shop, or just feel like a person. The <a href="/products/ergonomic-3-in-1-baby-carrier-hip-seat">Ergonomic 3-in-1 with Hip Seat</a> covers all carry positions from newborn to toddler. Buy one before baby arrives.</p>
+
+<p><strong>A bassinet for the first 3–4 months.</strong> Having baby sleep in your room (but not your bed) for the first 6 months is the AAP recommendation for SIDS prevention — and it makes night feeds dramatically easier. A bedside bassinet like the <a href="/products/smart-electric-rocking-bassinet-bedside">Smart Electric Rocking Bassinet</a> keeps baby at arm's reach without requiring you to walk to another room at 3 a.m.</p>
+
+<p><strong>A bouncer.</strong> The humble bouncer is one of the most practical baby items ever made. A safe place to put baby down when your arms need a break, a good view of the room, and a gentle bounce that soothes. Our <a href="/products/folding-baby-bouncer-seat-light-gray">Folding Baby Bouncer</a> folds flat for travel and covers 0–9 months.</p>
+
+<p><strong>Sleep sacks (3–4 of them).</strong> Safe sleep means nothing in the crib — no loose blankets. A sleep sack replaces the blanket. Buy multiple because they get washed constantly.</p>
+
+<p><strong>A solid diaper bag.</strong> Not a fashionable one — a functional one. You want: waterproof lining, multiple pockets, wide opening, comfortable straps, and enough room for everything without being a second suitcase. The <a href="/products/mom-diaper-bag-with-folding-stool">Mom Diaper Bag with Hidden Folding Stool</a> adds a built-in seat for park outings.</p>
+
+<h2>Tier 2: Nice to have, not essential</h2>
+
+<p><strong>A swing.</strong> Some babies love swings. Some don't. If you can borrow one to try first, do that. If your baby loves it, it's worth buying. Don't buy in advance.</p>
+
+<p><strong>A bottle warmer.</strong> If you're formula feeding or bottle-feeding pumped milk, a warmer is a nice convenience at 2 a.m. It's not essential — a bowl of warm water works too — but it's faster.</p>
+
+<p><strong>A white noise machine.</strong> Very helpful for light-sleeping babies, for blocking household sounds, and for creating a sleep association. A cheap one works just as well as a $80 one.</p>
+
+<h2>Tier 3: You don't need this</h2>
+
+<p><strong>A Diaper Genie or diaper pail.</strong> A small lidded trash can with a lid works perfectly. The proprietary bags are expensive and the mechanism jams.</p>
+
+<p><strong>A wipe warmer.</strong> Babies adapt to room-temperature wipes in about three days. You will never need to warm a wipe at grandma's house anyway.</p>
+
+<p><strong>Baby shoes before walking.</strong> Adorable. Completely pointless until baby is standing and beginning to walk outdoors.</p>
+
+<p><strong>A dedicated changing table.</strong> A changing pad on top of a regular dresser does the same job and takes up the same space. Save the money.</p>
+
+<p><strong>A "baby monitor" with 47 sensors.</strong> A basic audio monitor (or a camera monitor if you want visual) is all you need. The $300 device that tracks breathing, room temperature, and sends alerts to your phone will make you more anxious, not less.</p>
+
+<h2>The one rule</h2>
+<p>Don't buy anything "just in case." Buy it when you need it. With 2-day shipping, there is almost nothing you can't have within 48 hours of discovering you need it. Spend your money on the Tier 1 items and wait on everything else until you know your baby.</p>
+`,
+  },
+
+  {
+    slug: 'feeding-your-baby-first-year',
+    title: 'Feeding Your Baby Through the First Year: A Stage-by-Stage Guide',
+    excerpt:
+      'Breast, bottle, formula, solids — feeding your baby changes every few months. Here is what to expect at each stage and how to navigate each transition.',
+    coverImage: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-06-10',
+    readingMinutes: 8,
+    tags: ['feeding', 'breastfeeding', 'formula', 'solids', 'baby nutrition'],
+    relatedProductSlugs: [
+      'silicone-baby-bottle-straw-brush-set',
+      'portable-baby-bottle-warmer-cooler',
+      'portable-baby-changing-pad-clutch',
+    ],
+    bodyHtml: `
+<p>How you feed your baby will change more in the first year than almost any other aspect of parenting. What works at 6 weeks won't work at 6 months. Here is a stage-by-stage guide to what's happening, what's normal, and how to make each transition smoother.</p>
+
+<h2>0 – 4 months: Milk only</h2>
+<p>Whether you're breastfeeding, formula feeding, or combining both — your baby's only nutrition source for the first 4–6 months is milk. No water, no juice, no solids. This is not early.</p>
+
+<p><strong>Breastfeeding in the early weeks:</strong> Your milk supply is established in the first 4–6 weeks. Feed on demand — every 1.5 to 3 hours is normal for newborns. Supply is driven by demand: the more you nurse (or pump), the more milk your body produces. Supplementing with formula in the early weeks without also pumping can reduce supply.</p>
+
+<p><strong>Formula feeding:</strong> Follow the manufacturer's instructions exactly for mixing. Don't dilute formula to make it last longer — it reduces nutrition and can cause dangerous electrolyte imbalances. Feed on demand in the early weeks, then move toward a looser schedule around 6–8 weeks.</p>
+
+<p><strong>Bottle basics:</strong> Whether you're using pumped milk or formula, having good bottles and a reliable bottle brush matters more than you'd think. Our <a href="/products/silicone-baby-bottle-straw-brush-set">Silicone Bottle Brush Set</a> reaches the bottom and bends of any bottle without scratching.</p>
+
+<h2>4 – 6 months: Watching for readiness signs</h2>
+<p>The AAP recommends introducing solid foods around 6 months, but some babies show readiness a little earlier. Readiness signs — not age alone — are the guide:</p>
+<ul>
+  <li>Baby can sit with minimal support and hold their head steady</li>
+  <li>Shows interest in food (watching you eat, reaching for food)</li>
+  <li>Has lost the tongue-thrust reflex (pushing food out of the mouth automatically)</li>
+</ul>
+<p>Starting solids too early — before 4 months — increases allergy and choking risk. Don't rush it.</p>
+
+<h2>6 months: First solids</h2>
+<p>Single-ingredient purees are the traditional starting point: sweet potato, butternut squash, peas, pear, banana. Introduce one new food every 3–5 days and watch for reactions (rash, swelling, vomiting, diarrhea). Milk (breast or formula) remains the primary nutrition source — solids at this stage are about exploring flavor and texture, not replacing milk feeds.</p>
+<p>Baby-led weaning (BLW) — skipping purees and going straight to soft finger foods — is increasingly popular and safe for most babies with good head control. Consult your pediatrician if you want to try this approach.</p>
+
+<h2>8 – 10 months: Texture progression</h2>
+<p>Move from smooth purees to mashed, lumpy, then soft finger foods. Your baby needs practice with texture before their first birthday or they may become resistant to anything that isn't completely smooth. Gagging (not choking) is normal as they learn — gagging is a safety reflex, not a danger sign.</p>
+
+<h2>10 – 12 months: Building toward family foods</h2>
+<p>By 10–12 months, most babies can eat soft versions of most foods the family eats — just cut into small pieces and avoid high-sodium, high-sugar, or honey (which poses a botulism risk under 12 months). Whole cow's milk is not recommended before 12 months; breast milk or formula remains primary.</p>
+
+<h2>12 months: The transition</h2>
+<p>At 12 months you can introduce whole cow's milk (full-fat, not low-fat — baby's developing brain needs dietary fat). Breast milk can continue as long as desired. Formula is no longer needed. Milk intake typically drops to 16–24 oz per day as solid foods take on more of the nutritional load.</p>
+
+<h2>Common feeding challenges</h2>
+<p><strong>Refusing the bottle:</strong> Common in breastfed babies. Try different bottle shapes, different temperatures, having someone other than mom offer it, and offering when baby is calm rather than hungry.</p>
+<p><strong>Food refusal at solids stage:</strong> Normal. It can take 10–15 exposures to a new food before a baby accepts it. Keep offering without pressure.</p>
+<p><strong>Gagging at finger foods:</strong> As described above — normal. Choking is silent; gagging is loud. Trust your baby's gag reflex.</p>
+
+<h2>One reassurance</h2>
+<p>However you feed your baby — breast, formula, combination — what matters most is that baby is fed, growing, and thriving. The feeding method is not a measure of your love or your parenting quality.</p>
+`,
+  },
+
+  {
     slug: 'what-to-pack-in-your-hospital-bag',
     title: "What to Pack in Your Hospital Bag: The Only Checklist You'll Need",
     excerpt:

@@ -45,7 +45,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
   return (
     <footer className="bg-cream-100 border-t border-ink-900/5 mt-16">
-      <div className="container-page py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm text-ink-700">
+      <div className="container-page py-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 text-sm text-ink-700">
         <div className="col-span-2 md:col-span-1">
           <p className="font-display text-2xl text-ink-900">Mama<span className="text-blush-400">Care</span></p>
           <p className="mt-3 max-w-xs">Thoughtfully curated baby gear and everyday essentials, from first onesie to first steps.</p>
@@ -93,8 +93,23 @@ export default function Footer() {
           <ul className="space-y-2">
             <li><Link href="/about" className="hover:text-blush-500">About</Link></li>
             <li><Link href="/blog" className="hover:text-blush-500">Journal</Link></li>
+            <li><Link href="/gift-guide" className="hover:text-blush-500">Gift Guide</Link></li>
             <li><Link href="/privacy" className="hover:text-blush-500">Privacy</Link></li>
             <li><Link href="/terms" className="hover:text-blush-500">Terms</Link></li>
+          </ul>
+        </div>
+
+        <div className="col-span-2 md:col-span-1">
+          <h4 className="font-medium text-ink-900 mb-3">For Mamas</h4>
+          <ul className="space-y-2">
+            <li>
+              <a href="https://www.babylist.com" target="_blank" rel="noopener noreferrer" className="hover:text-blush-500 inline-flex items-center gap-1.5">
+                🍼 Add to Babylist Registry
+              </a>
+            </li>
+            <li><Link href="/gift-guide" className="hover:text-blush-500">Baby Shower Gift Guide</Link></li>
+            <li><Link href="/blog" className="hover:text-blush-500">Sleep &amp; Care Tips</Link></li>
+            <li><Link href="/shop" className="hover:text-blush-500">Shop by Age</Link></li>
           </ul>
         </div>
       </div>

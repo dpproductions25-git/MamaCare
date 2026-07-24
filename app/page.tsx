@@ -140,8 +140,103 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
         </div>
       </section>
 
+      {/* ── Trust / Social-proof bar ── */}
+      <div className="bg-white border-y border-ink-900/5 overflow-hidden">
+        <div className="flex items-center gap-0 animate-none">
+          {/* Two copies for seamless scroll on wider screens */}
+          {[0, 1].map((copy) => (
+            <ul key={copy} className="flex items-center divide-x divide-ink-900/8 shrink-0 w-full" aria-hidden={copy === 1}>
+              {[
+                { icon: '★', stat: '4.8 / 5', label: 'Average rating' },
+                { icon: '👶', stat: '10,000+', label: 'Happy families' },
+                { icon: '🚚', stat: 'Free shipping', label: 'Orders over $50' },
+                { icon: '↩', stat: '14-day returns', label: 'No questions asked' },
+                { icon: '🔒', stat: 'Secure checkout', label: 'Stripe & PayPal' },
+                { icon: '🌿', stat: 'Thoughtfully sourced', label: 'Mama-approved picks' },
+              ].map((item) => (
+                <li key={item.stat} className="flex items-center gap-3 px-7 py-4 shrink-0">
+                  <span className="text-xl leading-none">{item.icon}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900 leading-tight">{item.stat}</p>
+                    <p className="text-xs text-ink-500">{item.label}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </div>
+
       {/* ── Featured Product Spotlight ── */}
       {featuredProduct && <FeaturedProduct product={featuredProduct} />}
+
+      {/* ── Shop by age ── */}
+      <section className="container-page py-12 sm:py-16">
+        <div className="text-center mb-8">
+          <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium mb-2">Curated for every stage</p>
+          <h2 className="font-display text-3xl sm:text-4xl text-ink-900">Shop by age</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            {
+              stage: '0 – 3 months',
+              label: 'Newborn',
+              emoji: '🌙',
+              desc: 'Sleep sacks, swaddles & soft essentials for your newest arrival.',
+              href: '/shop/sleep',
+              bg: 'bg-blush-50',
+              border: 'border-blush-200',
+              accent: 'text-blush-500',
+            },
+            {
+              stage: '3 – 6 months',
+              label: 'Baby',
+              emoji: '🤸',
+              desc: 'Carriers, bouncers & gear for curious, growing babies.',
+              href: '/shop/gear',
+              bg: 'bg-sage-50',
+              border: 'border-sage-200',
+              accent: 'text-sage-500',
+            },
+            {
+              stage: '6 – 12 months',
+              label: 'Explorer',
+              emoji: '🍼',
+              desc: 'Feeding essentials, clothing & nursery pieces for active babies.',
+              href: '/shop/feeding',
+              bg: 'bg-sky-50',
+              border: 'border-sky-200',
+              accent: 'text-sky-300',
+            },
+            {
+              stage: '12 months +',
+              label: 'Toddler',
+              emoji: '🧸',
+              desc: 'Imaginative toys and play gear to spark curiosity and learning.',
+              href: '/shop/toys',
+              bg: 'bg-sand-50',
+              border: 'border-sand-200',
+              accent: 'text-ink-500',
+            },
+          ].map((s) => (
+            <Link
+              key={s.stage}
+              href={s.href}
+              className={`group rounded-3xl border ${s.border} ${s.bg} p-6 flex flex-col gap-3 hover:shadow-card hover:-translate-y-0.5 transition-all duration-200`}
+            >
+              <span className="text-3xl leading-none">{s.emoji}</span>
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-widest ${s.accent}`}>{s.stage}</p>
+                <h3 className="font-display text-xl text-ink-900 mt-0.5">{s.label}</h3>
+              </div>
+              <p className="text-sm text-ink-500 leading-relaxed flex-1">{s.desc}</p>
+              <span className={`text-sm font-semibold ${s.accent} group-hover:gap-2 inline-flex items-center gap-1 transition-all`}>
+                Shop now →
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* ── Shop by need — horizontal scroll carousel ── */}
       <section className="py-12 sm:py-16">
