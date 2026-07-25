@@ -32,16 +32,8 @@ export default function AddToRegistryButton({ productId, variantId, qty = 1 }: P
       });
       const data = await res.json();
       if (res.ok) {
-        setItems(
-          data.items.map((i: any) => ({
-            id: i.id,
-            productId: i.product_id,
-            variantId: i.variant_id ?? null,
-            qtyWanted: i.qty_wanted,
-            qtyPurchased: i.qty_purchased,
-            note: i.note ?? null,
-          }))
-        );
+        // API returns fully enriched items — no client-side mapping needed.
+        setItems(data.items || []);
         setAdded(true);
         open();
         setTimeout(() => setAdded(false), 2500);

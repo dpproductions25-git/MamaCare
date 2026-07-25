@@ -161,6 +161,17 @@ export async function removeRegistryItem(itemId: number, registryId: string): Pr
   await sql`DELETE FROM registry_items WHERE id = ${itemId} AND registry_id = ${registryId};`;
 }
 
+/** Set the desired quantity. Never drops below what's already been purchased. */
+export async function setRegistryItemQty(
+  itemId: number, registryId: string, qtyWanted: number
+): Promise<void> {
+  await sql`
+    UPDATE registry_items
+    SET qty_wanted = GREATEST(${qtyWanted}, qty_purchased, 1)
+    WHERE id = ${itemId} AND registry_id = ${registryId};
+  `;
+}
+
 export async function markItemPurchased(itemId: number, qty: number): Promise<void> {
   await sql`
     UPDATE registry_items

@@ -5,6 +5,7 @@ import { products } from '@/lib/products';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
 import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
+import { enrichRegistryItems } from '@/lib/registry-enrich';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -157,11 +158,11 @@ export async function POST(req: Request) {
           if (!registry) continue;
 
           const rows = await getRegistryItems(registryId);
-          const giftedItems = pairs.map((p) => {
-            const row = rows.find((r) => r.id === p.itemId);
-            const prod = row ? products.find((x) => x.id === row.product_id) : undefined;
-            return { productName: prod?.name ?? 'Item', qty: p.qty };
-          });
+          const enriched = await enrichRegistryItems(rows);
+          const giftedItems = pairs.map((p) => ({
+            productName: enriched.find((r) => r.id === p.itemId)?.name ?? 'Item',
+            qty: p.qty,
+          }));
 
           await sendRegistryGiftNotification({
             to: registry.email,

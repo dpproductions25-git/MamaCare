@@ -3,6 +3,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+/**
+ * Items are enriched server-side (see lib/registry-enrich.ts) so the client
+ * never has to resolve product data itself. Client-side enrichment from the
+ * static product list used to silently drop admin-created products.
+ */
 export type RegistryItem = {
   id: number;
   productId: string;
@@ -10,6 +15,12 @@ export type RegistryItem = {
   qtyWanted: number;
   qtyPurchased: number;
   note: string | null;
+  name: string;
+  image: string;
+  price: number;
+  slug: string;
+  inStock: boolean;
+  unavailable: boolean;
 };
 
 type RegistryState = {

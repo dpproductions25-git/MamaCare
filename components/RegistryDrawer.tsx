@@ -6,44 +6,33 @@ import Link from 'next/link';
 import { useRegistry, RegistryItem } from '@/lib/registry-store';
 import RegistrySetup from './RegistrySetup';
 
-type EnrichedItem = RegistryItem & {
-  name: string;
-  image: string;
-  price: number;
-  slug: string;
-};
-
-function mapItems(raw: any[]): RegistryItem[] {
-  return raw.map((i) => ({
-    id: i.id,
-    productId: i.product_id,
-    variantId: i.variant_id ?? null,
-    qtyWanted: i.qty_wanted,
-    qtyPurchased: i.qty_purchased,
-    note: i.note ?? null,
-  }));
-}
-
 export default function RegistryDrawer() {
   const {
     isOpen, close, registryId, pin, ownerName, title, items, setItems, clearRegistry,
   } = useRegistry();
-  const [showSetup, setShowSetup] = useState(false);
-  const [enriched, setEnriched] = useState<EnrichedItem[]>([]);
-  const [removing, setRemoving] = useState<number | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [loadingItems, setLoadingItems] = useState(false);
 
-  // Load items from server when drawer opens
+  const [showSetup, setShowSetup] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [busyItem, setBusyItem] = useState<number | null>(null);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [undo, setUndo] = useState<{ item: RegistryItem; timer: any } | null>(null);
+
+  // ── Data loading ───────────────────────────────────────────────────────────
   const loadItems = useCallback(async () => {
     if (!registryId) return;
-    setLoadingItems(true);
+    setLoading(true);
+    setError('');
     try {
-      const res = await fetch(`/api/registry/${registryId}`);
+      const res = await fetch(`/api/registry/${registryId}`, { cache: 'no-store' });
       const data = await res.json();
-      if (res.ok) setItems(mapItems(data.items || []));
+      if (res.ok) setItems(data.items || []);
+      else setError(data.error || 'Could not load your registry.');
+    } catch {
+      setError('Network error — check your connection.');
     } finally {
-      setLoadingItems(false);
+      setLoading(false);
     }
   }, [registryId, setItems]);
 
@@ -51,39 +40,101 @@ export default function RegistryDrawer() {
     if (isOpen && registryId) loadItems();
   }, [isOpen, registryId, loadItems]);
 
-  // Enrich items with product data from static list
+  // Lock body scroll + close on Escape while open
   useEffect(() => {
-    if (!items.length) { setEnriched([]); return; }
-    import('@/lib/products').then(({ products }) => {
-      const result: EnrichedItem[] = items.map((item) => {
-        const p = products.find((x) => x.id === item.productId);
-        if (!p) return null;
-        const variant = item.variantId ? p.variants?.find((v) => v.vid === item.variantId) : undefined;
-        return {
-          ...item,
-          name: variant ? `${p.name} — ${variant.name}` : p.name,
-          image: variant?.image || p.image,
-          price: variant?.price ?? p.price,
-          slug: p.slug,
-        };
-      }).filter(Boolean) as EnrichedItem[];
-      setEnriched(result);
-    });
-  }, [items]);
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen, close]);
 
-  async function removeItem(itemId: number) {
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  async function removeItem(item: RegistryItem) {
     if (!pin || !registryId) return;
-    setRemoving(itemId);
+    setBusyItem(item.id);
+    setError('');
+
+    const snapshot = items;
+    setItems(items.filter((i) => i.id !== item.id)); // optimistic
+
     try {
       const res = await fetch(`/api/registry/${registryId}/items`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, itemId }),
+        body: JSON.stringify({ pin, itemId: item.id }),
       });
       const data = await res.json();
-      if (res.ok) setItems(mapItems(data.items));
+      if (res.ok) {
+        setItems(data.items || []);
+        if (undo?.timer) clearTimeout(undo.timer);
+        const timer = setTimeout(() => setUndo(null), 6000);
+        setUndo({ item, timer });
+      } else {
+        setItems(snapshot);
+        setError(data.error || 'Could not remove that item.');
+      }
+    } catch {
+      setItems(snapshot);
+      setError('Network error — item was not removed.');
     } finally {
-      setRemoving(null);
+      setBusyItem(null);
+    }
+  }
+
+  async function restoreItem(item: RegistryItem) {
+    if (!pin || !registryId) return;
+    if (undo?.timer) clearTimeout(undo.timer);
+    setUndo(null);
+    setBusyItem(item.id);
+    try {
+      const res = await fetch(`/api/registry/${registryId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin,
+          productId: item.productId,
+          variantId: item.variantId,
+          qtyWanted: item.qtyWanted,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) setItems(data.items || []);
+      else setError(data.error || 'Could not restore that item.');
+    } catch {
+      setError('Network error — could not restore.');
+    } finally {
+      setBusyItem(null);
+    }
+  }
+
+  async function changeQty(item: RegistryItem, next: number) {
+    if (!pin || !registryId) return;
+    if (next < Math.max(1, item.qtyPurchased) || next > 99) return;
+    setBusyItem(item.id);
+    setError('');
+
+    const snapshot = items;
+    setItems(items.map((i) => (i.id === item.id ? { ...i, qtyWanted: next } : i)));
+
+    try {
+      const res = await fetch(`/api/registry/${registryId}/items`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, itemId: item.id, qtyWanted: next }),
+      });
+      const data = await res.json();
+      if (res.ok) setItems(data.items || []);
+      else { setItems(snapshot); setError(data.error || 'Could not update quantity.'); }
+    } catch {
+      setItems(snapshot);
+      setError('Network error — quantity unchanged.');
+    } finally {
+      setBusyItem(null);
     }
   }
 
@@ -92,39 +143,59 @@ export default function RegistryDrawer() {
     const url = `${window.location.origin}/registry/${registryId}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2200);
     });
   }
 
-  const shareUrl = registryId ? `${typeof window !== 'undefined' ? window.location.origin : ''}/registry/${registryId}` : '';
+  async function shareRegistry() {
+    if (!registryId) return;
+    const url = `${window.location.origin}/registry/${registryId}`;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: title || 'My Baby Registry', url });
+        return;
+      } catch { /* cancelled — fall through to copy */ }
+    }
+    copyLink();
+  }
+
+  // ── Derived ────────────────────────────────────────────────────────────────
   const totalWanted = items.reduce((n, i) => n + i.qtyWanted, 0);
   const totalPurchased = items.reduce((n, i) => n + i.qtyPurchased, 0);
   const progressPct = totalWanted > 0 ? Math.round((totalPurchased / totalWanted) * 100) : 0;
+  const estTotal = items.reduce((sum, i) => sum + i.price * (i.qtyWanted - i.qtyPurchased), 0);
 
   if (!isOpen) return null;
 
-  // Not signed in — show setup
+  // ── Signed-out state ───────────────────────────────────────────────────────
   if (!registryId) {
     return (
       <>
-        <div className="fixed inset-0 z-40 bg-ink-900/30 backdrop-blur-sm" onClick={close} />
-        <aside className="fixed right-0 top-0 h-full w-full sm:w-[420px] z-50 bg-white shadow-2xl flex flex-col animate-slideInRight">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-ink-900/8">
-            <h2 className="font-display text-xl text-ink-900">🎀 Baby Registry</h2>
-            <button onClick={close} aria-label="Close" className="text-ink-400 hover:text-ink-700">
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round"/>
-              </svg>
-            </button>
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-            <div className="text-5xl">🌸</div>
+        <div className="fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-sm" onClick={close} />
+        <aside className="fixed right-0 top-0 h-full w-full sm:w-[440px] z-50 bg-cream-50 shadow-2xl flex flex-col animate-slideInRight">
+          <DrawerHeader title="Baby Registry" onClose={close} />
+          <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
+            <div className="w-20 h-20 rounded-full bg-blush-100 flex items-center justify-center text-4xl">🎀</div>
             <div>
-              <h3 className="font-display text-xl text-ink-900">Your wishlist awaits</h3>
-              <p className="text-sm text-ink-500 mt-2">Create a registry to save favourites and share a link with family and friends.</p>
+              <h3 className="font-display text-2xl text-ink-900">Your wishlist awaits</h3>
+              <p className="text-sm text-ink-500 mt-2 leading-relaxed">
+                Save your favourite things in one place, then share a single link with
+                family and friends. We&apos;ll track what&apos;s been bought so nobody doubles up.
+              </p>
             </div>
-            <button onClick={() => setShowSetup(true)} className="btn-primary w-full">
-              Get started
+            <ul className="text-left text-sm text-ink-700 space-y-2 mt-1">
+              <li className="flex gap-2"><span className="text-blush-400">✓</span> Free, no account needed</li>
+              <li className="flex gap-2"><span className="text-blush-400">✓</span> Just your email and a 4-digit PIN</li>
+              <li className="flex gap-2"><span className="text-blush-400">✓</span> Get an email when someone gifts you</li>
+            </ul>
+            <button onClick={() => setShowSetup(true)} className="btn-primary w-full mt-2">
+              Create my registry
+            </button>
+            <button
+              onClick={() => setShowSetup(true)}
+              className="text-sm text-ink-500 hover:text-blush-500 transition-colors"
+            >
+              I already have one →
             </button>
           </div>
         </aside>
@@ -133,145 +204,288 @@ export default function RegistryDrawer() {
     );
   }
 
+  // ── Signed-in state ────────────────────────────────────────────────────────
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-ink-900/30 backdrop-blur-sm" onClick={close} />
+      <div className="fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-sm" onClick={close} />
 
-      {/* Drawer */}
-      <aside className="fixed right-0 top-0 h-full w-full sm:w-[420px] z-50 bg-white shadow-2xl flex flex-col animate-slideInRight">
+      <aside
+        className="fixed right-0 top-0 h-full w-full sm:w-[440px] z-50 bg-cream-50 shadow-2xl flex flex-col animate-slideInRight"
+        role="dialog"
+        aria-label="Your baby registry"
+      >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-ink-900/8">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="font-display text-xl text-ink-900">🎀 {title || 'My Baby Registry'}</h2>
-              <p className="text-xs text-ink-500 mt-0.5">{ownerName}'s registry · {items.length} items</p>
+        <div className="bg-white px-6 pt-5 pb-4 border-b border-ink-900/6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-display text-xl text-ink-900 truncate">🎀 {title || 'My Baby Registry'}</h2>
+              <p className="text-xs text-ink-500 mt-0.5">{ownerName}&apos;s registry</p>
             </div>
-            <button onClick={close} aria-label="Close" className="text-ink-400 hover:text-ink-700 mt-1">
+            <button
+              onClick={close}
+              aria-label="Close registry"
+              className="text-ink-400 hover:text-ink-900 hover:bg-cream-100 rounded-full p-1.5 transition-colors -mt-1 -mr-1"
+            >
               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round"/>
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
               </svg>
             </button>
           </div>
 
-          {/* Progress bar */}
           {totalWanted > 0 && (
             <div className="mt-4">
-              <div className="flex items-center justify-between text-xs text-ink-500 mb-1.5">
-                <span>{totalPurchased} of {totalWanted} items purchased</span>
-                <span>{progressPct}%</span>
+              <div className="flex items-end justify-between mb-1.5">
+                <span className="text-xs text-ink-500">
+                  <strong className="text-ink-900 text-sm">{totalPurchased}</strong> of {totalWanted} gifted
+                </span>
+                <span className="text-xs font-medium text-blush-500">{progressPct}%</span>
               </div>
               <div className="h-2 rounded-full bg-cream-200 overflow-hidden">
                 <div
-                  className="h-full bg-blush-400 rounded-full transition-all"
+                  className="h-full bg-blush-400 rounded-full transition-all duration-500"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
+              {progressPct === 100 && (
+                <p className="text-xs text-sage-600 mt-2 font-medium">
+                  🎉 Everything on your registry has been gifted!
+                </p>
+              )}
             </div>
           )}
 
-          {/* Share + view links */}
           <div className="flex gap-2 mt-4">
             <button
-              onClick={copyLink}
-              className="flex-1 flex items-center justify-center gap-2 border border-ink-900/12 rounded-full py-2 text-sm font-medium text-ink-700 hover:border-blush-400 hover:text-blush-500 transition-colors"
+              onClick={shareRegistry}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-blush-400 text-white rounded-full py-2.5 text-sm font-medium hover:bg-blush-500 transition-colors"
             >
-              {copied ? (
-                <>✓ Copied!</>
-              ) : (
+              {copied ? '✓ Link copied!' : (
                 <>
                   <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" strokeLinecap="round"/>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" strokeLinecap="round"/>
+                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                    <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" strokeLinecap="round" />
                   </svg>
-                  Share link
+                  Share registry
                 </>
               )}
             </button>
             <Link
               href={`/registry/${registryId}`}
               onClick={close}
-              className="flex-1 flex items-center justify-center gap-1 border border-ink-900/12 rounded-full py-2 text-sm font-medium text-ink-700 hover:border-blush-400 hover:text-blush-500 transition-colors"
+              className="px-4 flex items-center justify-center border border-ink-900/12 rounded-full text-sm font-medium text-ink-700 hover:border-blush-400 hover:text-blush-500 transition-colors whitespace-nowrap"
             >
-              View full registry →
+              Preview
             </Link>
           </div>
         </div>
 
+        {error && (
+          <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-2">
+            <span className="text-red-400 text-sm">⚠</span>
+            <p className="text-xs text-red-500 flex-1">{error}</p>
+            <button onClick={() => setError('')} className="text-red-300 hover:text-red-500 text-xs">✕</button>
+          </div>
+        )}
+
         {/* Items */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {loadingItems && (
-            <div className="flex items-center justify-center py-12 text-ink-400 text-sm">Loading…</div>
-          )}
-          {!loadingItems && enriched.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-              <span className="text-4xl">✨</span>
-              <p className="text-ink-500 text-sm">No items yet — browse the shop and tap "Add to registry"!</p>
-              <Link href="/shop" onClick={close} className="btn-primary mt-2">Browse products</Link>
+          {loading && items.length === 0 && <SkeletonList />}
+
+          {!loading && items.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-cream-200 flex items-center justify-center text-3xl">✨</div>
+              <div>
+                <h3 className="font-display text-lg text-ink-900">Nothing here yet</h3>
+                <p className="text-sm text-ink-500 mt-1.5 max-w-[15rem]">
+                  Browse the shop and tap &ldquo;Add to registry&rdquo; to save your first item.
+                </p>
+              </div>
+              <Link href="/shop" onClick={close} className="btn-primary mt-1">Browse products</Link>
             </div>
           )}
-          {!loadingItems && enriched.map((item) => {
-            const remaining = item.qtyWanted - item.qtyPurchased;
-            return (
-              <div key={item.id} className="flex gap-4 py-4 border-b border-ink-900/6 last:border-0">
-                <Link href={`/products/${item.slug}`} onClick={close} className="relative w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden bg-cream-100">
-                  <Image src={item.image} alt={item.name} fill sizes="80px" className="object-cover" />
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/products/${item.slug}`}
-                    onClick={close}
-                    className="text-sm font-medium text-ink-900 hover:text-blush-500 line-clamp-2"
-                  >
-                    {item.name}
-                  </Link>
-                  <p className="text-sm text-ink-700 mt-0.5">${item.price.toFixed(2)}</p>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-ink-500">
-                    <span>Wants {item.qtyWanted}</span>
-                    {item.qtyPurchased > 0 && (
-                      <span className="text-sage-500 font-medium">{item.qtyPurchased} purchased</span>
+
+          <div className="space-y-3">
+            {items.map((item) => {
+              const remaining = item.qtyWanted - item.qtyPurchased;
+              const fulfilled = remaining <= 0;
+              const busy = busyItem === item.id;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`bg-white rounded-2xl p-3 flex gap-3 border border-ink-900/5 transition-all ${
+                    busy ? 'opacity-50' : ''
+                  }`}
+                >
+                  {item.unavailable || !item.image ? (
+                    <div className="w-[72px] h-[72px] flex-shrink-0 rounded-xl bg-cream-200 flex items-center justify-center text-ink-400 text-xl">
+                      ?
+                    </div>
+                  ) : (
+                    <Link
+                      href={`/products/${item.slug}`}
+                      onClick={close}
+                      className="relative w-[72px] h-[72px] flex-shrink-0 rounded-xl overflow-hidden bg-cream-100"
+                    >
+                      <Image src={item.image} alt={item.name} fill sizes="72px" className="object-cover" />
+                    </Link>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      {item.unavailable ? (
+                        <p className="text-sm text-ink-400 italic line-clamp-2">{item.name}</p>
+                      ) : (
+                        <Link
+                          href={`/products/${item.slug}`}
+                          onClick={close}
+                          className="text-sm font-medium text-ink-900 hover:text-blush-500 line-clamp-2 leading-snug"
+                        >
+                          {item.name}
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => removeItem(item)}
+                        disabled={busy}
+                        aria-label={`Remove ${item.name} from registry`}
+                        className="text-ink-300 hover:text-red-400 hover:bg-red-50 rounded-lg p-1 transition-colors flex-shrink-0"
+                      >
+                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {!item.unavailable && (
+                      <p className="text-sm text-ink-700 font-medium mt-0.5">${item.price.toFixed(2)}</p>
                     )}
-                    {remaining > 0 && item.qtyPurchased > 0 && (
-                      <span className="text-blush-500">{remaining} still needed</span>
+
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      {fulfilled ? (
+                        <span className="text-xs font-medium text-sage-600 bg-sage-100 px-2.5 py-1 rounded-full">
+                          ✓ All gifted
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => changeQty(item, item.qtyWanted - 1)}
+                            disabled={busy || item.qtyWanted <= Math.max(1, item.qtyPurchased)}
+                            aria-label="Decrease quantity"
+                            className="w-6 h-6 rounded-full border border-ink-900/12 text-ink-700 hover:border-blush-400 hover:text-blush-500 disabled:opacity-30 transition-colors flex items-center justify-center text-sm leading-none"
+                          >
+                            −
+                          </button>
+                          <span className="text-xs text-ink-700 tabular-nums w-14 text-center">
+                            want {item.qtyWanted}
+                          </span>
+                          <button
+                            onClick={() => changeQty(item, item.qtyWanted + 1)}
+                            disabled={busy || item.qtyWanted >= 99}
+                            aria-label="Increase quantity"
+                            className="w-6 h-6 rounded-full border border-ink-900/12 text-ink-700 hover:border-blush-400 hover:text-blush-500 disabled:opacity-30 transition-colors flex items-center justify-center text-sm leading-none"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
+
+                      {item.qtyPurchased > 0 && !fulfilled && (
+                        <span className="text-xs text-sage-600 font-medium whitespace-nowrap">
+                          {item.qtyPurchased} gifted
+                        </span>
+                      )}
+                    </div>
+
+                    {!item.unavailable && !item.inStock && (
+                      <p className="text-xs text-amber-600 mt-1.5">Currently out of stock</p>
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => removeItem(item.id)}
-                  disabled={removing === item.id}
-                  aria-label="Remove from registry"
-                  className="text-ink-300 hover:text-red-400 transition-colors mt-0.5 flex-shrink-0"
-                >
-                  {removing === item.id ? (
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83" strokeLinecap="round"/>
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {undo && (
+            <div className="sticky bottom-2 mt-4 bg-ink-900 text-white rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+              <span className="text-xs truncate">Removed from registry</span>
+              <button
+                onClick={() => restoreItem(undo.item)}
+                className="text-xs font-semibold text-blush-200 hover:text-white transition-colors whitespace-nowrap"
+              >
+                Undo
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-ink-900/8 bg-cream-50">
-          <div className="flex items-center justify-between text-sm">
+        <div className="px-6 py-4 border-t border-ink-900/8 bg-white">
+          <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-ink-500">
-              {items.length} {items.length === 1 ? 'item' : 'items'}
+              {items.length} {items.length === 1 ? 'item' : 'items'} on registry
             </span>
+            <span className="font-medium text-ink-900">${estTotal.toFixed(2)} left</span>
+          </div>
+
+          {!confirmSignOut ? (
             <button
-              onClick={() => clearRegistry()}
-              className="text-ink-400 hover:text-red-400 text-xs transition-colors"
+              onClick={() => setConfirmSignOut(true)}
+              className="text-xs text-ink-400 hover:text-ink-700 transition-colors"
             >
               Sign out of registry
             </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs flex-wrap">
+              <span className="text-ink-700">Sign out? Your registry stays saved.</span>
+              <button
+                onClick={() => { clearRegistry(); setConfirmSignOut(false); }}
+                className="font-medium text-red-500 hover:text-red-600"
+              >
+                Yes
+              </button>
+              <button onClick={() => setConfirmSignOut(false)} className="text-ink-400 hover:text-ink-700">
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>
+  );
+}
+
+// ── Small pieces ─────────────────────────────────────────────────────────────
+
+function DrawerHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  return (
+    <div className="flex items-center justify-between px-6 py-5 border-b border-ink-900/6 bg-white">
+      <h2 className="font-display text-xl text-ink-900">🎀 {title}</h2>
+      <button
+        onClick={onClose}
+        aria-label="Close"
+        className="text-ink-400 hover:text-ink-900 hover:bg-cream-100 rounded-full p-1.5 transition-colors"
+      >
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+function SkeletonList() {
+  return (
+    <div className="space-y-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="bg-white rounded-2xl p-3 flex gap-3 border border-ink-900/5">
+          <div className="w-[72px] h-[72px] rounded-xl bg-cream-200 animate-pulse flex-shrink-0" />
+          <div className="flex-1 space-y-2 py-1">
+            <div className="h-3 bg-cream-200 rounded-full animate-pulse w-3/4" />
+            <div className="h-3 bg-cream-200 rounded-full animate-pulse w-1/3" />
+            <div className="h-5 bg-cream-100 rounded-full animate-pulse w-24 mt-3" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

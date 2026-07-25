@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { listAllRegistries, adminGetRegistryDetail } from '@/lib/db-registry';
-import { products } from '@/lib/products';
+import { enrichRegistryItems } from '@/lib/registry-enrich';
 import RegistryAdminActions from '@/components/RegistryAdminActions';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,8 @@ export default async function AdminRegistries() {
     registries.map(async (r) => {
       try {
         const d = await adminGetRegistryDetail(r.id);
-        return d?.items ?? [];
+        // Enrich so admin-created products resolve to real names, not raw IDs
+        return d ? await enrichRegistryItems(d.items) : [];
       } catch {
         return [];
       }
@@ -105,27 +106,21 @@ export default async function AdminRegistries() {
                   </summary>
                   <ul className="mt-3 divide-y divide-ink-900/5 text-sm">
                     {items.map((it: any) => {
-                      const p = products.find((x) => x.id === it.product_id);
-                      const variant = it.variant_id
-                        ? p?.variants?.find((v) => v.vid === it.variant_id)
-                        : undefined;
-                      const name = p
-                        ? variant
-                          ? `${p.name} — ${variant.name}`
-                          : p.name
-                        : it.product_id;
-                      const done = it.qty_purchased >= it.qty_wanted;
+                      const done = it.qtyPurchased >= it.qtyWanted;
                       return (
                         <li key={it.id} className="py-2 flex justify-between items-center gap-3">
                           <span className={done ? 'text-ink-400 line-through' : 'text-ink-900'}>
-                            {name}
+                            {it.name}
+                            {it.unavailable && (
+                              <span className="ml-2 text-xs text-amber-600">(product removed)</span>
+                            )}
                           </span>
                           <span
                             className={`text-xs px-2.5 py-1 rounded-full whitespace-nowrap ${
                               done ? 'bg-sage-100 text-sage-600' : 'bg-cream-100 text-ink-700'
                             }`}
                           >
-                            {it.qty_purchased} / {it.qty_wanted}
+                            {it.qtyPurchased} / {it.qtyWanted}
                             {done ? ' ✓' : ''}
                           </span>
                         </li>

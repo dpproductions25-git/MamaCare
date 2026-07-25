@@ -3,7 +3,8 @@ import { createOrder as createCjOrder } from '@/lib/cj';
 import { products } from '@/lib/products';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
 import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
-import { markItemPurchased, findRegistryById, ensureRegistrySchema } from '@/lib/db-registry';
+import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
+import { enrichRegistryItems } from '@/lib/registry-enrich';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -128,8 +129,9 @@ export async function POST(req: Request) {
           }
           const registry = await findRegistryById(registryId);
           if (registry) {
+            const enriched = await enrichRegistryItems(await getRegistryItems(registryId));
             const giftedItems = regItems.map((ri) => ({
-              productName: products.find((p) => p.id === ri.productId)?.name ?? 'Item',
+              productName: enriched.find((e) => e.id === ri.registryItemId)?.name ?? 'Item',
               qty: ri.qty,
             }));
             await sendRegistryGiftNotification({

@@ -1,20 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRegistry, RegistryItem } from '@/lib/registry-store';
+import { useRegistry } from '@/lib/registry-store';
 
 type Mode = 'choose' | 'create' | 'find';
-
-function mapItems(raw: any[]): RegistryItem[] {
-  return raw.map((i) => ({
-    id: i.id,
-    productId: i.product_id,
-    variantId: i.variant_id ?? null,
-    qtyWanted: i.qty_wanted,
-    qtyPurchased: i.qty_purchased,
-    note: i.note ?? null,
-  }));
-}
 
 export default function RegistrySetup({
   onClose,
@@ -88,7 +77,7 @@ export default function RegistrySetup({
         ownerName: data.registry.owner_name,
         title: data.registry.title,
       });
-      setItems(mapItems(itemsData.items || []));
+      setItems(itemsData.items || []);
       onSuccess?.(data.registry.id, fPin);
       open();
       onClose();
