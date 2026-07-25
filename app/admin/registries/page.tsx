@@ -130,7 +130,13 @@ export default async function AdminRegistries() {
                 </details>
               )}
 
-              <RegistryAdminActions registryId={r.id} ownerName={r.owner_name} />
+              <RegistryAdminActions
+                registryId={r.id}
+                ownerName={r.owner_name}
+                registryTitle={r.title}
+                itemCount={r.item_count}
+                purchasedCount={r.total_purchased}
+              />
             </article>
           );
         })}

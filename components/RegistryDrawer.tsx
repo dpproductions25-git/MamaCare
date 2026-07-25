@@ -17,6 +17,8 @@ export default function RegistryDrawer() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [undo, setUndo] = useState<{ item: RegistryItem; timer: any } | null>(null);
 
   // ── Data loading ───────────────────────────────────────────────────────────
@@ -144,6 +146,34 @@ export default function RegistryDrawer() {
       setError('Network error — quantity unchanged.');
     } finally {
       setBusyItem(null);
+    }
+  }
+
+  /** Owner deletes their whole registry. PIN-verified server-side. */
+  async function deleteRegistry() {
+    if (!registryId || !pin) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/registry/${registryId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        clearRegistry();   // wipes local identity + items
+        setConfirmDelete(false);
+        close();
+      } else {
+        setError(data.error || 'Could not delete your registry.');
+        setConfirmDelete(false);
+      }
+    } catch {
+      setError('Network error — your registry was not deleted.');
+      setConfirmDelete(false);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -429,31 +459,71 @@ export default function RegistryDrawer() {
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-ink-900/8 bg-white">
-          <div className="flex items-center justify-between text-sm mb-2">
+          <div className="flex items-center justify-between text-sm mb-3">
             <span className="text-ink-500">
               {items.length} {items.length === 1 ? 'item' : 'items'} on registry
             </span>
             <span className="font-medium text-ink-900">${estTotal.toFixed(2)} left</span>
           </div>
 
-          {!confirmSignOut ? (
-            <button
-              onClick={() => setConfirmSignOut(true)}
-              className="text-xs text-ink-400 hover:text-ink-700 transition-colors"
-            >
-              Sign out of registry
-            </button>
-          ) : (
+          {/* Delete confirmation takes over the footer when active */}
+          {confirmDelete ? (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
+              <p className="text-sm font-medium text-red-600">Delete this registry?</p>
+              <p className="text-xs text-ink-700 mt-1.5 leading-relaxed">
+                This permanently removes <strong>{title || 'your registry'}</strong> and all{' '}
+                {items.length} {items.length === 1 ? 'item' : 'items'}. Your share link will stop
+                working for anyone you sent it to. This can&apos;t be undone.
+              </p>
+              {totalPurchased > 0 && (
+                <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                  Heads up — {totalPurchased} {totalPurchased === 1 ? 'gift has' : 'gifts have'} already
+                  been bought from this registry.
+                </p>
+              )}
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={deleteRegistry}
+                  disabled={deleting}
+                  className="flex-1 bg-red-500 text-white rounded-full py-2.5 text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-60"
+                >
+                  {deleting ? 'Deleting…' : 'Yes, delete permanently'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="px-5 rounded-full border border-ink-900/12 text-sm font-medium text-ink-700 hover:border-ink-900/25 transition-colors"
+                >
+                  Keep it
+                </button>
+              </div>
+            </div>
+          ) : confirmSignOut ? (
             <div className="flex items-center gap-2 text-xs flex-wrap">
               <span className="text-ink-700">Sign out? Your registry stays saved.</span>
               <button
                 onClick={() => { clearRegistry(); setConfirmSignOut(false); }}
-                className="font-medium text-red-500 hover:text-red-600"
+                className="font-medium text-blush-500 hover:text-blush-600"
               >
-                Yes
+                Yes, sign out
               </button>
               <button onClick={() => setConfirmSignOut(false)} className="text-ink-400 hover:text-ink-700">
                 Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setConfirmSignOut(true)}
+                className="text-xs text-ink-400 hover:text-ink-700 transition-colors"
+              >
+                Sign out of registry
+              </button>
+              <button
+                onClick={() => { setConfirmDelete(true); setError(''); }}
+                className="text-xs text-ink-400 hover:text-red-500 transition-colors"
+              >
+                Delete registry
               </button>
             </div>
           )}
