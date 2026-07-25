@@ -4,6 +4,7 @@ import {
   setRegistryItemQty, ensureRegistrySchema
 } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -27,10 +28,28 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!pin || !productId) {
       return NextResponse.json({ error: 'pin and productId are required.' }, { status: 400 });
     }
+    // Diagnostic: shows in Vercel logs exactly which product the browser sent.
+    console.log(
+      `[registry/items POST] registry=${params.id} productId=${productId} variantId=${variantId ?? 'null'} qty=${qtyWanted}`
+    );
     const valid = await verifyRegistryPin(params.id, String(pin));
     if (!valid) {
       console.error(`[registry/items POST] PIN verification failed for registry ${params.id}`);
       return NextResponse.json({ error: 'Invalid PIN.' }, { status: 401 });
+    }
+
+    // Confirm the product actually exists before storing it. Without this a bad
+    // or stale id gets saved silently and only surfaces later as "wrong product".
+    const catalog = await getMergedProducts();
+    const match = catalog.find((p) => p.id === productId);
+    if (!match) {
+      console.error(
+        `[registry/items POST] unknown productId "${productId}" — not in catalog of ${catalog.length}`
+      );
+      return NextResponse.json(
+        { error: 'That product could not be found. Please refresh the page and try again.' },
+        { status: 400 }
+      );
     }
 
     const item = await addRegistryItem({

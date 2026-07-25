@@ -80,6 +80,38 @@ export const useRegistry = create<RegistryState>()(
         ownerName: s.ownerName,
         title: s.title,
       }),
+
+      /**
+       * partialize only controls what gets WRITTEN. Anyone who used the site
+       * before this change still has a stale `items` array (and `isOpen`) sitting
+       * in localStorage, and the default rehydrate would merge it straight back
+       * in — showing the wrong products all over again.
+       *
+       * Bumping the version forces this migrate to run once per browser and
+       * throw the old cached fields away.
+       */
+      version: 2,
+      migrate: (persisted: any) => ({
+        registryId: persisted?.registryId ?? null,
+        email: persisted?.email ?? null,
+        pin: persisted?.pin ?? null,
+        ownerName: persisted?.ownerName ?? null,
+        title: persisted?.title ?? null,
+        items: [],
+        isOpen: false,
+      }),
+
+      // Belt and braces: never let a persisted value win for items/isOpen.
+      merge: (persisted: any, current) => ({
+        ...current,
+        registryId: persisted?.registryId ?? null,
+        email: persisted?.email ?? null,
+        pin: persisted?.pin ?? null,
+        ownerName: persisted?.ownerName ?? null,
+        title: persisted?.title ?? null,
+        items: [],
+        isOpen: false,
+      }),
     }
   )
 );
