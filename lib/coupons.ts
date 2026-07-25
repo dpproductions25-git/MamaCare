@@ -23,15 +23,25 @@ export type Coupon = {
   expiresAt?: string;    // ISO date; null/missing = no expiry
 };
 
+/**
+ * Legacy hard-coded codes. These still work, but prefer creating codes in the
+ * admin panel (/admin/marketing) — those support expiry, usage limits,
+ * minimum order values and can be switched off without a deploy.
+ */
 export const COUPONS: Coupon[] = [
   {
     code: 'DAVID',
     type: 'free-shipping',
     description: 'Free shipping'
+  },
+  {
+    // Safety net: the signup flow issues a unique single-use code per customer,
+    // but falls back to this one if the database is briefly unreachable.
+    code: 'WELCOME10',
+    type: 'percent',
+    value: 10,
+    description: '10% off your first order'
   }
-  // Add more codes here, e.g.
-  // { code: 'WELCOME10',  type: 'percent', value: 10, description: '10% off your order' },
-  // { code: 'NEWBABY5',   type: 'fixed',   value: 5,  description: '$5 off' }
 ];
 
 export function findCoupon(input?: string | null): Coupon | null {
@@ -43,15 +53,28 @@ export function findCoupon(input?: string | null): Coupon | null {
   return found;
 }
 
-/** Standard shipping when no coupon is applied. */
-export function baseShipping(subtotal: number): number {
-  return subtotal >= 50 ? 0 : 6.99;
+/**
+ * Standard shipping when no coupon is applied.
+ *
+ * The threshold/rate are editable in the admin panel; pass the live settings in
+ * where you have them. The defaults here match the original hard-coded rule and
+ * are only used as a fallback when the DB is unreachable.
+ */
+export function baseShipping(
+  subtotal: number,
+  settings: { freeThreshold: number; flatRate: number } = { freeThreshold: 50, flatRate: 6.99 }
+): number {
+  return subtotal >= settings.freeThreshold ? 0 : settings.flatRate;
 }
 
 /** Final shipping after applying coupon. */
-export function calculateShipping(subtotal: number, coupon: Coupon | null): number {
+export function calculateShipping(
+  subtotal: number,
+  coupon: Coupon | null,
+  settings?: { freeThreshold: number; flatRate: number }
+): number {
   if (coupon?.type === 'free-shipping') return 0;
-  return baseShipping(subtotal);
+  return baseShipping(subtotal, settings);
 }
 
 /** Discount off subtotal after applying coupon. Returns dollars. */
@@ -66,11 +89,22 @@ export function calculateDiscount(subtotal: number, coupon: Coupon | null): numb
   return 0;
 }
 
-/** Convenience: full order math in one call. */
-export function calculateTotals(subtotal: number, couponCode?: string | null) {
+/**
+ * Convenience: full order math in one call.
+ *
+ * NOTE: this is the *client-side preview* only — it reads the hard-coded
+ * COUPONS list and default shipping. The authoritative numbers are always
+ * recomputed on the server via resolveTotals() in lib/pricing.ts before a
+ * payment is created. Never rely on this for what a customer is charged.
+ */
+export function calculateTotals(
+  subtotal: number,
+  couponCode?: string | null,
+  settings?: { freeThreshold: number; flatRate: number }
+) {
   const coupon = findCoupon(couponCode);
   const discount = calculateDiscount(subtotal, coupon);
-  const shipping = calculateShipping(subtotal - discount, coupon);
+  const shipping = calculateShipping(subtotal - discount, coupon, settings);
   const total = +(subtotal - discount + shipping).toFixed(2);
   return { coupon, subtotal, discount, shipping, total };
 }

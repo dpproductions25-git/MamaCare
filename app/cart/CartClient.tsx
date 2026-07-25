@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useCart } from '@/lib/cart';
-import { calculateTotals, findCoupon } from '@/lib/coupons';
+import { calculateTotals } from '@/lib/coupons';
 import type { Product } from '@/lib/types';
 
 export default function CartClient({ serverProducts }: { serverProducts: Product[] }) {
@@ -12,8 +12,93 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
   const [mounted, setMounted] = useState(false);
   const [codeInput, setCodeInput] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // Subtotal from merged (server) products so admin price changes are reflected.
+  // Computed before any early return so the hooks below always run.
+  const sub = items.reduce((sum, i) => {
+    const product = serverProducts.find((p) => p.id === i.productId);
+    if (!product) return sum;
+    const variant = i.variantId ? product.variants?.find((v) => v.vid === i.variantId) : undefined;
+    return sum + (variant?.price ?? product.price) * i.qty;
+  }, 0);
+
+  // Server-resolved totals: knows admin shipping settings and database coupons
+  // (including per-customer single-use codes) that the client can't see.
+  const preview = calculateTotals(sub, couponCode);
+  const [totals, setTotals] = useState({
+    discount: preview.discount,
+    shipping: preview.shipping,
+    total: preview.total,
+    appliedCode: preview.coupon?.code ?? null as string | null,
+    couponDescription: preview.coupon?.description ?? null as string | null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (sub <= 0) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/coupon/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subtotal: sub, code: couponCode }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok) {
+          setTotals({
+            discount: data.discount,
+            shipping: data.shipping,
+            total: data.total,
+            appliedCode: data.appliedCode,
+            couponDescription: data.couponDescription,
+          });
+          // Code went stale (expired / used up) while sitting in the cart
+          if (couponCode && !data.appliedCode && data.couponError) {
+            setCodeError(data.couponError);
+            removeCoupon();
+          }
+        }
+      } catch {
+        /* keep the local preview */
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sub, couponCode]);
+
+  const { discount, shipping, total, appliedCode, couponDescription } = totals;
+
+  async function handleApplyCoupon() {
+    setCodeError(null);
+    const code = codeInput.trim();
+    if (!code) return;
+    setApplying(true);
+    try {
+      const res = await fetch('/api/coupon/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subtotal: sub, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCodeError(data.error || 'Could not check that code.');
+        return;
+      }
+      if (!data.appliedCode) {
+        setCodeError(data.couponError || 'Invalid or expired code.');
+        return;
+      }
+      applyCoupon(code);
+      setCodeInput('');
+    } catch {
+      setCodeError('Network error — please try again.');
+    } finally {
+      setApplying(false);
+    }
+  }
 
   if (!mounted) {
     return (
@@ -43,25 +128,6 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
         <Link href="/shop" className="btn-primary mt-6 inline-block">Continue shopping</Link>
       </section>
     );
-  }
-
-  // Compute subtotal from merged (server) products so admin price changes are reflected.
-  const sub = lines.reduce((sum, { item, product, variant }) => {
-    const price = variant?.price ?? product!.price;
-    return sum + price * item.qty;
-  }, 0);
-
-  const { coupon, discount, shipping, total } = calculateTotals(sub, couponCode);
-
-  function handleApplyCoupon() {
-    setCodeError(null);
-    const found = findCoupon(codeInput);
-    if (!found) {
-      setCodeError('Invalid or expired code.');
-      return;
-    }
-    applyCoupon(codeInput);
-    setCodeInput('');
   }
 
   return (
@@ -106,7 +172,7 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
 
           {/* Promo code input */}
           <div className="mt-4">
-            {!coupon ? (
+            {!appliedCode ? (
               <>
                 <label className="text-xs text-ink-500 uppercase tracking-wide">Promo code</label>
                 <div className="mt-1 flex gap-2">
@@ -121,9 +187,10 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
                   <button
                     type="button"
                     onClick={handleApplyCoupon}
-                    className="px-4 py-2 rounded-full bg-ink-900 text-white text-sm hover:bg-ink-700"
+                    disabled={applying}
+                    className="px-4 py-2 rounded-full bg-ink-900 text-white text-sm hover:bg-ink-700 disabled:opacity-60"
                   >
-                    Apply
+                    {applying ? 'Checking…' : 'Apply'}
                   </button>
                 </div>
                 {codeError && <p className="text-xs text-blush-500 mt-1">{codeError}</p>}
@@ -131,7 +198,8 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
             ) : (
               <div className="flex items-center justify-between bg-sage-50 border border-sage-200 rounded-2xl px-3 py-2">
                 <span className="text-sm text-sage-500">
-                  <strong>{coupon.code}</strong> applied — {coupon.description.toLowerCase()}
+                  <strong>{appliedCode}</strong> applied
+                  {couponDescription ? ` — ${couponDescription.toLowerCase()}` : ''}
                 </span>
                 <button
                   type="button"

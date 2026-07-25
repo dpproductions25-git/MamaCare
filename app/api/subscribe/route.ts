@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { generateSingleUseCode, findUnusedCodeForEmail } from '@/lib/db-commerce';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,6 +57,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
   }
 
+  // ── Issue a unique single-use 10% code ───────────────────────
+  // Re-signing up with the same email returns the existing unused code rather
+  // than minting a new one, so nobody can farm codes by re-subscribing.
+  let discountCode = 'WELCOME10'; // fallback if the DB is unavailable
+  try {
+    const existing = await findUnusedCodeForEmail(email);
+    const coupon = existing ?? await generateSingleUseCode({
+      prefix: 'MAMA',
+      type: 'percent',
+      value: 10,
+      description: '10% off your first order',
+      issuedTo: email.toLowerCase(),
+    });
+    discountCode = coupon.code;
+  } catch (e) {
+    console.error('Could not generate signup code — falling back', e);
+  }
+
   // ── Welcome email to subscriber ──────────────────────────────
   const welcomeHtml = `
 <!DOCTYPE html>
@@ -82,11 +101,11 @@ export async function POST(req: Request) {
           <!-- Coupon box -->
           <div style="background:#FDF2F4;border:2px dashed #E68197;border-radius:16px;padding:20px 32px;display:inline-block;margin-bottom:28px;">
             <p style="margin:0 0 4px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#E68197;font-weight:600;">Your code</p>
-            <p style="margin:0;font-size:28px;font-weight:700;letter-spacing:0.08em;color:#2A2A33;font-family:monospace;">WELCOME10</p>
+            <p style="margin:0;font-size:28px;font-weight:700;letter-spacing:0.08em;color:#2A2A33;font-family:monospace;">${discountCode}</p>
           </div>
 
           <p style="margin:0 0 32px;font-size:13px;color:#7A7A87;line-height:1.6;">
-            Enter this code at checkout. Valid on your first order of any amount. No expiry.
+            Enter this code at checkout. This code is unique to you and can be used once.
           </p>
 
           <a href="https://mamacare.us/shop" style="display:inline-block;background:#E68197;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:999px;font-size:15px;font-weight:600;letter-spacing:0.02em;">
@@ -111,7 +130,8 @@ export async function POST(req: Request) {
   // ── Notification email to you ────────────────────────────────
   const notifyHtml = `
 <p style="font-family:sans-serif;font-size:15px;color:#2A2A33;">
-  New MamaCare subscriber: <strong>${email}</strong>
+  New MamaCare subscriber: <strong>${email}</strong><br>
+  Issued single-use code: <strong>${discountCode}</strong>
 </p>`;
 
   // Fire both emails; don't block on the notification

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { products as staticProducts } from '@/lib/products';
 import { getAllOverrides } from '@/lib/db';
 import { applyOverridesToProducts } from '@/lib/product-overrides';
-import { calculateTotals } from '@/lib/coupons';
+import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -58,7 +58,13 @@ export async function POST(req: Request) {
       };
     });
 
-    const { coupon, discount, shipping, total } = calculateTotals(subtotal, couponCode);
+    // Authoritative pricing — DB coupons + admin shipping settings
+    const totals = await resolveTotals(subtotal, couponCode);
+    const { discount, shipping, total, appliedCode } = totals;
+
+    if (totals.couponError && !appliedCode) {
+      return NextResponse.json({ error: totals.couponError }, { status: 400 });
+    }
 
     const breakdown: Record<string, { currency_code: string; value: string }> = {
       item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
@@ -75,7 +81,7 @@ export async function POST(req: Request) {
         purchase_units: [{
           amount: { currency_code: 'USD', value: total.toFixed(2), breakdown },
           items: ppItems,
-          custom_id: coupon?.code || undefined
+          custom_id: appliedCode || undefined
         }],
         application_context: {
           brand_name: 'MamaCare',

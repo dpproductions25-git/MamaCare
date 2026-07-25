@@ -4,7 +4,7 @@ import { products as staticProducts } from '@/lib/products';
 import { getAllOverrides } from '@/lib/db';
 import { applyOverridesToProducts } from '@/lib/product-overrides';
 import { SITE_URL } from '@/lib/seo';
-import { calculateTotals } from '@/lib/coupons';
+import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -88,15 +88,21 @@ export async function POST(req: Request) {
       .join(';')
       .slice(0, 490); // hard safety cap under Stripe's 500-char limit
 
-    const { coupon, discount, shipping } = calculateTotals(subtotal, couponCode);
+    // Authoritative pricing — DB coupons + admin shipping settings.
+    const totals = await resolveTotals(subtotal, couponCode);
+    const { discount, shipping, appliedCode } = totals;
 
-    if (coupon && discount > 0) {
+    if (totals.couponError && !appliedCode) {
+      return NextResponse.json({ error: totals.couponError }, { status: 400 });
+    }
+
+    if (appliedCode && discount > 0) {
       line_items.push({
         quantity: 1,
         price_data: {
           currency: 'usd',
           unit_amount: -Math.round(discount * 100),
-          product_data: { name: `Discount (${coupon.code})` }
+          product_data: { name: `Discount (${appliedCode})` }
         }
       });
     }
@@ -123,7 +129,7 @@ export async function POST(req: Request) {
       metadata: {
         productSnapshot: JSON.stringify(items),
         shippingAddress: JSON.stringify(shippingAddress || {}),
-        couponCode: coupon?.code || '',
+        couponCode: appliedCode || '',
         registrySnapshot,
       }
     });

@@ -6,6 +6,7 @@ import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
 import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
+import { redeemCoupon } from '@/lib/db-commerce';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -87,6 +88,17 @@ export async function POST(req: Request) {
       shipping,
       items: snapshot
     });
+
+    // 1b) Record coupon redemption (idempotent — keyed on order id, so Stripe's
+    //     webhook retries can't inflate the counter or burn a code twice)
+    const usedCode = session.metadata?.couponCode;
+    if (usedCode) {
+      try {
+        await redeemCoupon(usedCode, session.id, shipping.email);
+      } catch (e) {
+        console.error('Coupon redemption failed', e);
+      }
+    }
 
     // 2) Email customer + admin
     if (shipping.email) {

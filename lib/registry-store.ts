@@ -61,6 +61,25 @@ export const useRegistry = create<RegistryState>()(
 
       setItems: (items) => set({ items }),
     }),
-    { name: 'mamacare-registry' }
+    {
+      name: 'mamacare-registry',
+      /**
+       * Only persist identity — never items or isOpen.
+       *
+       * Persisting `items` meant a stale localStorage copy rendered before the
+       * server responded, so adding a product briefly showed the WRONG items
+       * (whatever was cached from a previous session). Persisting `isOpen`
+       * also made the drawer spring open by itself on the next page load.
+       *
+       * Items are always fetched fresh from the server instead.
+       */
+      partialize: (s) => ({
+        registryId: s.registryId,
+        email: s.email,
+        pin: s.pin,
+        ownerName: s.ownerName,
+        title: s.title,
+      }),
+    }
   )
 );

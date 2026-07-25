@@ -36,8 +36,17 @@ export default function RegistryDrawer() {
     }
   }, [registryId, setItems]);
 
+  /**
+   * Items are never persisted to localStorage, so we hydrate from the server:
+   *   - on mount (this drawer lives in the root layout, so it always runs)
+   *   - whenever the drawer is opened, to pick up gifts bought since last look
+   *
+   * Hydrating on mount also keeps AddToRegistryButton's "already in registry"
+   * check accurate — without it, a fresh page load would re-POST an item that
+   * was already saved and silently bump its quantity.
+   */
   useEffect(() => {
-    if (isOpen && registryId) loadItems();
+    if (registryId) loadItems();
   }, [isOpen, registryId, loadItems]);
 
   // Lock body scroll + close on Escape while open

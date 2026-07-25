@@ -5,6 +5,7 @@ import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
 import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
+import { redeemCoupon } from '@/lib/db-commerce';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,7 @@ async function paypalToken(): Promise<string> {
 
 export async function POST(req: Request) {
   try {
-    const { orderId, items, shippingAddress } = await req.json();
+    const { orderId, items, shippingAddress, couponCode } = await req.json();
     const token = await paypalToken();
     const r = await fetch(`${paypalBase()}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
@@ -62,6 +63,15 @@ export async function POST(req: Request) {
       });
     } catch (e) {
       console.error('DB save failed (PayPal)', e);
+    }
+
+    // 1b) Record coupon redemption (idempotent — keyed on order id)
+    if (couponCode) {
+      try {
+        await redeemCoupon(String(couponCode), orderId, shipping.email);
+      } catch (e) {
+        console.error('Coupon redemption failed (PayPal)', e);
+      }
     }
 
     // 2) Email customer + admin

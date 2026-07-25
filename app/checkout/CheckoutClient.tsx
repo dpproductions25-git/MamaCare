@@ -41,7 +41,48 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
     return sum + (variant?.price ?? p.price) * i.qty;
   }, 0);
 
-  const { coupon, discount, shipping, total: grand } = calculateTotals(sub, couponCode);
+  // Local preview used only until the server responds.
+  const preview = calculateTotals(sub, couponCode);
+  const [totals, setTotals] = useState({
+    discount: preview.discount,
+    shipping: preview.shipping,
+    total: preview.total,
+    appliedCode: preview.coupon?.code ?? null,
+    couponDescription: preview.coupon?.description ?? null,
+    couponError: null as string | null,
+  });
+
+  // Authoritative totals from the server — knows admin shipping settings and
+  // database coupons (including single-use codes) that the client can't see.
+  useEffect(() => {
+    let cancelled = false;
+    if (sub <= 0) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/coupon/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subtotal: sub, code: couponCode }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok) {
+          setTotals({
+            discount: data.discount,
+            shipping: data.shipping,
+            total: data.total,
+            appliedCode: data.appliedCode,
+            couponDescription: data.couponDescription,
+            couponError: data.couponError,
+          });
+        }
+      } catch {
+        /* keep the local preview */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sub, couponCode]);
+
+  const { discount, shipping, total: grand, appliedCode, couponDescription } = totals;
 
   useEffect(() => {
     if (items.length === 0) router.replace('/cart');
@@ -200,15 +241,22 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
           </ul>
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between"><dt>Subtotal</dt><dd>${sub.toFixed(2)}</dd></div>
-            {coupon && discount > 0 && (
+            {appliedCode && discount > 0 && (
               <div className="flex justify-between text-sage-500">
-                <dt>{coupon.code} (− {coupon.description.toLowerCase()})</dt>
+                <dt>{appliedCode}{couponDescription ? ` (${couponDescription.toLowerCase()})` : ''}</dt>
                 <dd>− ${discount.toFixed(2)}</dd>
               </div>
             )}
+            {totals.couponError && (
+              <div className="text-blush-500 text-xs">{totals.couponError}</div>
+            )}
             <div className="flex justify-between">
               <dt>Shipping</dt>
-              <dd>{shipping === 0 ? <span className="text-sage-500">{coupon?.type === 'free-shipping' ? `Free (${coupon.code})` : 'Free'}</span> : `$${shipping.toFixed(2)}`}</dd>
+              <dd>
+                {shipping === 0
+                  ? <span className="text-sage-500">{appliedCode && discount === 0 ? `Free (${appliedCode})` : 'Free'}</span>
+                  : `$${shipping.toFixed(2)}`}
+              </dd>
             </div>
             <div className="flex justify-between text-base text-ink-900 font-medium pt-2 border-t border-ink-900/10">
               <dt>Total</dt><dd>${grand.toFixed(2)}</dd>
