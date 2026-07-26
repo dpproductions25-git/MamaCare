@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useRegistry, RegistryItem } from '@/lib/registry-store';
 import RegistrySetup from './RegistrySetup';
 
@@ -50,6 +51,26 @@ export default function RegistryDrawer() {
   useEffect(() => {
     if (registryId) loadItems();
   }, [isOpen, registryId, loadItems]);
+
+  /**
+   * Close the drawer when the route actually changes — never from a link's
+   * onClick.
+   *
+   * Calling close() inside a <Link onClick> set isOpen=false, which made this
+   * component return null and unmounted the <a> element while the browser was
+   * still processing that same click. Next's router transition was aborted
+   * mid-flight, so "Preview" (and every product link in here) did nothing.
+   * Letting the navigation happen first and reacting to the new pathname
+   * fixes all of them at once.
+   */
+  const pathname = usePathname();
+  const lastPath = useRef(pathname);
+  useEffect(() => {
+    if (lastPath.current !== pathname) {
+      lastPath.current = pathname;
+      close();
+    }
+  }, [pathname, close]);
 
   // Lock body scroll + close on Escape while open
   useEffect(() => {
@@ -310,7 +331,6 @@ export default function RegistryDrawer() {
             </button>
             <Link
               href={`/registry/${registryId}`}
-              onClick={close}
               className="px-4 flex items-center justify-center border border-ink-900/12 rounded-full text-sm font-medium text-ink-700 hover:border-blush-400 hover:text-blush-500 transition-colors whitespace-nowrap"
             >
               Preview
@@ -339,7 +359,7 @@ export default function RegistryDrawer() {
                   Browse the shop and tap &ldquo;Add to registry&rdquo; to save your first item.
                 </p>
               </div>
-              <Link href="/shop" onClick={close} className="btn-primary mt-1">Browse products</Link>
+              <Link href="/shop" className="btn-primary mt-1">Browse products</Link>
             </div>
           )}
 
@@ -363,7 +383,6 @@ export default function RegistryDrawer() {
                   ) : (
                     <Link
                       href={`/products/${item.slug}`}
-                      onClick={close}
                       className="relative w-[72px] h-[72px] flex-shrink-0 rounded-xl overflow-hidden bg-cream-100"
                     >
                       <Image src={item.image} alt={item.name} fill sizes="72px" className="object-cover" />
@@ -377,7 +396,6 @@ export default function RegistryDrawer() {
                       ) : (
                         <Link
                           href={`/products/${item.slug}`}
-                          onClick={close}
                           className="text-sm font-medium text-ink-900 hover:text-blush-500 line-clamp-2 leading-snug"
                         >
                           {item.name}
