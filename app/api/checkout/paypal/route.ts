@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { products as staticProducts } from '@/lib/products';
-import { getAllOverrides } from '@/lib/db';
-import { applyOverridesToProducts } from '@/lib/product-overrides';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -39,13 +37,17 @@ export async function POST(req: Request) {
     const couponCode: string | undefined = body.couponCode || undefined;
     if (!items.length) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
 
-    // Apply admin overrides server-side
-    const overrides = await getAllOverrides();
-    const products = applyOverridesToProducts(staticProducts, overrides);
+    // Full catalog including admin-created products — see the note in the
+    // Stripe route. The static-only list silently dropped custom products.
+    const products = await getMergedProducts();
 
     let subtotal = 0;
     const ppItems = items.map((i) => {
-      const p = products.find((x) => x.id === i.productId)!;
+      const p = products.find((x) => x.id === i.productId);
+      if (!p) {
+        console.error(`[checkout/paypal] unknown productId "${i.productId}"`);
+        throw new Error('One of the items in your cart is no longer available. Please remove it and try again.');
+      }
       if (!p.inStock) throw new Error(`${p.name} is out of stock.`);
       const variant = i.variantId ? p.variants?.find((v) => v.vid === i.variantId) : undefined;
       const price = variant?.price ?? p.price;
@@ -64,6 +66,14 @@ export async function POST(req: Request) {
 
     if (totals.couponError && !appliedCode) {
       return NextResponse.json({ error: totals.couponError }, { status: 400 });
+    }
+
+    // PayPal, like Stripe, cannot process a $0 order.
+    if (total <= 0) {
+      return NextResponse.json(
+        { error: 'This order totals $0.00, so there is nothing to charge. Please check the item prices in your cart.' },
+        { status: 400 }
+      );
     }
 
     const breakdown: Record<string, { currency_code: string; value: string }> = {

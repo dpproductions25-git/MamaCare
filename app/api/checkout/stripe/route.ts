@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { products as staticProducts } from '@/lib/products';
-import { getAllOverrides } from '@/lib/db';
-import { applyOverridesToProducts } from '@/lib/product-overrides';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { SITE_URL } from '@/lib/seo';
 import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -36,9 +34,17 @@ export async function POST(req: Request) {
 
     if (!items.length) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
 
-    // Apply admin overrides server-side — never trust the client's price.
-    const overrides = await getAllOverrides();
-    const products = applyOverridesToProducts(staticProducts, overrides);
+    /**
+     * Full catalog — static products WITH admin overrides applied, PLUS products
+     * created in the admin panel.
+     *
+     * This used to be applyOverridesToProducts(staticProducts, overrides), which
+     * only covered static products. Anything created in admin was not found
+     * below, hit the `continue`, and silently vanished from line_items — leaving
+     * Stripe to reject the whole order with "line_items is required".
+     * Prices still come from the server, never from the client.
+     */
+    const products = await getMergedProducts();
 
     const stripe = getStripe();
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
@@ -46,7 +52,14 @@ export async function POST(req: Request) {
 
     for (const it of items) {
       const p = products.find((x) => x.id === it.productId);
-      if (!p) continue;
+      if (!p) {
+        // Fail loudly rather than quietly dropping the item.
+        console.error(`[checkout/stripe] unknown productId "${it.productId}"`);
+        return NextResponse.json(
+          { error: 'One of the items in your cart is no longer available. Please remove it and try again.' },
+          { status: 400 }
+        );
+      }
       if (!p.inStock) {
         return NextResponse.json({ error: `${p.name} is out of stock.` }, { status: 400 });
       }
@@ -94,6 +107,16 @@ export async function POST(req: Request) {
 
     if (totals.couponError && !appliedCode) {
       return NextResponse.json({ error: totals.couponError }, { status: 400 });
+    }
+
+    // Stripe cannot create a payment session for $0. This happens with a
+    // free/test product or a 100% discount — give a clear reason instead of
+    // letting Stripe return a cryptic error.
+    if (totals.total <= 0) {
+      return NextResponse.json(
+        { error: 'This order totals $0.00, so there is nothing to charge. Please check the item prices in your cart.' },
+        { status: 400 }
+      );
     }
 
     if (appliedCode && discount > 0) {

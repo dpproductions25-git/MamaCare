@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createOrder as createCjOrder } from '@/lib/cj';
-import { products } from '@/lib/products';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
 import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
@@ -111,13 +111,23 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3) Fire CJ fulfillment
+    // 3) Fire CJ fulfillment.
+    // Must use the merged catalog — the static list omits admin-created
+    // products, which meant those orders were paid for but never sent to the
+    // supplier.
+    const catalog = await getMergedProducts();
     const cjItems = snapshot
       .map((s) => {
-        const p = products.find((x) => x.id === s.productId);
+        const p = catalog.find((x) => x.id === s.productId);
         return p?.cjVariantId ? { vid: p.cjVariantId, quantity: s.qty } : null;
       })
       .filter(Boolean) as { vid: string; quantity: number }[];
+
+    if (cjItems.length !== snapshot.length) {
+      console.warn(
+        `[stripe webhook] ${snapshot.length - cjItems.length} item(s) in order ${session.id} have no CJ variant id — fulfil these manually.`
+      );
+    }
 
     if (cjItems.length && process.env.CJ_API_KEY) {
       try {

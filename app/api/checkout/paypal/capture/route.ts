@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createOrder as createCjOrder } from '@/lib/cj';
-import { products } from '@/lib/products';
+import { getMergedProducts } from '@/lib/product-overrides';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
 import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
@@ -91,9 +91,12 @@ export async function POST(req: Request) {
 
     // 3) CJ fulfillment
     try {
+      // Merged catalog — the static list omits admin-created products, which
+      // meant those orders were paid for but never sent to the supplier.
+      const catalog = await getMergedProducts();
       const cjItems = (items as { productId: string; qty: number }[])
         .map((s) => {
-          const p = products.find((x) => x.id === s.productId);
+          const p = catalog.find((x) => x.id === s.productId);
           return p?.cjVariantId ? { vid: p.cjVariantId, quantity: s.qty } : null;
         })
         .filter(Boolean) as { vid: string; quantity: number }[];
