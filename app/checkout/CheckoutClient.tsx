@@ -59,7 +59,8 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
   useEffect(() => {
     let cancelled = false;
     if (sub <= 0) return;
-    (async () => {
+    const timer = setTimeout(() => {
+      (async () => {
       try {
         const res = await fetch('/api/coupon/validate', {
           method: 'POST',
@@ -67,6 +68,9 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
           body: JSON.stringify({ subtotal: sub, code: couponCode }),
         });
         const data = await res.json();
+        if (!cancelled && !res.ok) {
+          console.error('[checkout] /api/coupon/validate failed:', res.status, data);
+        }
         if (!cancelled && res.ok) {
           setTotals({
             discount: data.discount,
@@ -79,11 +83,12 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
             flatRate: data.flatRate,
           });
         }
-      } catch {
-        /* keep the local preview */
+      } catch (e: any) {
+        console.error('[checkout] pricing request threw:', e?.message);
       }
-    })();
-    return () => { cancelled = true; };
+      })();
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [sub, couponCode]);
 
   const { discount, shipping, total: grand, appliedCode, couponDescription } = totals;

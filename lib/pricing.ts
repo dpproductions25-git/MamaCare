@@ -1,4 +1,5 @@
-import { getShippingSettings, validateCoupon, DbCoupon } from './db-commerce';
+import { getShippingSettings, validateCoupon } from './db-commerce';
+import type { DbCoupon } from './db-commerce';
 import { findCoupon as findStaticCoupon } from './coupons';
 
 /**
@@ -49,12 +50,20 @@ export async function resolveTotals(
   if (couponCode && couponCode.trim()) {
     let coupon: DbCoupon | null = null;
 
-    // 1) Database coupons (admin-created + generated single-use codes)
-    const check = await validateCoupon(couponCode, subtotal);
-    if (check.ok) {
-      coupon = check.coupon;
-    } else {
-      couponError = check.reason;
+    // 1) Database coupons (admin-created + generated single-use codes).
+    //    A thrown error here used to bubble up and 500 the whole request, which
+    //    made the client silently fall back to hardcoded prices — looking
+    //    exactly like "the code is wrong" rather than "the lookup broke".
+    try {
+      const check = await validateCoupon(couponCode, subtotal);
+      if (check.ok) {
+        coupon = check.coupon;
+      } else {
+        couponError = check.reason;
+      }
+    } catch (e: any) {
+      console.error('[pricing] coupon lookup FAILED:', e?.message);
+      couponError = 'We could not check that code right now. Please try again.';
     }
 
     // 2) Fall back to the legacy hard-coded list in lib/coupons.ts so existing

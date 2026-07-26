@@ -82,6 +82,13 @@ export async function ensureCommerceSchema() {
 
 // ── Shipping settings ─────────────────────────────────────────────────────────
 
+/**
+ * Read shipping settings.
+ *
+ * Falls back to defaults if the DB is unreachable, but LOUDLY — a silent
+ * fallback here is indistinguishable from "the admin save didn't work", which
+ * makes this impossible to debug from the outside.
+ */
 export async function getShippingSettings(): Promise<ShippingSettings> {
   try {
     await ensureCommerceSchema();
@@ -90,14 +97,27 @@ export async function getShippingSettings(): Promise<ShippingSettings> {
       WHERE key IN ('shipping_free_threshold', 'shipping_flat_rate');
     `;
     const map = Object.fromEntries(r.rows.map((x) => [x.key, x.value]));
-    const threshold = Number(map['shipping_free_threshold']);
-    const flat = Number(map['shipping_flat_rate']);
+
+    const rawThreshold = map['shipping_free_threshold'];
+    const rawFlat = map['shipping_flat_rate'];
+    const threshold = Number(rawThreshold);
+    const flat = Number(rawFlat);
+
+    if (rawThreshold == null || rawFlat == null) {
+      console.warn(
+        `[shipping] no saved settings yet (threshold=${rawThreshold}, flat=${rawFlat}) — using defaults`
+      );
+    }
+
     return {
+      // Note: Number('0') === 0 which is falsy, so we must check isFinite,
+      // never truthiness — otherwise a $0 flat rate silently becomes $6.99.
       freeThreshold: Number.isFinite(threshold) ? threshold : DEFAULT_SHIPPING.freeThreshold,
       flatRate: Number.isFinite(flat) ? flat : DEFAULT_SHIPPING.flatRate,
     };
-  } catch {
-    return DEFAULT_SHIPPING; // DB unavailable — fall back to defaults
+  } catch (e: any) {
+    console.error('[shipping] getShippingSettings FAILED — falling back to defaults:', e?.message);
+    return DEFAULT_SHIPPING;
   }
 }
 

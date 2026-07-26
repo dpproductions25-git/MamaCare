@@ -42,7 +42,9 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
   useEffect(() => {
     let cancelled = false;
     if (sub <= 0) return;
-    (async () => {
+    // Debounced: tapping the quantity stepper fires this repeatedly otherwise.
+    const timer = setTimeout(() => {
+      (async () => {
       try {
         const res = await fetch('/api/coupon/validate', {
           method: 'POST',
@@ -50,6 +52,12 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
           body: JSON.stringify({ subtotal: sub, code: couponCode }),
         });
         const data = await res.json();
+        if (!cancelled && !res.ok) {
+          // Don't fail silently — a masked error here looks identical to
+          // "your settings didn't save", which is impossible to debug.
+          console.error('[cart] /api/coupon/validate failed:', res.status, data);
+          setCodeError(data?.error || `Could not reach pricing service (${res.status}).`);
+        }
         if (!cancelled && res.ok) {
           setTotals({
             discount: data.discount,
@@ -66,11 +74,13 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
             removeCoupon();
           }
         }
-      } catch {
-        /* keep the local preview */
+      } catch (e: any) {
+        console.error('[cart] pricing request threw:', e?.message);
+        if (!cancelled) setCodeError('Could not load live pricing. Showing estimated totals.');
       }
-    })();
-    return () => { cancelled = true; };
+      })();
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sub, couponCode]);
 
