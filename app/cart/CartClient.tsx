@@ -8,7 +8,14 @@ import { calculateTotals } from '@/lib/coupons';
 import { freeShippingNudge } from '@/lib/shipping-copy';
 import type { Product } from '@/lib/types';
 
-export default function CartClient({ serverProducts }: { serverProducts: Product[] }) {
+export default function CartClient({
+  serverProducts,
+  shippingSettings = { freeThreshold: 50, flatRate: 6.99 },
+}: {
+  serverProducts: Product[];
+  /** Live settings from the server so the first paint is already correct */
+  shippingSettings?: { freeThreshold: number; flatRate: number };
+}) {
   const { items, couponCode, setQty, remove, applyCoupon, removeCoupon } = useCart();
   const [mounted, setMounted] = useState(false);
   const [codeInput, setCodeInput] = useState('');
@@ -28,15 +35,18 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
 
   // Server-resolved totals: knows admin shipping settings and database coupons
   // (including per-customer single-use codes) that the client can't see.
-  const preview = calculateTotals(sub, couponCode);
+  // Seed with the real server settings so the first paint is already correct —
+  // no flash of the wrong shipping price, and still accurate if the live
+  // pricing request is slow or fails.
+  const preview = calculateTotals(sub, couponCode, shippingSettings);
   const [totals, setTotals] = useState({
     discount: preview.discount,
     shipping: preview.shipping,
     total: preview.total,
     appliedCode: preview.coupon?.code ?? null as string | null,
     couponDescription: preview.coupon?.description ?? null as string | null,
-    freeThreshold: 50,
-    flatRate: 6.99,
+    freeThreshold: shippingSettings.freeThreshold,
+    flatRate: shippingSettings.flatRate,
   });
 
   useEffect(() => {

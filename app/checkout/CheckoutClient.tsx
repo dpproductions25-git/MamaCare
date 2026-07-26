@@ -25,7 +25,14 @@ const empty: Form = {
   line1: '', line2: '', city: '', state: '', postalCode: '', country: 'US'
 };
 
-export default function CheckoutClient({ serverProducts }: { serverProducts: Product[] }) {
+export default function CheckoutClient({
+  serverProducts,
+  shippingSettings = { freeThreshold: 50, flatRate: 6.99 },
+}: {
+  serverProducts: Product[];
+  /** Live settings from the server so the first paint is already correct */
+  shippingSettings?: { freeThreshold: number; flatRate: number };
+}) {
   const router = useRouter();
   const { items, couponCode, clear } = useCart();
   const [form, setForm] = useState<Form>(empty);
@@ -42,7 +49,8 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
   }, 0);
 
   // Local preview used only until the server responds.
-  const preview = calculateTotals(sub, couponCode);
+  // Seed with the real server settings so the first paint is already correct.
+  const preview = calculateTotals(sub, couponCode, shippingSettings);
   const [totals, setTotals] = useState({
     discount: preview.discount,
     shipping: preview.shipping,
@@ -50,8 +58,8 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
     appliedCode: preview.coupon?.code ?? null as string | null,
     couponDescription: preview.coupon?.description ?? null as string | null,
     couponError: null as string | null,
-    freeThreshold: 50,
-    flatRate: 6.99,
+    freeThreshold: shippingSettings.freeThreshold,
+    flatRate: shippingSettings.flatRate,
   });
 
   // Authoritative totals from the server — knows admin shipping settings and
