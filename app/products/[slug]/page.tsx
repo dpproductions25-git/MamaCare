@@ -4,6 +4,8 @@ import Script from 'next/script';
 import ProductGallery from '@/components/ProductGallery';
 import { products } from '@/lib/products';
 import { getMergedProduct } from '@/lib/product-overrides';
+import { getShippingSettings } from '@/lib/db-commerce';
+import { shippingBlurb } from '@/lib/shipping-copy';
 import { buildMetadata, SITE_URL, SITE_NAME } from '@/lib/seo';
 
 export const revalidate = 30;
@@ -31,6 +33,8 @@ export async function generateMetadata({ params }: Params) {
 export default async function ProductPage({ params }: Params) {
   const product = await getMergedProduct(params.slug);
   if (!product) return notFound();
+
+  const shipping = await getShippingSettings();
 
   const productJsonLd = {
     '@context': 'https://schema.org',
@@ -69,7 +73,7 @@ export default async function ProductPage({ params }: Params) {
         <span className="text-ink-900">{product.name}</span>
       </nav>
 
-      <ProductGallery product={product} />
+      <ProductGallery product={product} shippingNote={shippingBlurb(shipping)} />
 
       <Script
         id={`schema-product-${product.id}`}

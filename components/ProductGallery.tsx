@@ -7,7 +7,14 @@ import { useCart } from '@/lib/cart';
 import { colorSwatchStyle } from '@/lib/colors';
 import AddToRegistryButton from './AddToRegistryButton';
 
-export default function ProductGallery({ product }: { product: Product }) {
+export default function ProductGallery({
+  product,
+  shippingNote = 'Free U.S. shipping over $50',
+}: {
+  product: Product;
+  /** Live copy from admin shipping settings — see lib/shipping-copy.ts */
+  shippingNote?: string;
+}) {
   const rawVariants = product.variants || [];
 
   // Normalize variants: if color field has an embedded size code at the end
@@ -262,7 +269,7 @@ export default function ProductGallery({ product }: { product: Product }) {
         </div>
 
         <ul className="mt-8 grid grid-cols-2 gap-4 text-sm text-ink-700">
-          <li className="flex items-center gap-2">🚚 Free U.S. shipping over $50</li>
+          <li className="flex items-center gap-2">🚚 {shippingNote}</li>
           <li className="flex items-center gap-2">↩ 14-day easy returns</li>
           <li className="flex items-center gap-2">🌿 Thoughtfully sourced</li>
           <li className="flex items-center gap-2">💳 Secure checkout</li>

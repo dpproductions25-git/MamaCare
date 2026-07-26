@@ -8,9 +8,14 @@ import { Product } from '@/lib/types';
 
 interface Props {
   product: Product;
+  /** Live copy from admin shipping settings — see lib/shipping-copy.ts */
+  shippingNote?: string;
 }
 
-export default function FeaturedProduct({ product }: Props) {
+export default function FeaturedProduct({
+  product,
+  shippingNote = 'Free U.S. shipping over $50',
+}: Props) {
   const variants = product.variants ?? [];
 
   // Build gallery exactly like ProductGallery does:
@@ -220,7 +225,7 @@ export default function FeaturedProduct({ product }: Props) {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-ink-500">
-            <span>🚚 Free U.S. shipping over $50</span>
+            <span>🚚 {shippingNote}</span>
             <span>↩ 14-day returns</span>
             <span>🔒 Secure checkout</span>
           </div>

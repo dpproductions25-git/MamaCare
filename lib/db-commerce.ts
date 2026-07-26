@@ -200,8 +200,15 @@ export async function validateCoupon(
   if (!coupon) return { ok: false, reason: 'That code isn’t valid.' };
   if (!coupon.active) return { ok: false, reason: 'That code is no longer active.' };
 
-  if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()) {
-    return { ok: false, reason: 'That code has expired.' };
+  // Expiry is inclusive of the whole day. The admin form sends a date only
+  // ("2026-08-01"), which parses to midnight — without this, a code set to
+  // expire today would already be dead the moment it was saved.
+  if (coupon.expires_at) {
+    const exp = new Date(coupon.expires_at);
+    exp.setHours(23, 59, 59, 999);
+    if (exp.getTime() < Date.now()) {
+      return { ok: false, reason: 'That code has expired.' };
+    }
   }
   if (coupon.max_redemptions != null && coupon.times_redeemed >= coupon.max_redemptions) {
     return { ok: false, reason: 'That code has already been fully redeemed.' };

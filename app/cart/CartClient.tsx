@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useCart } from '@/lib/cart';
 import { calculateTotals } from '@/lib/coupons';
+import { freeShippingNudge } from '@/lib/shipping-copy';
 import type { Product } from '@/lib/types';
 
 export default function CartClient({ serverProducts }: { serverProducts: Product[] }) {
@@ -34,6 +35,8 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
     total: preview.total,
     appliedCode: preview.coupon?.code ?? null as string | null,
     couponDescription: preview.coupon?.description ?? null as string | null,
+    freeThreshold: 50,
+    flatRate: 6.99,
   });
 
   useEffect(() => {
@@ -54,6 +57,8 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
             total: data.total,
             appliedCode: data.appliedCode,
             couponDescription: data.couponDescription,
+            freeThreshold: data.freeThreshold,
+            flatRate: data.flatRate,
           });
           // Code went stale (expired / used up) while sitting in the cart
           if (couponCode && !data.appliedCode && data.couponError) {
@@ -70,6 +75,12 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
   }, [sub, couponCode]);
 
   const { discount, shipping, total, appliedCode, couponDescription } = totals;
+
+  // "Add $12.50 more for free shipping" — uses the live admin threshold
+  const nudge = freeShippingNudge(sub - discount, {
+    freeThreshold: totals.freeThreshold,
+    flatRate: totals.flatRate,
+  });
 
   async function handleApplyCoupon() {
     setCodeError(null);
@@ -225,6 +236,11 @@ export default function CartClient({ serverProducts }: { serverProducts: Product
               <dt>Shipping</dt>
               <dd>{shipping === 0 ? <span className="text-sage-500">Free</span> : `$${shipping.toFixed(2)}`}</dd>
             </div>
+            {nudge && (
+              <div className="text-xs text-blush-500 bg-blush-50 border border-blush-100 rounded-xl px-3 py-2">
+                🚚 {nudge}
+              </div>
+            )}
             <div className="flex justify-between text-base text-ink-900 font-medium pt-2 border-t border-ink-900/10">
               <dt>Total</dt><dd>${total.toFixed(2)}</dd>
             </div>

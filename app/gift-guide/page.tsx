@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { getMergedProducts } from '@/lib/product-overrides';
+import { getShippingSettings } from '@/lib/db-commerce';
+import { shippingBlurb } from '@/lib/shipping-copy';
 import { buildMetadata } from '@/lib/seo';
 
 export const metadata = buildMetadata({
@@ -58,6 +60,7 @@ const SECTIONS = [
 export default async function GiftGuidePage() {
   const all = await getMergedProducts();
   const bySlug = Object.fromEntries(all.map((p) => [p.slug, p]));
+  const shipNote = shippingBlurb(await getShippingSettings());
 
   return (
     <>
@@ -82,7 +85,7 @@ export default async function GiftGuidePage() {
       {/* Tips bar */}
       <div className="bg-white border-b border-ink-900/5">
         <div className="container-page py-5 flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm text-ink-600">
-          <span className="flex items-center gap-2">🚚 Free U.S. shipping over $50</span>
+          <span className="flex items-center gap-2">🚚 {shipNote}</span>
           <span className="flex items-center gap-2">🎁 Gift-ready packaging available</span>
           <span className="flex items-center gap-2">↩ 14-day easy returns</span>
           <span className="flex items-center gap-2">🔒 Secure checkout</span>

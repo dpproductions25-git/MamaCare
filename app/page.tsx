@@ -7,6 +7,8 @@ import { featuredScore } from '@/lib/featured';
 import { categories } from '@/lib/products';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllConfig } from '@/lib/db';
+import { getShippingSettings } from '@/lib/db-commerce';
+import { shippingBlurb, shippingSubLabel } from '@/lib/shipping-copy';
 import { buildMetadata } from '@/lib/seo';
 
 
@@ -48,8 +50,13 @@ const DEFAULTS = {
 
 export default async function HomePage({ searchParams }: { searchParams?: { subscribed?: string } }) {
   const subscribed = searchParams?.subscribed === '1';
-  const [all, config] = await Promise.all([getMergedProducts(), getAllConfig()]);
+  const [all, config, shipping] = await Promise.all([
+    getMergedProducts(),
+    getAllConfig(),
+    getShippingSettings(),
+  ]);
   const bestSellers = all.filter((p) => p.bestSeller).slice(0, 8);
+  const shipNote = shippingBlurb(shipping);
 
   // Pick the highest-scoring product for the featured spotlight.
   // Algorithm: reviewsCount × rating × (1 + discountPct) × bestSellerBonus
@@ -131,7 +138,7 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
                   4.8 from 7,400+ mamas
                 </span>
                 <span className="w-px h-4 bg-white/25 hidden sm:block" />
-                <span className="hidden sm:inline">Free U.S. shipping over $50</span>
+                <span className="hidden sm:inline">{shipNote}</span>
                 <span className="w-px h-4 bg-white/25 hidden sm:block" />
                 <span className="hidden sm:inline">14-day returns</span>
               </div>
@@ -149,7 +156,7 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
               {[
                 { icon: '★', stat: '4.8 / 5', label: 'Average rating' },
                 { icon: '👶', stat: '10,000+', label: 'Happy families' },
-                { icon: '🚚', stat: 'Free shipping', label: 'Orders over $50' },
+                { icon: '🚚', stat: 'Free shipping', label: shippingSubLabel(shipping) },
                 { icon: '↩', stat: '14-day returns', label: 'No questions asked' },
                 { icon: '🔒', stat: 'Secure checkout', label: 'Stripe & PayPal' },
                 { icon: '🌿', stat: 'Thoughtfully sourced', label: 'Mama-approved picks' },
@@ -168,7 +175,7 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
       </div>
 
       {/* ── Featured Product Spotlight ── */}
-      {featuredProduct && <FeaturedProduct product={featuredProduct} />}
+      {featuredProduct && <FeaturedProduct product={featuredProduct} shippingNote={shipNote} />}
 
       {/* ── Shop by age ── */}
       <section className="container-page py-12 sm:py-16">
@@ -332,7 +339,7 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
           <div>
             <div className="mx-auto w-12 h-12 rounded-full bg-white flex items-center justify-center mb-3 shadow-soft">🚚</div>
             <h3 className="font-display text-xl text-ink-900">Fast, free shipping</h3>
-            <p className="text-ink-500 mt-2 max-w-xs mx-auto">Free U.S. shipping over $50. Worldwide delivery available.</p>
+            <p className="text-ink-500 mt-2 max-w-xs mx-auto">{shipNote}. Worldwide delivery available.</p>
           </div>
           <div>
             <div className="mx-auto w-12 h-12 rounded-full bg-white flex items-center justify-center mb-3 shadow-soft">💌</div>

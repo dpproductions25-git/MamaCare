@@ -47,9 +47,11 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
     discount: preview.discount,
     shipping: preview.shipping,
     total: preview.total,
-    appliedCode: preview.coupon?.code ?? null,
-    couponDescription: preview.coupon?.description ?? null,
+    appliedCode: preview.coupon?.code ?? null as string | null,
+    couponDescription: preview.coupon?.description ?? null as string | null,
     couponError: null as string | null,
+    freeThreshold: 50,
+    flatRate: 6.99,
   });
 
   // Authoritative totals from the server — knows admin shipping settings and
@@ -73,6 +75,8 @@ export default function CheckoutClient({ serverProducts }: { serverProducts: Pro
             appliedCode: data.appliedCode,
             couponDescription: data.couponDescription,
             couponError: data.couponError,
+            freeThreshold: data.freeThreshold,
+            flatRate: data.flatRate,
           });
         }
       } catch {

@@ -19,6 +19,9 @@ export type ResolvedTotals = {
   couponDescription: string | null;
   /** Set when a submitted code was rejected — safe to show the customer */
   couponError: string | null;
+  /** Live admin shipping settings, so the client can render accurate copy */
+  freeThreshold: number;
+  flatRate: number;
 };
 
 function discountFor(
@@ -94,5 +97,7 @@ export async function resolveTotals(
     appliedCode,
     couponDescription,
     couponError,
+    freeThreshold: settings.freeThreshold,
+    flatRate: settings.flatRate,
   };
 }
