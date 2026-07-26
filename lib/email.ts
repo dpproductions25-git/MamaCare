@@ -10,8 +10,53 @@ function client(): Resend | null {
   return _resend;
 }
 
-const FROM = process.env.RESEND_FROM || 'MamaCare <orders@mamacare.us>';
+/**
+ * Sender address.
+ *
+ * The subscribe route reads RESEND_FROM_EMAIL while this file read RESEND_FROM
+ * — so if only one was configured, order and registry emails silently fell back
+ * to an address that may not be verified in Resend, and every send failed with
+ * nothing surfacing. Accept both names, and fall back to Resend's always-valid
+ * sandbox sender rather than an unverified custom domain.
+ */
+const FROM =
+  process.env.RESEND_FROM ||
+  process.env.RESEND_FROM_EMAIL ||
+  'MamaCare <onboarding@resend.dev>';
+
 const ADMIN = process.env.CONTACT_EMAIL || 'hello@mamacare.us';
+
+/**
+ * The Resend SDK resolves with { data, error } instead of throwing, so an
+ * unverified domain or bad key looked exactly like success. This surfaces it.
+ */
+async function send(opts: { to: string; subject: string; html: string }) {
+  const c = client();
+  if (!c) {
+    console.warn('[email] RESEND_API_KEY not set — skipping:', opts.subject);
+    return false;
+  }
+  try {
+    const res: any = await c.emails.send({
+      from: FROM,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+    });
+    if (res?.error) {
+      console.error(
+        `[email] Resend rejected "${opts.subject}" to ${opts.to} from "${FROM}":`,
+        res.error
+      );
+      return false;
+    }
+    console.log(`[email] sent "${opts.subject}" to ${opts.to}`);
+    return true;
+  } catch (e: any) {
+    console.error(`[email] threw sending "${opts.subject}" to ${opts.to}:`, e?.message);
+    return false;
+  }
+}
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
@@ -62,16 +107,14 @@ export async function sendOrderConfirmation(opts: {
     </table>
     <p>We'll email you again with tracking as soon as your order ships.</p>`;
 
-  await c.emails.send({
-    from: FROM,
+  await send({
     to: opts.to,
     subject: `Order confirmed — ${opts.orderId}`,
     html: shell('Order confirmed', body)
   });
 
   // Notify the shop owner too
-  await c.emails.send({
-    from: FROM,
+  await send({
     to: ADMIN,
     subject: `🛍 New order ${opts.orderId} — ${dollars(opts.totalCents)}`,
     html: shell('New order received', `
@@ -94,9 +137,6 @@ export async function sendRegistryGiftNotification(opts: {
   registryId: string;
   giftedItems: { productName: string; qty: number }[];
 }) {
-  const c = client();
-  if (!c) { console.warn('Resend not configured — skipping registry gift email'); return; }
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mamacare.us';
   const registryUrl = `${siteUrl}/registry/${opts.registryId}`;
 
@@ -115,15 +155,19 @@ export async function sendRegistryGiftNotification(opts: {
     <table width="100%" style="border-top:1px solid #eee;border-bottom:1px solid #eee;margin:16px 0;">
       ${itemRows}
     </table>
-    <p>Your registry has been updated automatically to reflect what's been purchased.</p>
+    <p>Your registry has been updated automatically, so nobody else buys the same thing.</p>
+    <p style="color:#7A7A87;font-size:13px;">
+      We keep gift-givers anonymous — we won't tell you who bought what, so you
+      can still be surprised. 💕
+    </p>
     <p style="margin-top:20px;">
       <a href="${registryUrl}" style="background:#E68197;color:#fff;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:600;">
         View your registry →
       </a>
     </p>`;
 
-  await c.emails.send({
-    from: FROM,
+  // NOTE: deliberately contains no buyer name, email, or address.
+  await send({
     to: opts.to,
     subject: `🎁 Someone bought from your baby registry!`,
     html: shell(`Someone bought from ${opts.registryTitle}!`, body),
@@ -136,9 +180,6 @@ export async function sendShippingUpdate(opts: {
   trackingNumber: string;
   trackingUrl?: string;
 }) {
-  const c = client();
-  if (!c) { console.warn('Resend not configured — skipping shipping email'); return; }
-
   const body = `
     <p>Great news — your MamaCare order has shipped!</p>
     <p><strong>Order:</strong> ${opts.orderId}<br/>
@@ -146,8 +187,7 @@ export async function sendShippingUpdate(opts: {
     ${opts.trackingUrl ? `<p><a href="${opts.trackingUrl}" style="background:#E68197;color:#fff;padding:12px 20px;border-radius:9999px;text-decoration:none;">Track your package →</a></p>` : ''}
     <p>You'll receive your package within 5–18 days depending on your location.</p>`;
 
-  await c.emails.send({
-    from: FROM,
+  await send({
     to: opts.to,
     subject: `Your MamaCare order has shipped 📦`,
     html: shell('On the way!', body)

@@ -100,15 +100,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2) Email customer + admin
+    // 2) Email customer + admin.
+    // Independently guarded: this used to be unguarded, so a failing email
+    // aborted the whole handler — skipping supplier fulfilment AND registry
+    // updates for an order that had already been paid for.
     if (shipping.email) {
-      await sendOrderConfirmation({
-        to: shipping.email,
-        orderId: session.id,
-        totalCents: session.amount_total ?? 0,
-        items: snapshot,
-        shipping
-      });
+      try {
+        await sendOrderConfirmation({
+          to: shipping.email,
+          orderId: session.id,
+          totalCents: session.amount_total ?? 0,
+          items: snapshot,
+          shipping
+        });
+      } catch (e) {
+        console.error('[stripe webhook] order confirmation email failed', e);
+      }
     }
 
     // 3) Fire CJ fulfillment.
@@ -152,6 +159,10 @@ export async function POST(req: Request) {
     // 4) Mark registry items as purchased and notify the registry owner.
     // Compact metadata format: registryId~itemId:qty,itemId:qty;registryId2~itemId:qty
     const registrySnapRaw = session.metadata?.registrySnapshot || '';
+    console.log(
+      `[stripe webhook] order ${session.id} registrySnapshot="${registrySnapRaw}"` +
+      (registrySnapRaw.trim() ? '' : ' (none — not a registry purchase)')
+    );
     if (registrySnapRaw.trim()) {
       try {
         await ensureRegistrySchema();
