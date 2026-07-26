@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getMergedProducts } from '@/lib/product-overrides';
-import { SITE_URL } from '@/lib/seo';
+import { resolveOrigin } from '@/lib/seo';
 import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -19,6 +19,8 @@ export async function POST(req: Request) {
   if (!rateLimit(`checkout:stripe:${ip}`, 10, 60_000)) {
     return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
   }
+
+  const origin = resolveOrigin(req);
 
   try {
     const body = await req.json();
@@ -145,8 +147,11 @@ export async function POST(req: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items,
-      success_url: `${SITE_URL}/checkout/success?provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/checkout`,
+      // Built from the request origin, not a config constant — a stale
+      // NEXT_PUBLIC_SITE_URL used to drop paying customers on a dead
+      // deployment's 404 page after checkout.
+      success_url: `${origin}/checkout/success?provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/checkout`,
       customer_email: shippingAddress?.email,
       shipping_address_collection: { allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ', 'IE'] },
       metadata: {
