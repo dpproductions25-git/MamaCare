@@ -103,6 +103,10 @@ export async function POST(req: Request) {
       .join(';')
       .slice(0, 490); // hard safety cap under Stripe's 500-char limit
 
+    if (registrySnapshot) {
+      console.log(`[checkout/stripe] registry purchase detected: ${registrySnapshot}`);
+    }
+
     // Authoritative pricing — DB coupons + admin shipping settings.
     const totals = await resolveTotals(subtotal, couponCode);
     const { discount, shipping, appliedCode } = totals;
@@ -155,8 +159,18 @@ export async function POST(req: Request) {
       customer_email: shippingAddress?.email,
       shipping_address_collection: { allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ', 'IE'] },
       metadata: {
-        productSnapshot: JSON.stringify(items),
-        shippingAddress: JSON.stringify(shippingAddress || {}),
+        // Only the fields the webhook needs. Serialising the whole cart item
+        // pushed this toward Stripe's 500-char-per-value metadata limit once
+        // registry fields were added — and an oversized value makes Stripe
+        // reject the entire session. Registry data lives in registrySnapshot.
+        productSnapshot: JSON.stringify(
+          items.map((i) => ({
+            productId: i.productId,
+            qty: i.qty,
+            ...(i.variantId ? { variantId: i.variantId } : {}),
+          }))
+        ).slice(0, 490),
+        shippingAddress: JSON.stringify(shippingAddress || {}).slice(0, 490),
         couponCode: appliedCode || '',
         registrySnapshot,
       }

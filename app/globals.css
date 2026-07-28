@@ -39,3 +39,44 @@ html, body {
   to   { transform: translateX(0);    opacity: 1; }
 }
 .animate-slideInRight { animation: slideInRight .3s cubic-bezier(.25,.46,.45,.94) both; }
+
+/* ── Email popup ─────────────────────────────────────────────────────────── */
+
+@keyframes mcPopupFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes mcPopupPop {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.mc-popup-backdrop { animation: mcPopupFade .25s ease-out both; }
+.mc-popup-card     { animation: mcPopupPop  .32s cubic-bezier(.22,1,.36,1) both; }
+
+/*
+ * Screen-reader-only text. Tailwind ships an sr-only utility, but this project
+ * uses a trimmed config, so define it explicitly rather than assume it exists.
+ */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/*
+ * Users who have asked their OS to reduce motion (common for vestibular
+ * disorders, and the default on some managed devices) get no animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .mc-popup-backdrop,
+  .mc-popup-card,
+  .animate-fadeUp,
+  .animate-slideInRight {
+    animation: none !important;
+  }
+}
