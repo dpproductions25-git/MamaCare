@@ -83,13 +83,15 @@ export default function EmailPopup() {
       onLeave = (e: MouseEvent) => {
         if (e.clientY <= 0) { stop(); show(); }
       };
-      document.addEventListener('mouseout', onLeave);
+      // mouseleave on the root element, not mouseout on document — mouseout
+      // fires on every element boundary crossing, thousands of times a session.
+      document.documentElement.addEventListener('mouseleave', onLeave);
     }
 
     return () => {
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
-      if (onLeave) document.removeEventListener('mouseout', onLeave);
+      if (onLeave) document.documentElement.removeEventListener('mouseleave', onLeave);
     };
   }, [suppressed]);
 
