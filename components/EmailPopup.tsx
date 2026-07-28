@@ -72,26 +72,14 @@ export default function EmailPopup() {
     if (document.visibilityState === 'visible') start();
     document.addEventListener('visibilitychange', onVisibility);
 
-    // Exit intent (desktop pointers only — touch devices never fire this,
-    // and the timer covers them).
-    let onLeave: ((e: MouseEvent) => void) | undefined;
-    const finePointer =
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(pointer: fine)').matches;
-
-    if (finePointer) {
-      onLeave = (e: MouseEvent) => {
-        if (e.clientY <= 0) { stop(); show(); }
-      };
-      // mouseleave on the root element, not mouseout on document — mouseout
-      // fires on every element boundary crossing, thousands of times a session.
-      document.documentElement.addEventListener('mouseleave', onLeave);
-    }
+    // NOTE: no exit-intent trigger. Firing on mouseleave meant the popup
+    // appeared every time the cursor went near the browser chrome, tabs, or a
+    // second monitor — which reads as broken rather than persuasive. The
+    // 5-second timer is the only trigger.
 
     return () => {
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
-      if (onLeave) document.documentElement.removeEventListener('mouseleave', onLeave);
     };
   }, [suppressed]);
 
