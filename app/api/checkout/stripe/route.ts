@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { resolveOrigin } from '@/lib/seo';
+import { TAX_ENABLED } from '@/lib/tax';
 import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -74,6 +75,8 @@ export async function POST(req: Request) {
         price_data: {
           currency: 'usd',
           unit_amount: Math.round(price * 100),
+          // Prices are entered exclusive of tax — Stripe Tax adds it on top.
+          tax_behavior: 'exclusive',
           product_data: {
             name: `${p.name}${variantLabel}`,
             images: [variant?.image || p.image],
@@ -125,32 +128,62 @@ export async function POST(req: Request) {
       );
     }
 
+    /**
+     * Discounts must go through Stripe's own coupon object, NOT a negative
+     * line item. `unit_amount` has to be non-negative, so the old approach made
+     * Stripe reject every discounted order — and negative line items are also
+     * incompatible with automatic tax. A one-off coupon lets Stripe apply the
+     * discount before calculating tax, which is the correct order.
+     */
+    let stripeDiscounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined;
     if (appliedCode && discount > 0) {
-      line_items.push({
-        quantity: 1,
-        price_data: {
+      try {
+        const coupon = await stripe.coupons.create({
+          amount_off: Math.round(discount * 100),
           currency: 'usd',
-          unit_amount: -Math.round(discount * 100),
-          product_data: { name: `Discount (${appliedCode})` }
-        }
-      });
+          duration: 'once',
+          name: `Discount (${appliedCode})`,
+          max_redemptions: 1,
+        });
+        stripeDiscounts = [{ coupon: coupon.id }];
+      } catch (e: any) {
+        console.error('[checkout/stripe] could not create discount coupon:', e?.message);
+        return NextResponse.json(
+          { error: 'We could not apply that discount. Please try again.' },
+          { status: 500 }
+        );
+      }
     }
 
+    /**
+     * Shipping goes through shipping_options rather than a line item so Stripe
+     * Tax can apply the correct rate — shipping is taxable in some US states
+     * and not others, and it can't work that out from a generic product line.
+     */
     const shippingCents = Math.round(shipping * 100);
-    if (shippingCents > 0) {
-      line_items.push({
-        quantity: 1,
-        price_data: {
-          currency: 'usd',
-          unit_amount: shippingCents,
-          product_data: { name: 'Shipping' }
-        }
-      });
-    }
+    const shipping_options: Stripe.Checkout.SessionCreateParams.ShippingOption[] =
+      shippingCents > 0
+        ? [{
+            shipping_rate_data: {
+              type: 'fixed_amount',
+              fixed_amount: { amount: shippingCents, currency: 'usd' },
+              display_name: 'Standard shipping',
+              tax_behavior: 'exclusive',
+            },
+          }]
+        : [];
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items,
+      ...(stripeDiscounts ? { discounts: stripeDiscounts } : {}),
+      ...(shipping_options.length ? { shipping_options } : {}),
+      // Tax is determined by the billing address, so it must be collected.
+      billing_address_collection: 'required',
+      // Off unless STRIPE_AUTOMATIC_TAX=true — enabling this without tax
+      // registrations set up in the Stripe Dashboard makes Stripe reject
+      // every session, which would take checkout down entirely.
+      automatic_tax: { enabled: TAX_ENABLED },
       // Built from the request origin, not a config constant — a stale
       // NEXT_PUBLIC_SITE_URL used to drop paying customers on a dead
       // deployment's 404 page after checkout.

@@ -275,8 +275,12 @@ export default function CheckoutClient({
                   : `$${shipping.toFixed(2)}`}
               </dd>
             </div>
+            <div className="flex justify-between text-ink-500">
+              <dt>Sales tax</dt>
+              <dd className="text-xs italic">Calculated at payment</dd>
+            </div>
             <div className="flex justify-between text-base text-ink-900 font-medium pt-2 border-t border-ink-900/10">
-              <dt>Total</dt><dd>${grand.toFixed(2)}</dd>
+              <dt>Total</dt><dd>${grand.toFixed(2)}<span className="text-xs font-normal text-ink-500"> + tax</span></dd>
             </div>
           </dl>
         </aside>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { resolveTotals } from '@/lib/pricing';
+import { calculateTax } from '@/lib/tax';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
@@ -76,11 +77,35 @@ export async function POST(req: Request) {
       );
     }
 
+    /**
+     * PayPal has no automatic tax service, so we use Stripe's Tax Calculation
+     * API here too. Using a different engine per payment method would charge
+     * two different totals for the same cart.
+     *
+     * Tax is based on the BILLING address the customer entered at checkout.
+     */
+    const billing = body.shippingAddress || {};
+    const tax = await calculateTax({
+      taxableAmount: Math.max(0, subtotal - discount),
+      shipping,
+      address: {
+        line1: billing.line1,
+        line2: billing.line2,
+        city: billing.city,
+        state: billing.state,
+        postalCode: billing.postalCode,
+        country: billing.country,
+      },
+    });
+
+    const grandTotal = +(total + tax).toFixed(2);
+
     const breakdown: Record<string, { currency_code: string; value: string }> = {
       item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
       shipping:   { currency_code: 'USD', value: shipping.toFixed(2) }
     };
     if (discount > 0) breakdown.discount = { currency_code: 'USD', value: discount.toFixed(2) };
+    if (tax > 0) breakdown.tax_total = { currency_code: 'USD', value: tax.toFixed(2) };
 
     const token = await paypalToken();
     const r = await fetch(`${paypalBase()}/v2/checkout/orders`, {
@@ -89,7 +114,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         intent: 'CAPTURE',
         purchase_units: [{
-          amount: { currency_code: 'USD', value: total.toFixed(2), breakdown },
+          amount: { currency_code: 'USD', value: grandTotal.toFixed(2), breakdown },
           items: ppItems,
           custom_id: appliedCode || undefined
         }],
