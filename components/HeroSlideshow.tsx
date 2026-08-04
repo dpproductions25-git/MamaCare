@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 
 const INTERVAL_MS = 6_000;
-const SWIPE_THRESHOLD = 50;
 
 /**
  * Auto-rotating hero background.
@@ -26,16 +25,17 @@ export default function HeroSlideshow({
   const slides = Array.from(new Set(images.filter(Boolean)));
 
   const [index, setIndex] = useState(0);
+  // Only paused while the tab is in the background — the banner runs purely on
+  // a timer, with no hover or swipe interruptions.
   const [paused, setPaused] = useState(false);
-  const touchStartX = useRef<number | null>(null);
 
   const go = useCallback(
     (next: number) => setIndex((next + slides.length) % slides.length),
     [slides.length]
   );
 
-  // Auto-advance. Skipped entirely for one slide, when paused, or when the user
-  // has asked their OS to reduce motion.
+  // Auto-advance. Skipped entirely for one slide, when backgrounded, or when
+  // the user has asked their OS to reduce motion.
   useEffect(() => {
     if (slides.length < 2 || paused) return;
 
@@ -55,24 +55,10 @@ export default function HeroSlideshow({
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
-  function onTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(delta) > SWIPE_THRESHOLD) go(index + (delta < 0 ? 1 : -1));
-    touchStartX.current = null;
-  }
-
   return (
     <section
       className="relative w-full overflow-hidden"
       style={{ minHeight: '88vh' }}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
       aria-roledescription="carousel"
       aria-label="Featured"
     >

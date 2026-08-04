@@ -5,6 +5,8 @@ import ProductCard from '@/components/ProductCard';
 import FeaturedProduct from '@/components/FeaturedProduct';
 import HeroSlideshow from '@/components/HeroSlideshow';
 import TrustBar from '@/components/TrustBar';
+import { buildHeroSlides } from '@/lib/hero-slides';
+import { getWeeklyPicks, currentWeekRange } from '@/lib/weekly';
 import { featuredScore } from '@/lib/featured';
 import { categories } from '@/lib/products';
 import { getMergedProducts } from '@/lib/product-overrides';
@@ -57,7 +59,11 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
     getAllConfig(),
     getShippingSettings(),
   ]);
-  const bestSellers = all.filter((p) => p.bestSeller).slice(0, 8);
+  // "Most loved this week" — rotates automatically every Monday. Seeded by ISO
+  // week, so every visitor sees the same line-up all week and it changes on its
+  // own without anyone curating it.
+  const weeklyPicks = getWeeklyPicks(all, 8);
+  const weekRange = currentWeekRange();
   const shipNote = shippingBlurb(shipping);
 
   // Pick the highest-scoring product for the featured spotlight.
@@ -81,29 +87,16 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
   }
 
   /**
-   * Hero slides.
-   *
-   * Admin can set up to four explicitly (hero_image … hero_image_4). Any unset
-   * slots are topped up with strong product photography from the catalogue, so
-   * the banner is a slideshow out of the box rather than a single static image.
+   * Hero slides — admin overrides first, then curated lifestyle photography.
+   * Product shots are no longer used as filler: catalogue images are cropped
+   * tight on plain backgrounds and looked weak stretched across a full banner.
    */
-  const heroSlides: string[] = [
-    config.hero_image || DEFAULTS.hero_image,
+  const heroSlides = buildHeroSlides([
+    config.hero_image,
     config.hero_image_2,
     config.hero_image_3,
     config.hero_image_4,
-  ].filter(Boolean);
-
-  if (heroSlides.length < 3) {
-    const fillers = all
-      .filter((p) => p.id !== 'mc-test' && p.image && !heroSlides.includes(p.image))
-      .sort((a, b) => featuredScore(b) - featuredScore(a))
-      .map((p) => p.image);
-    for (const img of fillers) {
-      if (heroSlides.length >= 3) break;
-      heroSlides.push(img);
-    }
-  }
+  ]);
 
   const hero = {
     image: config.hero_image || DEFAULTS.hero_image,
@@ -300,13 +293,16 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
       <section className="container-page py-12 sm:py-16">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="font-display text-3xl sm:text-4xl text-ink-900">Best sellers</h2>
-            <p className="text-ink-500 mt-1">Mama-approved favorites.</p>
+            <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium mb-2">
+              {weekRange}
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl text-ink-900">Most loved this week</h2>
+            <p className="text-ink-500 mt-1">A fresh edit of mama-approved favourites, every Monday.</p>
           </div>
           <Link href="/shop" className="btn-ghost">Shop all →</Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {bestSellers.map((p) => (
+          {weeklyPicks.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>
