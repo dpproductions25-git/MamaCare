@@ -40,6 +40,23 @@ html, body {
 }
 .animate-slideInRight { animation: slideInRight .3s cubic-bezier(.25,.46,.45,.94) both; }
 
+/* ── Hero slideshow ──────────────────────────────────────────────────────── */
+
+/*
+ * Slow Ken Burns drift. The image is rendered at scale-105 so there's room to
+ * move without exposing an edge. Paired with motion-safe: in the markup, so
+ * reduced-motion users get a still image.
+ */
+@keyframes heroPan {
+  from { transform: scale(1.05) translate3d(0, 0, 0); }
+  to   { transform: scale(1.12) translate3d(-1.2%, -1%, 0); }
+}
+.animate-heroPan { animation: heroPan 14s ease-out both; }
+
+/* Hide the scrollbar on horizontally swipeable strips (mobile trust bar) */
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 /* ── Email popup ─────────────────────────────────────────────────────────── */
 
 @keyframes mcPopupFade {
@@ -76,7 +93,8 @@ html, body {
   .mc-popup-backdrop,
   .mc-popup-card,
   .animate-fadeUp,
-  .animate-slideInRight {
+  .animate-slideInRight,
+  .animate-heroPan {
     animation: none !important;
   }
 }

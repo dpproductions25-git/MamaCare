@@ -3,6 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
 import FeaturedProduct from '@/components/FeaturedProduct';
+import HeroSlideshow from '@/components/HeroSlideshow';
+import TrustBar from '@/components/TrustBar';
 import { featuredScore } from '@/lib/featured';
 import { categories } from '@/lib/products';
 import { getMergedProducts } from '@/lib/product-overrides';
@@ -78,6 +80,31 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
     if (pick) categoryHeroImages[cat.slug] = pick.image;
   }
 
+  /**
+   * Hero slides.
+   *
+   * Admin can set up to four explicitly (hero_image … hero_image_4). Any unset
+   * slots are topped up with strong product photography from the catalogue, so
+   * the banner is a slideshow out of the box rather than a single static image.
+   */
+  const heroSlides: string[] = [
+    config.hero_image || DEFAULTS.hero_image,
+    config.hero_image_2,
+    config.hero_image_3,
+    config.hero_image_4,
+  ].filter(Boolean);
+
+  if (heroSlides.length < 3) {
+    const fillers = all
+      .filter((p) => p.id !== 'mc-test' && p.image && !heroSlides.includes(p.image))
+      .sort((a, b) => featuredScore(b) - featuredScore(a))
+      .map((p) => p.image);
+    for (const img of fillers) {
+      if (heroSlides.length >= 3) break;
+      heroSlides.push(img);
+    }
+  }
+
   const hero = {
     image: config.hero_image || DEFAULTS.hero_image,
     eyebrow: config.hero_eyebrow || DEFAULTS.hero_eyebrow,
@@ -89,27 +116,8 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
 
   return (
     <>
-      {/* ── Full-bleed hero banner ── */}
-      <section className="relative w-full overflow-hidden" style={{ minHeight: '88vh' }}>
-        {/* Background image — full bleed, no border radius */}
-        <Image
-          src={hero.image}
-          alt={hero.headline}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-[center_30%]"
-        />
-
-        {/* Left-to-right gradient — dark on left for text, fades out on right */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/5" />
-        {/* Bottom vignette for depth + smooth page transition */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-        {/* Bottom fade into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#FBF5EE] to-transparent" />
-
-        {/* Content */}
-        <div className="relative z-10 flex items-center" style={{ minHeight: '88vh' }}>
+      {/* ── Full-bleed hero slideshow ── */}
+      <HeroSlideshow images={heroSlides} alt={hero.headline}>
           <div className="container-page py-24 lg:py-36">
             <div className="max-w-2xl">
               <p className="uppercase tracking-[0.22em] text-blush-300 text-xs font-semibold mb-5">
@@ -144,35 +152,10 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
               </div>
             </div>
           </div>
-        </div>
-      </section>
+      </HeroSlideshow>
 
       {/* ── Trust / Social-proof bar ── */}
-      <div className="bg-white border-y border-ink-900/5 overflow-hidden">
-        <div className="flex items-center gap-0 animate-none">
-          {/* Two copies for seamless scroll on wider screens */}
-          {[0, 1].map((copy) => (
-            <ul key={copy} className="flex items-center divide-x divide-ink-900/8 shrink-0 w-full" aria-hidden={copy === 1}>
-              {[
-                { icon: '★', stat: '4.8 / 5', label: 'Average rating' },
-                { icon: '👶', stat: '10,000+', label: 'Happy families' },
-                { icon: '🚚', stat: 'Free shipping', label: shippingSubLabel(shipping) },
-                { icon: '↩', stat: '14-day returns', label: 'No questions asked' },
-                { icon: '🔒', stat: 'Secure checkout', label: 'Stripe & PayPal' },
-                { icon: '🌿', stat: 'Thoughtfully sourced', label: 'Mama-approved picks' },
-              ].map((item) => (
-                <li key={item.stat} className="flex items-center gap-3 px-7 py-4 shrink-0">
-                  <span className="text-xl leading-none">{item.icon}</span>
-                  <div>
-                    <p className="text-sm font-semibold text-ink-900 leading-tight">{item.stat}</p>
-                    <p className="text-xs text-ink-500">{item.label}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ))}
-        </div>
-      </div>
+      <TrustBar shippingLabel={shippingSubLabel(shipping)} />
 
       {/* ── Featured Product Spotlight ── */}
       {featuredProduct && <FeaturedProduct product={featuredProduct} shippingNote={shipNote} />}
