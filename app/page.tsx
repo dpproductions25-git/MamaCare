@@ -5,7 +5,7 @@ import ProductCard from '@/components/ProductCard';
 import FeaturedProduct from '@/components/FeaturedProduct';
 import HeroSlideshow from '@/components/HeroSlideshow';
 import TrustBar from '@/components/TrustBar';
-import { buildHeroSlides } from '@/lib/hero-slides';
+import { buildHeroSlides, DEFAULT_HERO_IMAGE } from '@/lib/hero-slides';
 import { getWeeklyPicks, currentWeekRange } from '@/lib/weekly';
 import { featuredScore } from '@/lib/featured';
 import { categories } from '@/lib/products';
@@ -44,7 +44,9 @@ export const metadata = buildMetadata({
 });
 
 const DEFAULTS = {
-  hero_image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=2400&q=85',
+  // Same photograph as the About page — used as the hero and as the fallback
+  // tile for any category without its own product image.
+  hero_image: DEFAULT_HERO_IMAGE,
   hero_eyebrow: 'Lovingly made for every mama',
   hero_headline: 'Soft, supportive essentials for every season of motherhood.',
   hero_subhead: 'From bump to baby and beyond — discover thoughtfully curated baby gear, sleep, feeding, and nursery products designed to feel as good as they look.',

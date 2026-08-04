@@ -16,35 +16,24 @@ function unsplash(id: string): string {
   return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${W}&q=${Q}`;
 }
 
-export const CURATED_HERO_SLIDES: string[] = [
-  // Warm, soft-lit lifestyle imagery — the existing default hero
-  unsplash('1503454537195-1dcabb73ffb9'),
-  // Used as the admin default hero placeholder
-  unsplash('1555252333-9f8e92e65df9'),
-  // About-page hero
-  unsplash('1519689680058-324335c77eba'),
-  // Nursery / soft textiles
-  unsplash('1584515933487-779824d29309'),
-];
+/** The baby-in-the-inflatable shot — the same photograph used on the About page. */
+export const DEFAULT_HERO_IMAGE = unsplash('1519689680058-324335c77eba');
+
+export const CURATED_HERO_SLIDES: string[] = [DEFAULT_HERO_IMAGE];
 
 /**
- * Build the final slide list: admin choices first, topped up with curated
- * photography, de-duplicated, capped at 4.
+ * Build the slide list.
  *
- * Product photography is deliberately NOT used as filler — catalogue shots are
- * cropped tight on white backgrounds and look weak stretched across a
- * full-bleed banner.
+ * Admin images are used exclusively when any are set — the curated default is
+ * NOT mixed in alongside them, otherwise setting one image in admin would
+ * silently produce a two-slide carousel nobody asked for.
+ *
+ * With a single slide the component skips the timer and hides the dots, so this
+ * renders as a plain static banner.
  */
 export function buildHeroSlides(adminImages: (string | undefined | null)[]): string[] {
-  const slides: string[] = [];
-
-  for (const img of adminImages) {
-    if (img && !slides.includes(img)) slides.push(img);
-  }
-  for (const img of CURATED_HERO_SLIDES) {
-    if (slides.length >= 4) break;
-    if (!slides.includes(img)) slides.push(img);
-  }
-
-  return slides.slice(0, 4);
+  const chosen = adminImages.filter(
+    (img, i, arr): img is string => !!img && arr.indexOf(img) === i
+  );
+  return chosen.length ? chosen.slice(0, 4) : [...CURATED_HERO_SLIDES];
 }
