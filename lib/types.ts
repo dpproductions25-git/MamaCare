@@ -19,6 +19,12 @@ export type ProductVariant = {
   price?: number;
   image?: string;
   inventory?: number;
+  /**
+   * UI-only: the raw text in the admin price box while it's being typed.
+   * Stripped before saving — never persisted. Exists so a partially typed
+   * value like "12." doesn't get collapsed by a premature Number() call.
+   */
+  priceText?: string;
 };
 
 export type Product = {

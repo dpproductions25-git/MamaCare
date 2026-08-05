@@ -22,8 +22,16 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
     short_description: initial.shortDescription,
     description: initial.description,
     seo_description: initial.seoDescription || '',
-    price: initial.price,
-    compare_at_price: initial.compareAtPrice ?? '',
+    /**
+     * Prices are held as STRINGS, not numbers.
+     *
+     * With a number, clearing the box gave Number('') === 0, which instantly
+     * snapped the field back to "0" — so you could never delete the leading
+     * zero, and typing "12." (mid-decimal) collapsed to "12". Keeping the raw
+     * text and converting once on submit makes the field behave normally.
+     */
+    price: String(initial.price ?? ''),
+    compare_at_price: initial.compareAtPrice != null ? String(initial.compareAtPrice) : '',
     image: initial.image,
     images: (initial.images || []).join(', '),
     category: initial.category,
@@ -42,6 +50,23 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
 
   function up<K extends keyof typeof form>(k: K, v: any) {
     setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  /**
+   * Accept only what can become a valid price as the user types: digits and a
+   * single decimal point, max 2 decimal places. Deliberately permits "" and
+   * "12." mid-typing — validation happens on submit, not on every keystroke.
+   */
+  function sanitizeMoney(raw: string): string {
+    let s = raw.replace(/[^\d.]/g, '');
+    const firstDot = s.indexOf('.');
+    if (firstDot !== -1) {
+      s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+    }
+    const [whole, dec] = s.split('.');
+    // Drop a leading zero as soon as a real digit follows ("05" → "5")
+    const cleanWhole = whole.length > 1 ? whole.replace(/^0+(?=\d)/, '') : whole;
+    return dec !== undefined ? `${cleanWhole}.${dec.slice(0, 2)}` : cleanWhole;
   }
 
   function addVariant() {
@@ -107,11 +132,33 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
       // Clean variants — drop empty rows
       const cleanVariants = variants
         .filter((v) => v.name?.trim() || v.color?.trim() || v.size?.trim())
-        .map((v) => ({
-          ...v,
-          name: v.name?.trim() || `${v.color || ''} ${v.size || ''}`.trim(),
-          image: v.image ? normalizeImageUrl(v.image) : undefined
-        }));
+        .map((v) => {
+          // priceText only exists to keep the input editable while typing —
+          // strip it so it never gets persisted.
+          const { priceText, ...rest } = v as ProductVariant & { priceText?: string };
+          return {
+            ...rest,
+            name: v.name?.trim() || `${v.color || ''} ${v.size || ''}`.trim(),
+            image: v.image ? normalizeImageUrl(v.image) : undefined,
+          };
+        });
+
+      // Validate prices here rather than relying on the browser — the fields
+      // are type="text" so there is no native number validation to lean on.
+      const priceNum = Number(form.price);
+      if (form.price.trim() === '' || !Number.isFinite(priceNum) || priceNum < 0) {
+        throw new Error('Enter a valid price (for example 24.99).');
+      }
+      let compareNum: number | null = null;
+      if (form.compare_at_price.trim() !== '') {
+        compareNum = Number(form.compare_at_price);
+        if (!Number.isFinite(compareNum) || compareNum < 0) {
+          throw new Error('Compare-at price must be a valid amount, or left blank.');
+        }
+        if (compareNum <= priceNum) {
+          throw new Error('Compare-at price must be higher than the price, or left blank.');
+        }
+      }
 
       const payload: any = {
         is_custom: isCustom,
@@ -119,8 +166,8 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
         short_description: form.short_description.trim(),
         description: form.description.trim(),
         seo_description: form.seo_description.trim() || null,
-        price: Number(form.price),
-        compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
+        price: priceNum,
+        compare_at_price: compareNum,
         image: normalizeImageUrl(form.image),
         images_json: imageList.length > 0 ? imageList : null,
         category: form.category,
@@ -201,10 +248,21 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
       <Section title="Pricing">
         <div className="grid sm:grid-cols-3 gap-4">
           <Field label="Price (USD) *">
-            <input type="number" step="0.01" min="0" required value={form.price} onChange={(e) => up('price', Number(e.target.value))} className="input" />
+            <MoneyInput
+              value={form.price}
+              onChange={(v) => up('price', v)}
+              onSanitize={sanitizeMoney}
+              required
+              placeholder="0.00"
+            />
           </Field>
           <Field label="Compare-at price" hint="Optional. Shown crossed out for sale display.">
-            <input type="number" step="0.01" min="0" value={form.compare_at_price} onChange={(e) => up('compare_at_price', e.target.value)} className="input" />
+            <MoneyInput
+              value={form.compare_at_price}
+              onChange={(v) => up('compare_at_price', v)}
+              onSanitize={sanitizeMoney}
+              placeholder="Leave blank for none"
+            />
           </Field>
           <Field label="Category">
             <select value={form.category} onChange={(e) => up('category', e.target.value)} className="input">
@@ -486,15 +544,22 @@ function VariantCard({
           </div>
           <div>
             <label className="text-xs text-ink-500 mb-1 block">Price override</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={variant.price ?? ''}
-              onChange={(e) => onChange('price', e.target.value ? Number(e.target.value) : undefined)}
-              className="input text-sm"
-              placeholder="Blank = base price"
-            />
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400 text-sm pointer-events-none">$</span>
+              <input
+                // text + inputMode, not type="number" — see MoneyInput below.
+                type="text"
+                inputMode="decimal"
+                value={variant.priceText ?? (variant.price != null ? String(variant.price) : '')}
+                onChange={(e) => {
+                  const text = sanitizeVariantMoney(e.target.value);
+                  onChange('priceText', text);
+                  onChange('price', text === '' ? undefined : Number(text));
+                }}
+                className="input text-sm pl-7"
+                placeholder="Base price"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -553,5 +618,63 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {hint && <span className="block text-xs text-ink-500 mb-1">{hint}</span>}
       <div className="mt-1">{children}</div>
     </label>
+  );
+}
+
+/** Shared with the variant rows — same rules as sanitizeMoney above. */
+function sanitizeVariantMoney(raw: string): string {
+  let s = raw.replace(/[^\d.]/g, '');
+  const firstDot = s.indexOf('.');
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+  }
+  const [whole, dec] = s.split('.');
+  const cleanWhole = whole.length > 1 ? whole.replace(/^0+(?=\d)/, '') : whole;
+  return dec !== undefined ? `${cleanWhole}.${dec.slice(0, 2)}` : cleanWhole;
+}
+
+/**
+ * Money field.
+ *
+ * Uses type="text" with inputMode="decimal" rather than type="number", because
+ * number inputs cause real problems in an admin context:
+ *   - the scroll wheel silently changes the price when scrolling the page
+ *   - up/down arrow keys nudge the value unintentionally
+ *   - browsers disagree on what a partial decimal ("12.") should do
+ *   - locale keyboards may produce a comma, which type="number" discards
+ * inputMode="decimal" still brings up the numeric keypad on phones.
+ */
+function MoneyInput({
+  value,
+  onChange,
+  onSanitize,
+  required,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSanitize: (raw: string) => string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div className="relative">
+      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none">$</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        required={required}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(onSanitize(e.target.value))}
+        // Tidy up to 2dp when leaving the field, but never while typing.
+        onBlur={(e) => {
+          const n = Number(e.target.value);
+          if (e.target.value !== '' && Number.isFinite(n)) onChange(n.toFixed(2));
+        }}
+        onFocus={(e) => e.target.select()}
+        className="input pl-8"
+      />
+    </div>
   );
 }

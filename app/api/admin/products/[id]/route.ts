@@ -24,12 +24,30 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const actor = headers().get('x-admin-name') || 'unknown';
   const body = await req.json();
 
-  const isCustom = !!body.is_custom;
+  /**
+   * Decide static-vs-custom on the SERVER, from the database.
+   *
+   * This used to branch on body.is_custom sent by the client. If that flag was
+   * wrong for any reason, the request ran UPDATE custom_products on a row that
+   * doesn't exist — which affects zero rows, throws nothing, and returned
+   * {ok:true}. The admin showed "Saved ✓" while the price silently never
+   * changed. Never trust the client for routing a write.
+   */
   const isStatic = staticProducts.some((p) => p.id === params.id);
-  const customProduct = !isStatic ? await getCustomProduct(params.id) : null;
+  const customProduct = isStatic ? null : await getCustomProduct(params.id);
 
   if (!isStatic && !customProduct) {
-    return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    console.error(`[admin/products PATCH] product "${params.id}" not found in static list or custom_products`);
+    return NextResponse.json(
+      { error: 'Product not found. It may have been deleted — refresh the products list.' },
+      { status: 404 }
+    );
+  }
+
+  if (body.is_custom !== undefined && !!body.is_custom !== !!customProduct) {
+    console.warn(
+      `[admin/products PATCH] client sent is_custom=${body.is_custom} for "${params.id}" but server resolved isCustom=${!!customProduct} — using the server value`
+    );
   }
 
   // Whitelist + normalize fields
@@ -57,8 +75,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const fields = pickFields();
 
+  // Reject a price that would silently corrupt the listing
+  if ('price' in fields && fields.price != null) {
+    if (!Number.isFinite(fields.price) || fields.price < 0) {
+      return NextResponse.json(
+        { error: 'Price must be a valid amount of 0 or more.' },
+        { status: 400 }
+      );
+    }
+  }
+
   try {
-    if (isCustom || (!isStatic && customProduct)) {
+    if (customProduct) {
       // Map override-field names → custom_products column names where they differ
       const customFields: any = { ...fields };
       // custom_products uses 'images' not 'images_json'; 'tags' not 'tags_json'
@@ -71,11 +99,24 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         delete customFields.tags_json;
       }
       await updateCustomProduct(params.id, customFields);
+
+      // Confirm the write actually landed — an UPDATE that matches no rows
+      // succeeds silently, which is exactly how prices appeared to "save"
+      // without changing.
+      const after = await getCustomProduct(params.id);
+      if (!after) {
+        return NextResponse.json(
+          { error: 'Save failed — the product could not be found after updating.' },
+          { status: 500 }
+        );
+      }
+      console.log(`[admin/products PATCH] custom "${params.id}" saved, price=${after.price}`);
     } else {
       await upsertOverride(params.id, { ...fields, updated_by: actor });
+      console.log(`[admin/products PATCH] override "${params.id}" saved, price=${fields.price ?? '(unchanged)'}`);
     }
     await logAudit(actor, 'product.update', params.id, fields);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, isCustom: !!customProduct });
   } catch (e: any) {
     console.error('product PATCH failed', e);
     return NextResponse.json({ error: e.message || 'Save failed' }, { status: 500 });
