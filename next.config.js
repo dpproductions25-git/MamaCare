@@ -4,8 +4,20 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
 
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  /**
+   * TEMPORARILY set to false to surface type/lint errors in the Vercel build log.
+   *
+   * With these ignored, broken code deployed silently and only failed at
+   * runtime in front of customers. Turning them on makes the build fail loudly
+   * instead — production stays on the last good deployment, so a failed build
+   * takes nothing down.
+   *
+   * If the build passes, LEAVE THESE AS FALSE. That's the safer long-term
+   * setting. Only flip back to true if you need to ship something urgent while
+   * a known error is outstanding.
+   */
+  eslint: { ignoreDuringBuilds: false },
+  typescript: { ignoreBuildErrors: false },
 
   images: {
     formats: ['image/avif', 'image/webp'],
