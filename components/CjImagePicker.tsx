@@ -61,6 +61,9 @@ export default function CjImagePicker({
     return list;
   });
   const [main, setMain] = useState<string>(initialMain);
+  /** URLs that failed to load — surfaced so dead CJ links can be spotted and removed. */
+  const [broken, setBroken] = useState<Set<string>>(new Set());
+  const [confirmClear, setConfirmClear] = useState(false);
   const [photosApplied, setPhotosApplied] = useState(false);
   const [variantsApplied, setVariantsApplied] = useState(false);
 
@@ -105,6 +108,33 @@ export default function CjImagePicker({
   }
 
   // ── Photo helpers ────────────────────────────────────────────────────
+
+  /**
+   * Push the current gallery straight up to the parent form.
+   *
+   * Previously the only route to onApply() was the "Apply photos to product"
+   * button, so removing, reordering, or re-starring a photo changed local state
+   * and looked like it worked — but the change never reached the form and was
+   * lost on save. Every mutation now syncs immediately.
+   */
+  const syncToForm = useCallback((list: string[], mainUrl: string) => {
+    const m = mainUrl && list.includes(mainUrl) ? mainUrl : (list[0] || '');
+    onApply(m, list.filter((u) => u !== m));
+  }, [onApply]);
+
+  /** Remove a photo from the gallery entirely. */
+  const removePhoto = useCallback((url: string) => {
+    setSelected((prev) => {
+      const next = prev.filter((u) => u !== url);
+      setMain((m) => {
+        const nextMain = m === url ? (next[0] || '') : m;
+        syncToForm(next, nextMain);
+        return nextMain;
+      });
+      return next;
+    });
+  }, [syncToForm]);
+
   const toggle = useCallback((url: string) => {
     setSelected((prev) => {
       if (prev.includes(url)) {
@@ -118,6 +148,12 @@ export default function CjImagePicker({
     });
   }, []);
 
+  /** Promote a photo to main, syncing immediately. */
+  const chooseMain = useCallback((url: string) => {
+    setMain(url);
+    setSelected((prev) => { syncToForm(prev, url); return prev; });
+  }, [syncToForm]);
+
   function move(url: string, dir: -1 | 1) {
     setSelected((prev) => {
       const i    = prev.indexOf(url);
@@ -125,9 +161,17 @@ export default function CjImagePicker({
       const swap = i + dir;
       if (i < 0 || swap < 0 || swap >= next.length) return prev;
       [next[i], next[swap]] = [next[swap], next[i]];
+      setMain((m) => { syncToForm(next, m); return m; });
       return next;
     });
   }
+
+  /** Wipe the gallery — handy when a CJ import brings in dead image URLs. */
+  const clearAllPhotos = useCallback(() => {
+    setSelected([]);
+    setMain('');
+    onApply('', []);
+  }, [onApply]);
 
   // ── Variant helpers ──────────────────────────────────────────────────
   function toggleVid(vid: string) {
@@ -460,39 +504,89 @@ export default function CjImagePicker({
       {/* ── Selected gallery strip (shown only in photos tab or when no fetched data) ── */}
       {selected.length > 0 && (variantTab === 'photos' || !fetched) && (
         <div className="border border-ink-900/10 rounded-2xl p-4 bg-cream-50">
-          <p className="text-xs font-medium text-ink-700 uppercase tracking-wider mb-3">
-            Your gallery ({selected.length}) — ★ = main image
-          </p>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <p className="text-xs font-medium text-ink-700 uppercase tracking-wider">
+                Your gallery ({selected.length}) — ★ = main image
+              </p>
+              <p className="text-xs text-ink-400 mt-1">
+                Changes here save with the product. Broken images are flagged in red.
+              </p>
+            </div>
+            {selected.length > 0 && (
+              confirmClear ? (
+                <span className="flex items-center gap-2 text-xs whitespace-nowrap">
+                  <span className="text-ink-700">Remove all {selected.length}?</span>
+                  <button type="button" onClick={() => { clearAllPhotos(); setConfirmClear(false); }}
+                    className="px-2.5 py-1 rounded-full bg-red-500 text-white hover:bg-red-600">Yes</button>
+                  <button type="button" onClick={() => setConfirmClear(false)}
+                    className="px-2.5 py-1 rounded-full border border-ink-900/12 text-ink-700">Cancel</button>
+                </span>
+              ) : (
+                <button type="button" onClick={() => setConfirmClear(true)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-red-200 text-red-400 hover:bg-red-50 whitespace-nowrap">
+                  Remove all
+                </button>
+              )
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-3">
-            {selected.map((url, i) => (
-              <div key={url} className="relative group flex flex-col items-center gap-1">
-                <div className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 ${main === url ? 'border-blush-400' : 'border-transparent'}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  {main === url && (
-                    <span className="absolute top-1 left-1 bg-blush-400 text-white text-[10px] rounded-full px-1.5 py-0.5 leading-none">★ main</span>
-                  )}
+            {selected.map((url, i) => {
+              const isBroken = broken.has(url);
+              return (
+                <div key={url} className="relative group flex flex-col items-center gap-1">
+                  <div className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 ${
+                    isBroken ? 'border-red-300' : main === url ? 'border-blush-400' : 'border-transparent'
+                  }`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover bg-cream-100"
+                      onError={() => setBroken((b) => new Set(b).add(url))}
+                    />
+                    {main === url && !isBroken && (
+                      <span className="absolute top-1 left-1 bg-blush-400 text-white text-[10px] rounded-full px-1.5 py-0.5 leading-none">★ main</span>
+                    )}
+                    {isBroken && (
+                      <span className="absolute inset-x-0 bottom-0 bg-red-500 text-white text-[10px] text-center py-0.5 leading-none">
+                        broken
+                      </span>
+                    )}
+
+                    {/* Always-visible delete — the old × was buried in a row of
+                        tiny buttons and easy to miss. */}
+                    <button
+                      type="button"
+                      title="Delete this photo"
+                      aria-label="Delete this photo"
+                      onClick={() => removePhoto(url)}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/95 text-red-500 shadow-sm
+                                 flex items-center justify-center text-sm leading-none
+                                 hover:bg-red-500 hover:text-white transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-xs">
+                    <button type="button" title="Set as main" onClick={() => chooseMain(url)}
+                      className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${main === url ? 'bg-blush-400 text-white border-blush-400' : 'bg-white text-ink-500 border-ink-900/10 hover:border-blush-300'}`}>
+                      ★
+                    </button>
+                    <button type="button" title="Move left" disabled={i === 0} onClick={() => move(url, -1)}
+                      className="w-6 h-6 rounded-full border bg-white text-ink-500 border-ink-900/10 flex items-center justify-center disabled:opacity-30 hover:border-ink-900/30">
+                      ←
+                    </button>
+                    <button type="button" title="Move right" disabled={i === selected.length - 1} onClick={() => move(url, 1)}
+                      className="w-6 h-6 rounded-full border bg-white text-ink-500 border-ink-900/10 flex items-center justify-center disabled:opacity-30 hover:border-ink-900/30">
+                      →
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs">
-                  <button type="button" title="Set as main" onClick={() => setMain(url)}
-                    className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${main === url ? 'bg-blush-400 text-white border-blush-400' : 'bg-white text-ink-500 border-ink-900/10 hover:border-blush-300'}`}>
-                    ★
-                  </button>
-                  <button type="button" title="Move left" disabled={i === 0} onClick={() => move(url, -1)}
-                    className="w-6 h-6 rounded-full border bg-white text-ink-500 border-ink-900/10 flex items-center justify-center disabled:opacity-30 hover:border-ink-900/30">
-                    ←
-                  </button>
-                  <button type="button" title="Move right" disabled={i === selected.length - 1} onClick={() => move(url, 1)}
-                    className="w-6 h-6 rounded-full border bg-white text-ink-500 border-ink-900/10 flex items-center justify-center disabled:opacity-30 hover:border-ink-900/30">
-                    →
-                  </button>
-                  <button type="button" title="Remove" onClick={() => toggle(url)}
-                    className="w-6 h-6 rounded-full border bg-white text-blush-400 border-ink-900/10 flex items-center justify-center hover:border-blush-300">
-                    ×
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

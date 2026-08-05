@@ -544,8 +544,8 @@ function VariantCard({
           </div>
           <div>
             <label className="text-xs text-ink-500 mb-1 block">Price override</label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400 text-sm pointer-events-none">$</span>
+            <div className="flex items-center w-full bg-white rounded-xl border border-ink-900/10 focus-within:ring-[3px] focus-within:ring-blush-300/30">
+              <span className="pl-3 pr-1 text-ink-400 text-sm select-none">$</span>
               <input
                 // text + inputMode, not type="number" — see MoneyInput below.
                 type="text"
@@ -556,7 +556,7 @@ function VariantCard({
                   onChange('priceText', text);
                   onChange('price', text === '' ? undefined : Number(text));
                 }}
-                className="input text-sm pl-7"
+                className="flex-1 min-w-0 bg-transparent border-0 outline-none py-[0.55rem] pr-3 text-sm text-ink-900"
                 placeholder="Base price"
               />
             </div>
@@ -657,9 +657,15 @@ function MoneyInput({
   required?: boolean;
   placeholder?: string;
 }) {
+  /*
+   * The "$" sits in the flex row rather than absolutely over the field.
+   * Overlaying it and adding pl-8 didn't work: `.input` is declared in a
+   * styled-jsx global block whose `padding` shorthand loads after Tailwind and
+   * overrode the utility, so the symbol sat on top of the digits.
+   */
   return (
-    <div className="relative">
-      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none">$</span>
+    <div className="flex items-center w-full bg-white rounded-xl border border-ink-900/10 focus-within:ring-[3px] focus-within:ring-blush-300/30 transition-shadow">
+      <span className="pl-3.5 pr-1 text-ink-400 text-sm select-none">$</span>
       <input
         type="text"
         inputMode="decimal"
@@ -673,7 +679,7 @@ function MoneyInput({
           if (e.target.value !== '' && Number.isFinite(n)) onChange(n.toFixed(2));
         }}
         onFocus={(e) => e.target.select()}
-        className="input pl-8"
+        className="flex-1 min-w-0 bg-transparent border-0 outline-none py-[0.55rem] pr-3.5 text-[0.9rem] text-ink-900"
       />
     </div>
   );
