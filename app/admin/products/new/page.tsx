@@ -189,6 +189,9 @@ export default function NewProductPage() {
           <Field label="Price (USD) *">
             <input
               type="number" step="0.01" min="0" required value={form.price}
+              // Blur on wheel — otherwise scrolling the page over a focused
+              // number input silently changes the price.
+              onWheel={(e) => e.currentTarget.blur()}
               onChange={(e) => up('price', e.target.value)}
               placeholder="29.99" className="input"
             />
@@ -196,6 +199,7 @@ export default function NewProductPage() {
           <Field label="Compare-at price" hint="Optional. Crosses out for sale display.">
             <input
               type="number" step="0.01" min="0" value={form.compare_at_price}
+              onWheel={(e) => e.currentTarget.blur()}
               onChange={(e) => up('compare_at_price', e.target.value)}
               placeholder="39.99" className="input"
             />

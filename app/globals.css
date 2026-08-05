@@ -12,6 +12,41 @@ html, body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /*
+   * Nothing may push the page wider than the screen. A single overflowing
+   * element makes mobile browsers zoom the whole page out to fit, which is the
+   * "I have to pinch to read it" symptom.
+   */
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Media should never exceed its container, whatever the intrinsic size */
+img, svg, video, canvas, iframe {
+  max-width: 100%;
+}
+
+/*
+ * iOS Safari AUTO-ZOOMS the entire page when you focus an input whose font-size
+ * is below 16px — and it does not zoom back out afterwards. Several inputs here
+ * are 0.9rem (14.4px), which triggers it on every tap.
+ *
+ * Forcing 16px on small screens stops the zoom entirely. Desktop keeps the
+ * smaller, denser sizing.
+ */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/*
+ * Long unbroken strings — registry IDs, image URLs, discount codes — would
+ * otherwise stretch their container past the viewport on narrow screens.
+ */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @layer components {

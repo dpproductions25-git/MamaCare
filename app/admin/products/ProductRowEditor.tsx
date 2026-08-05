@@ -4,6 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/lib/types';
 
+/** Digits + one decimal point, max 2dp. Allows "" and "12." while typing. */
+function sanitizeMoney(raw: string): string {
+  let s = raw.replace(/[^\d.]/g, '');
+  const dot = s.indexOf('.');
+  if (dot !== -1) s = s.slice(0, dot + 1) + s.slice(dot + 1).replace(/\./g, '');
+  const [whole, dec] = s.split('.');
+  const cleanWhole = whole.length > 1 ? whole.replace(/^0+(?=\d)/, '') : whole;
+  return dec !== undefined ? `${cleanWhole}.${dec.slice(0, 2)}` : cleanWhole;
+}
+
 export default function ProductRowEditor({
   product,
   isCustom,
@@ -14,8 +24,13 @@ export default function ProductRowEditor({
   visible: boolean;
 }) {
   const router = useRouter();
-  const [price, setPrice] = useState(product.price);
-  const [compareAt, setCompareAt] = useState<number | undefined>(product.compareAtPrice);
+  // Held as text, not numbers — Number('') is 0, which made the leading zero
+  // impossible to delete and collapsed partly typed decimals. Same bug as the
+  // full edit form had.
+  const [price, setPrice] = useState(String(product.price ?? ''));
+  const [compareAt, setCompareAt] = useState(
+    product.compareAtPrice != null ? String(product.compareAtPrice) : ''
+  );
   const [inStock, setInStock] = useState(product.inStock);
   const [bestSeller, setBestSeller] = useState(product.bestSeller || false);
   const [shortDesc, setShortDesc] = useState(product.shortDescription);
@@ -23,9 +38,14 @@ export default function ProductRowEditor({
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
+  const priceNum = Number(price);
+  const compareNum = compareAt.trim() === '' ? null : Number(compareAt);
+  const priceValid = price.trim() !== '' && Number.isFinite(priceNum) && priceNum >= 0;
+  const compareValid = compareNum === null || (Number.isFinite(compareNum) && compareNum >= 0);
+
   const isDirty =
-    price !== product.price ||
-    (compareAt || null) !== (product.compareAtPrice || null) ||
+    priceNum !== product.price ||
+    (compareNum ?? null) !== (product.compareAtPrice ?? null) ||
     inStock !== product.inStock ||
     bestSeller !== (product.bestSeller || false) ||
     shortDesc !== product.shortDescription ||
@@ -33,14 +53,16 @@ export default function ProductRowEditor({
 
   async function save() {
     setSavedMsg(null);
+    if (!priceValid) { setSavedMsg('Enter a valid price'); return; }
+    if (!compareValid) { setSavedMsg('Invalid compare-at price'); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/products/${product.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          price,
-          compare_at_price: compareAt ?? null,
+          price: priceNum,
+          compare_at_price: compareNum,
           in_stock: inStock,
           best_seller: bestSeller,
           short_description: shortDesc,
@@ -83,10 +105,16 @@ export default function ProductRowEditor({
         <div className="flex items-center gap-1">
           <span className="text-ink-500 text-xs">$</span>
           <input
-            type="number" step="0.01" min="0"
+            // text + inputMode, not number: the scroll wheel silently changes
+            // a focused number input while scrolling a long product table.
+            type="text"
+            inputMode="decimal"
             value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
-            className="w-20 rounded-lg bg-white border border-ink-900/10 px-2 py-1 text-sm"
+            onChange={(e) => setPrice(sanitizeMoney(e.target.value))}
+            onFocus={(e) => e.target.select()}
+            className={`w-20 rounded-lg bg-white border px-2 py-1 text-sm ${
+              priceValid ? 'border-ink-900/10' : 'border-red-300 bg-red-50'
+            }`}
           />
         </div>
       </td>
@@ -94,10 +122,15 @@ export default function ProductRowEditor({
         <div className="flex items-center gap-1">
           <span className="text-ink-500 text-xs">$</span>
           <input
-            type="number" step="0.01" min="0" placeholder="—"
-            value={compareAt ?? ''}
-            onChange={(e) => setCompareAt(e.target.value ? Number(e.target.value) : undefined)}
-            className="w-20 rounded-lg bg-white border border-ink-900/10 px-2 py-1 text-sm"
+            type="text"
+            inputMode="decimal"
+            placeholder="—"
+            value={compareAt}
+            onChange={(e) => setCompareAt(sanitizeMoney(e.target.value))}
+            onFocus={(e) => e.target.select()}
+            className={`w-20 rounded-lg bg-white border px-2 py-1 text-sm ${
+              compareValid ? 'border-ink-900/10' : 'border-red-300 bg-red-50'
+            }`}
           />
         </div>
       </td>

@@ -122,18 +122,21 @@ export default function CjImagePicker({
     onApply(m, list.filter((u) => u !== m));
   }, [onApply]);
 
-  /** Remove a photo from the gallery entirely. */
+  /**
+   * Remove a photo from the gallery entirely.
+   *
+   * Next state is computed from the current values rather than inside a
+   * setState updater. Updaters must be pure — calling the parent's onApply from
+   * within one updates another component mid-render, which React 18 warns
+   * about and can apply out of order.
+   */
   const removePhoto = useCallback((url: string) => {
-    setSelected((prev) => {
-      const next = prev.filter((u) => u !== url);
-      setMain((m) => {
-        const nextMain = m === url ? (next[0] || '') : m;
-        syncToForm(next, nextMain);
-        return nextMain;
-      });
-      return next;
-    });
-  }, [syncToForm]);
+    const next = selected.filter((u) => u !== url);
+    const nextMain = main === url ? (next[0] || '') : main;
+    setSelected(next);
+    setMain(nextMain);
+    syncToForm(next, nextMain);
+  }, [selected, main, syncToForm]);
 
   const toggle = useCallback((url: string) => {
     setSelected((prev) => {
@@ -151,19 +154,17 @@ export default function CjImagePicker({
   /** Promote a photo to main, syncing immediately. */
   const chooseMain = useCallback((url: string) => {
     setMain(url);
-    setSelected((prev) => { syncToForm(prev, url); return prev; });
-  }, [syncToForm]);
+    syncToForm(selected, url);
+  }, [selected, syncToForm]);
 
   function move(url: string, dir: -1 | 1) {
-    setSelected((prev) => {
-      const i    = prev.indexOf(url);
-      const next = [...prev];
-      const swap = i + dir;
-      if (i < 0 || swap < 0 || swap >= next.length) return prev;
-      [next[i], next[swap]] = [next[swap], next[i]];
-      setMain((m) => { syncToForm(next, m); return m; });
-      return next;
-    });
+    const i = selected.indexOf(url);
+    const swap = i + dir;
+    if (i < 0 || swap < 0 || swap >= selected.length) return;
+    const next = [...selected];
+    [next[i], next[swap]] = [next[swap], next[i]];
+    setSelected(next);
+    syncToForm(next, main);
   }
 
   /** Wipe the gallery — handy when a CJ import brings in dead image URLs. */
