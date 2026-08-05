@@ -283,11 +283,25 @@ export async function getAllOverrides(): Promise<Record<string, DbOverride>> {
 }
 
 export async function upsertOverride(productId: string, fields: Partial<DbOverride> & { updated_by: string }) {
-  // Build dynamic UPSERT — only set provided fields.
+  /**
+   * Dynamic UPSERT — only writes the fields provided.
+   *
+   * BUG HISTORY: `updated_at` is written as the SQL literal NOW(), which is not
+   * a bound parameter. The values array used to include the string 'NOW()'
+   * anyway, so it always carried exactly one more element than there were
+   * placeholders. Postgres rejected every call with:
+   *
+   *   bind message supplies N parameters, but prepared statement "" requires N-1
+   *
+   * That meant editing ANY static (code-defined) product silently failed —
+   * only admin-created products, which use updateCustomProduct, could be saved.
+   * Keep literals out of the values array.
+   */
   const cols = ['product_id', 'updated_by', 'updated_at'];
-  const vals: any[] = [productId, fields.updated_by, 'NOW()'];
   const placeholders = ['$1', '$2', 'NOW()'];
+  const vals: any[] = [productId, fields.updated_by];
   let i = 3;
+
   for (const [k, v] of Object.entries(fields)) {
     if (k === 'updated_by' || k === 'product_id' || k === 'updated_at') continue;
     if (v === undefined) continue;
@@ -300,12 +314,27 @@ export async function upsertOverride(productId: string, fields: Partial<DbOverri
       placeholders.push(`$${i++}`);
     }
   }
-  const updateCols = cols.filter((c) => c !== 'product_id').map((c) => `${c} = EXCLUDED.${c}`).join(', ');
+
+  // Guard: fail with something readable if these ever drift apart again.
+  const expected = i - 1;
+  if (vals.length !== expected) {
+    throw new Error(
+      `upsertOverride parameter mismatch: built ${expected} placeholders but ${vals.length} values. ` +
+      `Columns: ${cols.join(', ')}`
+    );
+  }
+
+  const updateCols = cols
+    .filter((c) => c !== 'product_id')
+    .map((c) => `${c} = EXCLUDED.${c}`)
+    .join(', ');
+
   const query = `
     INSERT INTO product_overrides (${cols.join(', ')})
     VALUES (${placeholders.join(', ')})
     ON CONFLICT (product_id) DO UPDATE SET ${updateCols};
   `;
+
   // @ts-ignore raw query
   await sql.query(query, vals);
 }
