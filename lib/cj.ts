@@ -94,3 +94,100 @@ export async function createOrder(payload: {
 export async function getOrderStatus(orderId: string) {
   return cjFetch<unknown>(`/shopping/order/query?orderId=${encodeURIComponent(orderId)}`);
 }
+
+// ── Product detail (used by the sync job) ────────────────────────────────────
+
+export type CjVariantDetail = {
+  vid: string;
+  variantKey?: string;
+  variantNameEn?: string;
+  variantSku?: string;
+  variantImage?: string;
+  variantSellPrice?: number | string;
+  variantStandard?: string;
+};
+
+export type CjProductDetail = {
+  pid: string;
+  productNameEn?: string;
+  productName?: string;
+  productImage?: string;
+  productImageSet?: string[];
+  description?: string;
+  sellPrice?: number | string;
+  variants?: CjVariantDetail[];
+};
+
+/**
+ * Full product detail including images and variants.
+ *
+ * CJ is inconsistent about field names and about whether images arrive as an
+ * array or a JSON-encoded string, so callers should use the normalisers below
+ * rather than reading raw fields.
+ */
+export async function getProductDetail(pid: string): Promise<CjProductDetail> {
+  return cjFetch<CjProductDetail>(`/product/query?pid=${encodeURIComponent(pid)}`);
+}
+
+/** CJ sometimes returns image sets as a JSON string rather than an array. */
+export function normalizeImageSet(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter((x): x is string => typeof x === 'string');
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((x): x is string => typeof x === 'string');
+    } catch {
+      // Occasionally a plain comma-separated list
+      return raw.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+// ── Stock ───────────────────────────────────────────────────────────────────
+
+export type CjStockRow = { vid: string; areaEn?: string; storageNum?: number };
+
+/** Warehouse stock for a variant. Summed across warehouses by the caller. */
+export async function getStockByVid(vid: string): Promise<CjStockRow[]> {
+  const data = await cjFetch<CjStockRow[] | { list: CjStockRow[] }>(
+    `/product/stock/queryByVid?vid=${encodeURIComponent(vid)}`
+  );
+  return Array.isArray(data) ? data : (data?.list ?? []);
+}
+
+// ── Shipping / freight ──────────────────────────────────────────────────────
+
+export type CjFreightOption = {
+  logisticName: string;
+  logisticPrice: number;
+  logisticAging?: string;   // e.g. "7-12" days
+  logisticPriceCn?: number;
+};
+
+/**
+ * Available shipping methods and costs for a destination.
+ *
+ * Use this to decide what to charge for shipping — it returns CJ's real cost
+ * per carrier, so you can see your actual margin instead of guessing.
+ */
+export async function getFreightOptions(payload: {
+  startCountryCode?: string;
+  endCountryCode: string;
+  products: { quantity: number; vid: string }[];
+  zip?: string;
+  houseNumber?: string;
+}): Promise<CjFreightOption[]> {
+  const body = {
+    startCountryCode: payload.startCountryCode || 'CN',
+    endCountryCode: payload.endCountryCode,
+    zip: payload.zip,
+    houseNumber: payload.houseNumber,
+    products: payload.products,
+  };
+  const data = await cjFetch<CjFreightOption[] | { list: CjFreightOption[] }>(
+    '/logistic/freightCalculate',
+    { method: 'POST', body: JSON.stringify(body) }
+  );
+  return Array.isArray(data) ? data : (data?.list ?? []);
+}
