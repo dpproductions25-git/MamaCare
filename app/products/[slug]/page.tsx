@@ -5,6 +5,7 @@ import ProductGallery from '@/components/ProductGallery';
 import { products } from '@/lib/products';
 import { getMergedProduct } from '@/lib/product-overrides';
 import { getShippingSettings } from '@/lib/db-commerce';
+import { getAltMap } from '@/lib/db-images';
 import { shippingBlurb } from '@/lib/shipping-copy';
 import { buildMetadata } from '@/lib/seo';
 import { productSchema, breadcrumbSchema } from '@/lib/schema';
@@ -35,7 +36,10 @@ export default async function ProductPage({ params }: Params) {
   const product = await getMergedProduct(params.slug);
   if (!product) return notFound();
 
-  const shipping = await getShippingSettings();
+  const [shipping, altMap] = await Promise.all([
+    getShippingSettings(),
+    getAltMap(),
+  ]);
 
   // Merchant-grade schema: adds shipping cost, delivery window, return policy
   // and price validity — the fields Google needs for a rich product snippet
@@ -63,7 +67,11 @@ export default async function ProductPage({ params }: Params) {
         <span className="text-ink-900">{product.name}</span>
       </nav>
 
-      <ProductGallery product={product} shippingNote={shippingBlurb(shipping)} />
+      <ProductGallery
+        product={product}
+        shippingNote={shippingBlurb(shipping)}
+        altMap={altMap}
+      />
 
       <Script
         id={`schema-product-${product.id}`}

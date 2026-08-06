@@ -58,6 +58,10 @@ export default async function AdminHome() {
           <h2 className="font-display text-xl text-ink-900">Registries →</h2>
           <p className="text-sm text-ink-500 mt-1">View every baby registry by email, reset PINs, delete.</p>
         </Link>
+        <Link href="/admin/images" className="card p-6 hover:-translate-y-0.5 hover:shadow-soft transition-all">
+          <h2 className="font-display text-xl text-ink-900">Image alt text →</h2>
+          <p className="text-sm text-ink-500 mt-1">AI-generated image descriptions for accessibility and Google Images.</p>
+        </Link>
         <Link href="/admin/marketing" className="card p-6 hover:-translate-y-0.5 hover:shadow-soft transition-all">
           <h2 className="font-display text-xl text-ink-900">Shipping &amp; discounts →</h2>
           <p className="text-sm text-ink-500 mt-1">Set shipping rates, create discount codes, generate one-time codes.</p>

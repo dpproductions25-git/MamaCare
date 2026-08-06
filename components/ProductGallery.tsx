@@ -10,11 +10,16 @@ import AddToRegistryButton from './AddToRegistryButton';
 export default function ProductGallery({
   product,
   shippingNote = 'Free U.S. shipping over $50',
+  altMap = {},
 }: {
   product: Product;
   /** Live copy from admin shipping settings — see lib/shipping-copy.ts */
   shippingNote?: string;
+  /** image url → alt text, written in Admin → Image alt text */
+  altMap?: Record<string, string>;
 }) {
+  /** Saved description if there is one, else the product name as a fallback. */
+  const altFor = (url: string) => altMap[url] || product.name;
   const rawVariants = product.variants || [];
 
   // Normalize variants: if color field has an embedded size code at the end
@@ -116,7 +121,7 @@ export default function ProductGallery({
       {/* ── Left: images ── */}
       <div>
         <div className="relative aspect-square rounded-4xl overflow-hidden bg-cream-100">
-          <Image src={activeImage} alt={product.name} fill priority sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
+          <Image src={activeImage} alt={altFor(activeImage)} fill priority sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
         </div>
         {gallery.length > 1 && (
           <div className="mt-3 grid grid-cols-5 sm:grid-cols-6 gap-2">
@@ -127,7 +132,8 @@ export default function ProductGallery({
                 className={`relative aspect-square rounded-2xl overflow-hidden bg-cream-100 border-2 transition-colors ${activeImage === url ? 'border-blush-400' : 'border-transparent hover:border-blush-200'}`}
                 aria-label="View image"
               >
-                <Image src={url} alt="" fill sizes="120px" className="object-cover" />
+                {/* Was alt="" — invisible to screen readers and Google Images */}
+                <Image src={url} alt={altFor(url)} fill sizes="120px" className="object-cover" />
               </button>
             ))}
           </div>
