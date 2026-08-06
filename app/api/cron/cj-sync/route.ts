@@ -6,7 +6,16 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 /**
- * Scheduled CJ sync (Vercel Cron — see vercel.json).
+ * Scheduled CJ sync.
+ *
+ * SCHEDULE: registered in vercel.json as "0 6 * * *" — once daily at 06:00 UTC.
+ * Vercel's Hobby plan permits only one run per day per cron; anything more
+ * frequent fails the build outright. vercel.json is strict JSON schema and
+ * rejects unknown keys (including "comment"), which is why this note lives
+ * here rather than beside the schedule.
+ *
+ * Because daily leaves stock up to 24h stale, POST /api/admin/cj/sync runs the
+ * same job on demand from admin.
  *
  * Sits under /api/cron rather than /api/admin because Vercel's scheduler can't
  * send Basic Auth. It's protected by CRON_SECRET instead: Vercel sends
