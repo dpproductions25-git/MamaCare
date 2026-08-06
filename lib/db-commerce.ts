@@ -121,6 +121,61 @@ export async function getShippingSettings(): Promise<ShippingSettings> {
   }
 }
 
+// ── Stripe tax codes ─────────────────────────────────────────────────────────
+
+/**
+ * Stripe needs a tax code per product to pick the right rate. It matters more
+ * than it sounds for this catalogue: several US states exempt or reduce tax on
+ * children's clothing, so shipping everything as "general goods" can over-collect.
+ *
+ * Stored as a category → code map, with a fallback for anything unmapped.
+ * Codes come from Stripe's published list, not from us — see
+ * https://docs.stripe.com/tax/tax-codes
+ */
+export type TaxCodeMap = {
+  /** Used when a product's category has no specific mapping */
+  default: string;
+  /** category slug → Stripe tax code */
+  byCategory: Record<string, string>;
+};
+
+/** Stripe's general tangible goods code — a safe, valid starting point. */
+export const DEFAULT_TAX_CODE = 'txcd_99999999';
+
+export async function getTaxCodes(): Promise<TaxCodeMap> {
+  try {
+    await ensureCommerceSchema();
+    const r = await sql<{ value: string }>`
+      SELECT value FROM store_settings WHERE key = 'tax_codes';
+    `;
+    if (!r.rows[0]?.value) return { default: DEFAULT_TAX_CODE, byCategory: {} };
+    const parsed = JSON.parse(r.rows[0].value);
+    return {
+      default: typeof parsed?.default === 'string' ? parsed.default : DEFAULT_TAX_CODE,
+      byCategory: parsed?.byCategory && typeof parsed.byCategory === 'object' ? parsed.byCategory : {},
+    };
+  } catch (e: any) {
+    console.error('[tax-codes] read failed, using default:', e?.message);
+    return { default: DEFAULT_TAX_CODE, byCategory: {} };
+  }
+}
+
+export async function saveTaxCodes(map: TaxCodeMap, updatedBy: string) {
+  await ensureCommerceSchema();
+  await sql`
+    INSERT INTO store_settings (key, value, updated_by, updated_at)
+    VALUES ('tax_codes', ${JSON.stringify(map)}, ${updatedBy}, NOW())
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value,
+      updated_by = EXCLUDED.updated_by, updated_at = NOW();
+  `;
+}
+
+/** Resolve the tax code for a product category. */
+export function taxCodeFor(category: string | undefined, map: TaxCodeMap): string {
+  if (category && map.byCategory[category]) return map.byCategory[category];
+  return map.default || DEFAULT_TAX_CODE;
+}
+
 export async function saveShippingSettings(s: ShippingSettings, updatedBy: string) {
   await ensureCommerceSchema();
   await sql`

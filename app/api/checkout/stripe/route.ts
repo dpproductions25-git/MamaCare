@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { resolveOrigin } from '@/lib/seo';
 import { TAX_ENABLED } from '@/lib/tax';
+import { getTaxCodes, taxCodeFor } from '@/lib/db-commerce';
 import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -49,6 +50,10 @@ export async function POST(req: Request) {
      */
     const products = await getMergedProducts();
 
+    // Per-category Stripe tax codes, configured in Admin → Shipping & discounts.
+    // Only fetched when tax is on, so a normal checkout doesn't pay for the query.
+    const taxCodes = TAX_ENABLED ? await getTaxCodes() : null;
+
     const stripe = getStripe();
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     let subtotal = 0;
@@ -80,6 +85,10 @@ export async function POST(req: Request) {
           product_data: {
             name: `${p.name}${variantLabel}`,
             images: [variant?.image || p.image],
+            // Tells Stripe Tax what kind of product this is. Without it every
+            // item is treated as general goods, which over-collects in states
+            // that exempt children's clothing.
+            ...(taxCodes ? { tax_code: taxCodeFor(p.category, taxCodes) } : {}),
             metadata: {
               productId: p.id,
               variantId: variant?.vid || '',

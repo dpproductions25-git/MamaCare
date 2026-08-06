@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   saveShippingSettings, upsertCoupon, deleteCoupon, setCouponActive,
-  generateCodeBatch, listCoupons,
+  generateCodeBatch, listCoupons, saveTaxCodes,
 } from '@/lib/db-commerce';
 import { logAudit } from '@/lib/db';
 
@@ -49,6 +49,34 @@ export async function POST(req: Request) {
           actor
         );
         await audit(actor, 'updated shipping settings', `free≥$${freeThreshold}, flat $${flatRate}`);
+        return NextResponse.json({ ok: true });
+      }
+
+      // ── Stripe tax codes ──────────────────────────────────────────────────
+      case 'save-tax-codes': {
+        const fallback = String(body.default || '').trim();
+        if (!/^txcd_[0-9a-zA-Z]+$/.test(fallback)) {
+          return NextResponse.json(
+            { error: 'Default tax code must look like txcd_99999999.' },
+            { status: 400 }
+          );
+        }
+
+        const byCategory: Record<string, string> = {};
+        for (const [cat, code] of Object.entries(body.byCategory || {})) {
+          const c = String(code || '').trim();
+          if (!c) continue; // blank means "use the default"
+          if (!/^txcd_[0-9a-zA-Z]+$/.test(c)) {
+            return NextResponse.json(
+              { error: `Tax code for "${cat}" must look like txcd_99999999.` },
+              { status: 400 }
+            );
+          }
+          byCategory[cat] = c;
+        }
+
+        await saveTaxCodes({ default: fallback, byCategory }, actor);
+        await audit(actor, 'updated tax codes', `default ${fallback}`);
         return NextResponse.json({ ok: true });
       }
 

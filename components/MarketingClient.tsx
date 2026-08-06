@@ -34,12 +34,18 @@ async function post(body: any) {
 export default function MarketingClient({
   initialShipping,
   initialCoupons,
+  initialTaxCodes,
+  categories,
+  taxEnabled,
 }: {
   initialShipping: Shipping;
   initialCoupons: Coupon[];
+  initialTaxCodes: { default: string; byCategory: Record<string, string> };
+  categories: { slug: string; label: string }[];
+  taxEnabled: boolean;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'shipping' | 'codes' | 'generate'>('shipping');
+  const [tab, setTab] = useState<'shipping' | 'codes' | 'generate' | 'tax'>('shipping');
 
   return (
     <div className="mt-8">
@@ -47,12 +53,127 @@ export default function MarketingClient({
         <Tab id="shipping" active={tab} set={setTab}>Shipping</Tab>
         <Tab id="codes" active={tab} set={setTab}>Discount codes</Tab>
         <Tab id="generate" active={tab} set={setTab}>Generate codes</Tab>
+        <Tab id="tax" active={tab} set={setTab}>Sales tax</Tab>
       </div>
 
       {tab === 'shipping' && <ShippingPanel initial={initialShipping} />}
       {tab === 'codes' && <CodesPanel initial={initialCoupons} onChange={() => router.refresh()} />}
       {tab === 'generate' && <GeneratePanel onDone={() => router.refresh()} />}
+      {tab === 'tax' && (
+        <TaxPanel initial={initialTaxCodes} categories={categories} enabled={taxEnabled} />
+      )}
     </div>
+  );
+}
+
+// ── Sales tax ────────────────────────────────────────────────────────────────
+
+function TaxPanel({
+  initial, categories, enabled,
+}: {
+  initial: { default: string; byCategory: Record<string, string> };
+  categories: { slug: string; label: string }[];
+  enabled: boolean;
+}) {
+  const [fallback, setFallback] = useState(initial.default);
+  const [byCategory, setByCategory] = useState<Record<string, string>>(initial.byCategory || {});
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setMsg(''); setErr('');
+    try {
+      await post({ action: 'save-tax-codes', default: fallback, byCategory });
+      setMsg('✓ Tax codes saved.');
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="card p-6 max-w-2xl">
+      <h2 className="font-display text-xl text-ink-900">Stripe tax codes</h2>
+
+      <div className={`mt-4 p-4 rounded-2xl text-sm ${
+        enabled
+          ? 'bg-sage-50 border border-sage-200 text-sage-700'
+          : 'bg-amber-50 border border-amber-200 text-amber-800'
+      }`}>
+        {enabled ? (
+          <>✓ <strong>Tax collection is live.</strong> Stripe calculates tax at checkout using the codes below.</>
+        ) : (
+          <>
+            <strong>Tax is not being collected yet.</strong> The code is ready, but the
+            switch is off. Set <code className="bg-white/60 px-1.5 py-0.5 rounded">STRIPE_AUTOMATIC_TAX=true</code>{' '}
+            in Vercel → Settings → Environment Variables, then redeploy.
+          </>
+        )}
+      </div>
+
+      <p className="text-sm text-ink-500 mt-5 leading-relaxed">
+        A tax code tells Stripe what kind of product it&apos;s taxing. This matters for a baby
+        store: several US states exempt or reduce tax on children&apos;s clothing, so sending
+        everything as general goods can over-collect. Find codes at{' '}
+        <a
+          href="https://docs.stripe.com/tax/tax-codes"
+          target="_blank"
+          rel="noreferrer"
+          className="underline text-blush-500"
+        >
+          Stripe&apos;s tax code list ↗
+        </a>.
+      </p>
+
+      <label className="block mt-6">
+        <span className="text-sm font-medium text-ink-700">Default code</span>
+        <span className="block text-xs text-ink-400 mt-0.5">
+          Used for any category without its own code below.
+        </span>
+        <input
+          required
+          value={fallback}
+          onChange={(e) => setFallback(e.target.value.trim())}
+          placeholder="txcd_99999999"
+          className="w-full mt-1.5 px-4 py-3 rounded-xl bg-white border border-ink-900/12 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blush-300"
+        />
+      </label>
+
+      <div className="mt-6">
+        <p className="text-sm font-medium text-ink-700 mb-1">Per-category codes</p>
+        <p className="text-xs text-ink-400 mb-3">Leave blank to use the default.</p>
+        <div className="space-y-2">
+          {categories.map((c) => (
+            <div key={c.slug} className="flex items-center gap-3">
+              <span className="text-sm text-ink-700 w-32 flex-shrink-0">{c.label}</span>
+              <input
+                value={byCategory[c.slug] || ''}
+                onChange={(e) =>
+                  setByCategory((m) => ({ ...m, [c.slug]: e.target.value.trim() }))
+                }
+                placeholder={fallback || 'txcd_99999999'}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-ink-900/12 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blush-300"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button type="submit" disabled={busy} className="btn-primary mt-6 disabled:opacity-60">
+        {busy ? 'Saving…' : 'Save tax codes'}
+      </button>
+      <Msg text={msg} />
+      <Msg text={err} error />
+
+      <p className="text-xs text-ink-400 mt-5 leading-relaxed">
+        Which codes apply to your products, and which states you must register in, depend on
+        your circumstances. Worth confirming with an accountant — MamaCare only collects where
+        you hold a Stripe tax registration.
+      </p>
+    </form>
   );
 }
 
