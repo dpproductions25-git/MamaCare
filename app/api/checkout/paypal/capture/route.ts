@@ -41,7 +41,45 @@ export async function POST(req: Request) {
     const cents = Math.round(
       (data?.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || 0) * 100
     );
-    const shipping = shippingAddress || {};
+
+    /**
+     * Shipping address now comes from PayPal, not from our form.
+     *
+     * The checkout page no longer asks for an address — PayPal already holds a
+     * verified one for the buyer. Reading it from the capture response is also
+     * more reliable than a typed address, and it's what PayPal Seller
+     * Protection requires you to ship to.
+     *
+     * Anything the client sent is used only as a fallback for contact details.
+     */
+    const pu = data?.purchase_units?.[0] || {};
+    const ppShip = pu?.shipping || {};
+    const ppAddr = ppShip?.address || {};
+    const payer = data?.payer || {};
+    const fallback = shippingAddress || {};
+
+    const shipping = {
+      fullName:
+        ppShip?.name?.full_name ||
+        [payer?.name?.given_name, payer?.name?.surname].filter(Boolean).join(' ') ||
+        fallback.fullName ||
+        'Customer',
+      line1: ppAddr.address_line_1 || fallback.line1 || '',
+      line2: ppAddr.address_line_2 || fallback.line2 || '',
+      city: ppAddr.admin_area_2 || fallback.city || '',
+      state: ppAddr.admin_area_1 || fallback.state || '',
+      postalCode: ppAddr.postal_code || fallback.postalCode || '',
+      country: ppAddr.country_code || fallback.country || 'US',
+      email: payer?.email_address || fallback.email || '',
+      phone: payer?.phone?.phone_number?.national_number || fallback.phone || '',
+    };
+
+    if (!shipping.line1) {
+      console.error(
+        `[paypal capture] order ${orderId} has no shipping address from PayPal — ` +
+        `fulfilment will need a manual address.`
+      );
+    }
 
     // 1) Save customer + order
     try {

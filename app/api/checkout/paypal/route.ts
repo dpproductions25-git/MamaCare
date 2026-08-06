@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { resolveTotals } from '@/lib/pricing';
-import { calculateTax } from '@/lib/tax';
+import { calculateTax, TAX_ENABLED } from '@/lib/tax';
 import { paypalBase } from '@/lib/paypal-env';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -83,6 +83,18 @@ export async function POST(req: Request) {
      * Tax is based on the BILLING address the customer entered at checkout.
      */
     const billing = body.shippingAddress || {};
+
+    if (TAX_ENABLED && !billing.country) {
+      // PayPal's shipping_preference is GET_FROM_FILE, so the buyer's address
+      // isn't known until they approve — after the amount is fixed. With no
+      // address at this point, tax cannot be calculated and this order goes
+      // through untaxed while card orders are taxed correctly.
+      console.warn(
+        '[checkout/paypal] tax is enabled but no address is available at order ' +
+        'creation — this PayPal order will be created with $0 tax.'
+      );
+    }
+
     const tax = await calculateTax({
       taxableAmount: Math.max(0, subtotal - discount),
       shipping,

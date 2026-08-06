@@ -18,22 +18,20 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null;
 
+/**
+ * Contact details only.
+ *
+ * Addresses are no longer collected here — Stripe gathers them inside its own
+ * payment form, and PayPal returns the buyer's address on capture. Asking for
+ * them up front meant customers typed the same address twice.
+ */
 type Form = {
   email: string;
   fullName: string;
   phone: string;
-  line1: string;
-  line2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
 };
 
-const empty: Form = {
-  email: '', fullName: '', phone: '',
-  line1: '', line2: '', city: '', state: '', postalCode: '', country: 'US'
-};
+const empty: Form = { email: '', fullName: '', phone: '' };
 
 export default function CheckoutClient({
   serverProducts,
@@ -122,11 +120,12 @@ export default function CheckoutClient({
   }
 
   function validate(): string | null {
-    for (const f of ['email', 'fullName', 'line1', 'city', 'state', 'postalCode', 'country'] as const) {
-      if (!form[f].trim()) return 'Please complete all required address fields.';
-    }
+    // Only name and email are needed here — the delivery address is collected
+    // by Stripe or supplied by PayPal at the payment step.
+    if (!form.fullName.trim()) return 'Please enter your full name.';
+    if (!form.email.trim()) return 'Please enter your email address.';
     if (!/^\S+@\S+\.\S+$/.test(form.email)) return 'Please enter a valid email.';
-    if (!agreedToTerms) return 'Please agree to the Terms and Conditions before completing your purchase.';
+    if (!agreedToTerms) return 'Please agree to the Terms and Conditions before continuing.';
     return null;
   }
 
@@ -164,24 +163,56 @@ export default function CheckoutClient({
     <section className="container-page py-10 sm:py-14">
       <h1 className="font-display text-4xl sm:text-5xl text-ink-900">Checkout</h1>
 
-      <div className="mt-8 grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+      {/*
+        Once the card form is open it takes the full width instead of a third
+        of the page. Stripe controls the layout inside its iframe, so the only
+        way to stop it being a tall narrow strip is to give it more room —
+        wider container, far less vertical scrolling.
+      */}
+      <div className={`mt-8 grid gap-8 ${clientSecret ? 'lg:grid-cols-1' : 'lg:grid-cols-3'}`}>
+        <div className={`space-y-6 ${clientSecret ? '' : 'lg:col-span-2'}`}>
+          {/*
+            Address fields deliberately removed. Stripe collects billing and
+            shipping addresses inside its own form (billing_address_collection
+            + shipping_address_collection), and PayPal supplies the address from
+            the buyer's PayPal account — so asking here made customers type the
+            same details twice.
+          */}
           <div className="card p-6">
-            <h2 className="font-display text-xl text-ink-900 mb-4">Contact</h2>
-            <input type="email" placeholder="Email *" required value={form.email} onChange={(e) => update('email', e.target.value)} className="input" />
-            <input type="tel" placeholder="Phone" value={form.phone} onChange={(e) => update('phone', e.target.value)} className="input mt-3" />
-          </div>
-
-          <div className="card p-6">
-            <h2 className="font-display text-xl text-ink-900 mb-4">Shipping address</h2>
-            <input placeholder="Full name *" required value={form.fullName} onChange={(e) => update('fullName', e.target.value)} className="input" />
-            <input placeholder="Address line 1 *" required value={form.line1} onChange={(e) => update('line1', e.target.value)} className="input mt-3" />
-            <input placeholder="Address line 2" value={form.line2} onChange={(e) => update('line2', e.target.value)} className="input mt-3" />
-            <div className="grid sm:grid-cols-2 gap-3 mt-3">
-              <input placeholder="City *" required value={form.city} onChange={(e) => update('city', e.target.value)} className="input" />
-              <input placeholder="State / Province *" required value={form.state} onChange={(e) => update('state', e.target.value)} className="input" />
-              <input placeholder="ZIP / Postal code *" required value={form.postalCode} onChange={(e) => update('postalCode', e.target.value)} className="input" />
-              <input placeholder="Country *" required value={form.country} onChange={(e) => update('country', e.target.value)} className="input" />
+            <h2 className="font-display text-xl text-ink-900 mb-1">Your details</h2>
+            <p className="text-sm text-ink-500 mb-4">
+              Delivery address is collected securely at the payment step.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <input
+                placeholder="Full name *"
+                required
+                autoComplete="name"
+                value={form.fullName}
+                onChange={(e) => update('fullName', e.target.value)}
+                className="input sm:col-span-2"
+              />
+              <input
+                type="email"
+                placeholder="Email *"
+                required
+                autoComplete="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                value={form.email}
+                onChange={(e) => update('email', e.target.value)}
+                className="input"
+              />
+              <input
+                type="tel"
+                placeholder="Phone"
+                autoComplete="tel"
+                inputMode="tel"
+                value={form.phone}
+                onChange={(e) => update('phone', e.target.value)}
+                className="input"
+              />
             </div>
           </div>
 
@@ -216,7 +247,7 @@ export default function CheckoutClient({
               never touches our site.
             */}
             {clientSecret && stripePromise ? (
-              <div className="rounded-2xl overflow-hidden">
+              <div className="rounded-2xl overflow-hidden max-w-3xl mx-auto w-full">
                 <EmbeddedCheckoutProvider
                   stripe={stripePromise}
                   options={{ clientSecret }}
@@ -297,7 +328,9 @@ export default function CheckoutClient({
           </div>
         </div>
 
-        <aside className="card p-6 h-fit lg:sticky lg:top-24">
+        {/* Stripe shows its own order summary inside the embedded form, so this
+            sidebar would be a duplicate while paying. */}
+        <aside className={`card p-6 h-fit lg:sticky lg:top-24 ${clientSecret ? 'hidden' : ''}`}>
           <h2 className="font-display text-2xl text-ink-900">Order</h2>
           <ul className="mt-4 divide-y divide-ink-900/5">
             {items.map((i) => {
