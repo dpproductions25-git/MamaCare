@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { getShippingSettings } from '@/lib/db-commerce';
 import { shippingBlurb } from '@/lib/shipping-copy';
+import RegistryCta from '@/components/RegistryCta';
 import { buildMetadata } from '@/lib/seo';
 
 export const metadata = buildMetadata({
@@ -161,17 +162,14 @@ export default async function GiftGuidePage() {
         <div className="container-page py-16 text-center max-w-xl mx-auto">
           <h2 className="font-display text-3xl text-ink-900">Need a registry?</h2>
           <p className="text-ink-600 mt-3 leading-relaxed">
-            Add any MamaCare product to your Babylist registry in seconds — and share it with everyone who wants to celebrate your little one.
+            Create your MamaCare registry in seconds — free, no account needed.
+            Share one link with family and friends, and we&apos;ll track what&apos;s
+            already been bought so nobody doubles up.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <a
-              href="https://www.babylist.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary px-7 py-3.5"
-            >
-              🍼 Create a Babylist Registry
-            </a>
+            {/* Was an outbound link to babylist.com — a competitor — on the
+                highest-intent page on the site. Now opens our own registry. */}
+            <RegistryCta />
             <Link href="/shop" className="btn-secondary px-7 py-3.5">
               Browse all products
             </Link>

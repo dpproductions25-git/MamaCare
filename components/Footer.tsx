@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import RegistryFooterLink from './RegistryFooterLink';
 
 const SOCIAL = [
   {
@@ -102,11 +103,7 @@ export default function Footer() {
         <div className="col-span-2 md:col-span-1">
           <h4 className="font-medium text-ink-900 mb-3">For Mamas</h4>
           <ul className="space-y-2">
-            <li>
-              <a href="https://www.babylist.com" target="_blank" rel="noopener noreferrer" className="hover:text-blush-500 inline-flex items-center gap-1.5">
-                🍼 Add to Babylist Registry
-              </a>
-            </li>
+            <li><RegistryFooterLink /></li>
             <li><Link href="/gift-guide" className="hover:text-blush-500">Baby Shower Gift Guide</Link></li>
             <li><Link href="/blog" className="hover:text-blush-500">Sleep &amp; Care Tips</Link></li>
             <li><Link href="/shop" className="hover:text-blush-500">Shop by Age</Link></li>
