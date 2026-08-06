@@ -58,10 +58,21 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: 'That PIN is incorrect.' }, { status: 401 });
     }
 
-    await deleteRegistry(params.id);
-    console.log(`[registry DELETE] registry ${params.id} deleted by owner (${registry.email})`);
+    const removed = await deleteRegistry(params.id);
 
-    return NextResponse.json({ ok: true });
+    // Verify rather than assume. Without this the drawer cleared local state
+    // and looked like it had worked even when nothing was removed — which is
+    // why owner-side deletion appeared to succeed while the row survived.
+    if (removed === 0) {
+      console.error(`[registry DELETE] PIN was valid but no row matched id "${params.id}"`);
+      return NextResponse.json(
+        { error: 'We could not delete your registry. Please try again or contact us.' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[registry DELETE] registry ${params.id} deleted by owner (${registry.email})`);
+    return NextResponse.json({ ok: true, removed });
   } catch (e: any) {
     console.error('[registry DELETE]', e);
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 });

@@ -50,7 +50,12 @@ export default function RegistryAdminActions({
         return;
       }
 
-      setMsg(data.error || `Delete failed (${res.status}).`);
+      // Surface the server's diagnosis inline — this failure mode is confusing
+      // enough that a generic message sends you hunting in the wrong place.
+      const detail = data?.diagnosis
+        ? ` ${data.diagnosis} (tried "${data.attemptedId}")`
+        : '';
+      setMsg(`${data.error || `Delete failed (${res.status}).`}${detail}`);
       setConfirmDelete(false);
     } catch (e: any) {
       setMsg(`Network error — ${e?.message || 'could not reach the server'}.`);
