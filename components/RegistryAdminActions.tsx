@@ -23,6 +23,7 @@ export default function RegistryAdminActions({
   const [showPinForm, setShowPinForm] = useState(false);
   const [newPin, setNewPin] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   function copyLink() {
     const url = `${window.location.origin}/registry/${registryId}`;
@@ -37,17 +38,25 @@ export default function RegistryAdminActions({
     setMsg('');
     try {
       const res = await fetch(`/api/admin/registries/${registryId}`, { method: 'DELETE' });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
+        // Hide the card immediately. router.refresh() alone left the row on
+        // screen until the server round-trip finished, which read as "nothing
+        // happened" — and if the refresh was served from cache, permanently so.
+        setDeleted(true);
+        setConfirmDelete(false);
         router.refresh();
-      } else {
-        setMsg(data.error || 'Delete failed.');
+        return;
       }
-    } catch {
-      setMsg('Network error.');
+
+      setMsg(data.error || `Delete failed (${res.status}).`);
+      setConfirmDelete(false);
+    } catch (e: any) {
+      setMsg(`Network error — ${e?.message || 'could not reach the server'}.`);
+      setConfirmDelete(false);
     } finally {
       setBusy(false);
-      setConfirmDelete(false);
     }
   }
 
@@ -78,6 +87,17 @@ export default function RegistryAdminActions({
     } finally {
       setBusy(false);
     }
+  }
+
+  if (deleted) {
+    return (
+      <div className="mt-4 pt-4 border-t border-ink-900/6">
+        <p className="text-sm text-sage-600 font-medium">
+          ✓ Deleted &mdash; &ldquo;{registryTitle}&rdquo; and its {itemCount}{' '}
+          {itemCount === 1 ? 'item' : 'items'} have been removed.
+        </p>
+      </div>
+    );
   }
 
   return (

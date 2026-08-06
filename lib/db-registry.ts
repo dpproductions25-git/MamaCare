@@ -216,9 +216,27 @@ export async function adminGetRegistryDetail(id: string) {
 }
 
 /** Permanently delete a registry. registry_items cascade automatically. */
-export async function deleteRegistry(id: string): Promise<void> {
+/**
+ * Permanently delete a registry and its items.
+ *
+ * Returns how many registry rows were removed so callers can tell a real
+ * deletion from a no-op. A bare DELETE reports success even when it matches
+ * nothing, which is indistinguishable from "it worked" at the UI layer.
+ *
+ * Items are removed explicitly rather than relying on ON DELETE CASCADE — if
+ * the tables were ever created without that constraint, the cascade silently
+ * doesn't happen and the delete fails on the foreign key instead.
+ */
+export async function deleteRegistry(id: string): Promise<number> {
   await ensureRegistrySchema();
-  await sql`DELETE FROM registries WHERE id = ${id};`;
+
+  const items = await sql`DELETE FROM registry_items WHERE registry_id = ${id};`;
+  const reg = await sql`DELETE FROM registries WHERE id = ${id};`;
+
+  console.log(
+    `[deleteRegistry] id=${id} removed ${reg.rowCount ?? 0} registry row(s) and ${items.rowCount ?? 0} item(s)`
+  );
+  return reg.rowCount ?? 0;
 }
 
 /** Admin PIN reset — lets support help a mom who forgot her PIN. */

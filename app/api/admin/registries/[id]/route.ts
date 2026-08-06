@@ -22,12 +22,25 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   const admin = req.headers.get('x-admin-name') || 'admin';
   try {
-    await deleteRegistry(params.id);
+    const removed = await deleteRegistry(params.id);
+
+    // Zero rows means the id didn't match anything — report it instead of
+    // returning a success the UI can't distinguish from a real deletion.
+    if (removed === 0) {
+      console.error(`[admin/registries DELETE] no registry matched id "${params.id}"`);
+      return NextResponse.json(
+        { error: 'That registry no longer exists. Refresh the page.' },
+        { status: 404 }
+      );
+    }
+
     try {
       await logAudit(admin, 'deleted registry', params.id);
     } catch {/* audit table may not exist yet */}
-    return NextResponse.json({ ok: true });
+
+    return NextResponse.json({ ok: true, removed });
   } catch (e: any) {
+    console.error('[admin/registries DELETE]', e?.message);
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 });
   }
 }
