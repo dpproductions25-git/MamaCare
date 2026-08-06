@@ -6,9 +6,9 @@
   "regions": ["iad1"],
   "crons": [
     {
-      "comment": "Pull stock, cost and photo changes from CJ every 6 hours",
+      "comment": "Pull stock, cost and photo changes from CJ once daily at 06:00 UTC. Vercel's Hobby plan permits one run per day per cron; a more frequent schedule fails the build. Use Admin -> Sync now for an immediate refresh in between.",
       "path": "/api/cron/cj-sync",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 6 * * *"
     }
   ],
   "headers": [
