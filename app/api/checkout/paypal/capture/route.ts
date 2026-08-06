@@ -6,14 +6,14 @@ import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
 import { redeemCoupon } from '@/lib/db-commerce';
+import { paypalBase } from '@/lib/paypal-env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function paypalBase() {
-  const env = process.env.PAYPAL_ENV || 'sandbox';
-  return env === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
-}
+// Shared with the order-creation route — see lib/paypal-env.ts. Keeping these
+// in one place prevents an order being created in one environment and captured
+// against the other.
 
 async function paypalToken(): Promise<string> {
   const id = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';

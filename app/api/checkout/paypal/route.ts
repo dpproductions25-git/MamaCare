@@ -2,16 +2,14 @@ import { NextResponse } from 'next/server';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { resolveTotals } from '@/lib/pricing';
 import { calculateTax } from '@/lib/tax';
+import { paypalBase } from '@/lib/paypal-env';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function paypalBase() {
-  return process.env.PAYPAL_ENV === 'live'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com';
-}
+// Environment resolution lives in lib/paypal-env.ts so this route and the
+// capture route can never disagree about live vs sandbox.
 
 async function paypalToken(): Promise<string> {
   const id = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
