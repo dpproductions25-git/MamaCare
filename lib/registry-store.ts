@@ -39,8 +39,20 @@ type RegistryState = {
   setItems: (items: RegistryItem[]) => void;
 };
 
+/**
+ * The subset actually written to localStorage — identity only.
+ *
+ * Declared explicitly because partialize and migrate must agree on the shape.
+ * When they disagreed, zustand inferred one shape from migrate and a different
+ * one from partialize, which is the type error the build reported.
+ */
+type PersistedRegistry = Pick<
+  RegistryState,
+  'registryId' | 'email' | 'pin' | 'ownerName' | 'title'
+>;
+
 export const useRegistry = create<RegistryState>()(
-  persist(
+  persist<RegistryState, [], [], PersistedRegistry>(
     (set) => ({
       registryId: null,
       email: null,
@@ -73,7 +85,7 @@ export const useRegistry = create<RegistryState>()(
        *
        * Items are always fetched fresh from the server instead.
        */
-      partialize: (s) => ({
+      partialize: (s): PersistedRegistry => ({
         registryId: s.registryId,
         email: s.email,
         pin: s.pin,
@@ -91,18 +103,21 @@ export const useRegistry = create<RegistryState>()(
        * throw the old cached fields away.
        */
       version: 2,
-      migrate: (persisted: any) => ({
+      // Returns the PERSISTED subset only — items/isOpen are re-established by
+      // merge below. Returning them here made the persisted type disagree with
+      // partialize, which is what the build caught.
+      migrate: (persisted: any): PersistedRegistry => ({
         registryId: persisted?.registryId ?? null,
         email: persisted?.email ?? null,
         pin: persisted?.pin ?? null,
         ownerName: persisted?.ownerName ?? null,
         title: persisted?.title ?? null,
-        items: [],
-        isOpen: false,
       }),
 
       // Belt and braces: never let a persisted value win for items/isOpen.
-      merge: (persisted: any, current) => ({
+      // Returns the FULL state, so items/isOpen are forced back to defaults
+      // regardless of what an older localStorage entry contains.
+      merge: (persisted: any, current): RegistryState => ({
         ...current,
         registryId: persisted?.registryId ?? null,
         email: persisted?.email ?? null,
