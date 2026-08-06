@@ -43,6 +43,8 @@ export default function ImageAltClient() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [health, setHealth] = useState<any[] | null>(null);
+  /** Per-image generation errors, shown so the cause is visible. */
+  const [failures, setFailures] = useState<{ imageUrl: string; error: string }[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,19 +79,46 @@ export default function ImageAltClient() {
     setSelected(new Set(visible.slice(0, 25).map((r) => r.imageUrl)));
   }
 
-  async function generate() {
-    if (!selected.size) { setErr('Select at least one image first.'); return; }
-    setBusy(true); setMsg(''); setErr('');
+  /**
+   * Generate for an explicit list, so the button never depends on the user
+   * having ticked checkboxes first. Nothing selected simply means "the first 25
+   * that need it".
+   */
+  async function generate(urls?: string[]) {
+    const targets = urls?.length ? urls : [...selected];
+    const list = targets.length
+      ? targets
+      : visible.filter((r) => !r.currentAlt).slice(0, 25).map((r) => r.imageUrl);
+
+    if (!list.length) { setErr('There are no images left needing a description.'); return; }
+
+    setBusy(true); setMsg(''); setErr(''); setFailures([]);
     try {
-      const data = await post({ action: 'generate', imageUrls: [...selected] });
+      const data = await post({ action: 'generate', imageUrls: list });
+
       const next = { ...drafts };
       for (const r of data.results) if (r.altText) next[r.imageUrl] = r.altText;
       setDrafts(next);
-      setMsg(
-        `Generated ${data.generated} suggestion${data.generated === 1 ? '' : 's'}` +
-        (data.failed ? ` · ${data.failed} failed` : '') +
-        ' — review below, then save.'
-      );
+
+      // Surface the actual per-image reasons. External image hosts sometimes
+      // block OpenAI from fetching the file, and a bare count of failures gives
+      // no way to tell that from a bad API key.
+      const failed = (data.results || []).filter((r: any) => r.error);
+      setFailures(failed);
+
+      if (data.generated === 0) {
+        setErr(
+          failed.length
+            ? `None could be generated. First error: ${failed[0].error}`
+            : 'No suggestions were returned.'
+        );
+      } else {
+        setMsg(
+          `Generated ${data.generated} suggestion${data.generated === 1 ? '' : 's'}` +
+          (failed.length ? ` · ${failed.length} failed (see below)` : '') +
+          ' — edit if needed, then Save.'
+        );
+      }
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -177,15 +206,24 @@ export default function ImageAltClient() {
           </button>
         </div>
 
-        <button onClick={selectAllVisible} className="text-sm px-4 py-2 rounded-full border border-ink-900/12 text-ink-700 hover:border-blush-400">
-          Select first 25
-        </button>
+        {/* Never disabled for lack of a selection — with nothing ticked it
+            simply works on the next 25 that need descriptions. */}
         <button
-          onClick={generate}
-          disabled={busy || !selected.size}
+          onClick={() => generate()}
+          disabled={busy || !stats?.aiEnabled}
           className="btn-primary text-sm px-5 py-2 disabled:opacity-50"
         >
-          {busy ? 'Working…' : `Generate for ${selected.size} selected`}
+          {busy
+            ? 'Generating…'
+            : selected.size
+              ? `Generate for ${selected.size} selected`
+              : 'Generate next 25 missing'}
+        </button>
+        <button
+          onClick={selectAllVisible}
+          className="text-sm px-4 py-2 rounded-full border border-ink-900/12 text-ink-700 hover:border-blush-400"
+        >
+          Select first 25
         </button>
         {draftCount > 0 && (
           <button onClick={saveApproved} disabled={busy} className="text-sm px-5 py-2 rounded-full bg-sage-500 text-white hover:bg-sage-600 disabled:opacity-50">
@@ -199,6 +237,26 @@ export default function ImageAltClient() {
 
       {msg && <p className="text-sm text-sage-600 mt-3">{msg}</p>}
       {err && <p className="text-sm text-red-500 mt-3">{err}</p>}
+
+      {failures.length > 0 && (
+        <div className="card p-5 mt-4 border border-red-200 bg-red-50/40">
+          <h3 className="font-display text-lg text-ink-900 mb-1">
+            {failures.length} image{failures.length === 1 ? '' : 's'} couldn&apos;t be described
+          </h3>
+          <p className="text-xs text-ink-500 mb-3">
+            Most often the image host blocks OpenAI from downloading the file, or the URL is
+            dead. Run &ldquo;Scan for broken images&rdquo; to check, and write those few by hand.
+          </p>
+          <ul className="space-y-2 text-sm max-h-64 overflow-y-auto">
+            {failures.map((f) => (
+              <li key={f.imageUrl}>
+                <p className="text-red-600">{f.error}</p>
+                <p className="text-[11px] text-ink-400 break-anywhere">{f.imageUrl}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Health results */}
       {health && health.length > 0 && (
