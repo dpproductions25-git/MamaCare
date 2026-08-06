@@ -6,7 +6,8 @@ import { products } from '@/lib/products';
 import { getMergedProduct } from '@/lib/product-overrides';
 import { getShippingSettings } from '@/lib/db-commerce';
 import { shippingBlurb } from '@/lib/shipping-copy';
-import { buildMetadata, SITE_URL, SITE_NAME } from '@/lib/seo';
+import { buildMetadata } from '@/lib/seo';
+import { productSchema, breadcrumbSchema } from '@/lib/schema';
 
 export const revalidate = 30;
 
@@ -36,28 +37,17 @@ export default async function ProductPage({ params }: Params) {
 
   const shipping = await getShippingSettings();
 
-  const productJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.name,
-    description: product.description,
-    image: product.images && product.images.length > 0 ? product.images : [product.image],
-    sku: product.id,
-    brand: { '@type': 'Brand', name: SITE_NAME },
-    offers: {
-      '@type': 'Offer',
-      url: `${SITE_URL}/products/${product.slug}`,
-      priceCurrency: product.currency,
-      price: product.price.toFixed(2),
-      availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      itemCondition: 'https://schema.org/NewCondition'
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: product.rating,
-      reviewCount: product.reviewsCount
-    }
-  };
+  // Merchant-grade schema: adds shipping cost, delivery window, return policy
+  // and price validity — the fields Google needs for a rich product snippet
+  // rather than a plain link, and the ones AI assistants read when comparing.
+  const productJsonLd = productSchema(product, shipping);
+
+  const breadcrumbJsonLd = breadcrumbSchema([
+    { name: 'Home', path: '/' },
+    { name: 'Shop', path: '/shop' },
+    { name: product.category, path: `/shop/${product.category}` },
+    { name: product.name, path: `/products/${product.slug}` },
+  ]);
 
   return (
     <article className="container-page py-10 sm:py-14">
@@ -79,6 +69,11 @@ export default async function ProductPage({ params }: Params) {
         id={`schema-product-${product.id}`}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <Script
+        id={`schema-breadcrumb-${product.id}`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
     </article>
   );

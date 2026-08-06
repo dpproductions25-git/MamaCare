@@ -78,12 +78,46 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // DB unavailable — Header will fall back to static getBestSellers()
   }
 
+  /**
+   * OnlineStore is a more specific type than Organization — it tells crawlers
+   * and assistants this is a shop, not a brand page or a blog. The extra fields
+   * (return policy, payment methods, contact point) are what Google uses to
+   * build a knowledge panel, and what an AI cites when asked "can I trust this
+   * store / what's their returns policy".
+   */
   const orgJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': 'OnlineStore',
+    '@id': `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
+    image: `${SITE_URL}/og-default.jpg`,
+    description: DEFAULT_DESCRIPTION,
+    currenciesAccepted: 'USD',
+    paymentAccepted: 'Credit Card, Debit Card, PayPal, Apple Pay, Google Pay',
+    areaServed: [
+      { '@type': 'Country', name: 'United States' },
+      { '@type': 'Country', name: 'Canada' },
+      { '@type': 'Country', name: 'United Kingdom' },
+      { '@type': 'Country', name: 'Australia' }
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: process.env.CONTACT_EMAIL || 'hello@mamacare.us',
+      availableLanguage: ['English'],
+      url: `${SITE_URL}/contact`
+    },
+    hasMerchantReturnPolicy: {
+      '@type': 'MerchantReturnPolicy',
+      applicableCountry: 'US',
+      returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+      merchantReturnDays: 14,
+      returnMethod: 'https://schema.org/ReturnByMail',
+      returnFees: 'https://schema.org/FreeReturn',
+      merchantReturnLink: `${SITE_URL}/returns`
+    },
     sameAs: [
       'https://www.instagram.com/mamaacaree_',
       'https://www.facebook.com/share/1JHrwDTgML/?mibextid=wwXIfr',
