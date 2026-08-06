@@ -6,7 +6,17 @@ import Link from 'next/link';
 import { useCart } from '@/lib/cart';
 import { calculateTotals } from '@/lib/coupons';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 import type { Product } from '@/lib/types';
+
+/**
+ * Created once at module scope, not per render — loadStripe() injects a script
+ * tag, so calling it inside the component would re-run on every state change.
+ */
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
 type Form = {
   email: string;
@@ -39,6 +49,8 @@ export default function CheckoutClient({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /** Set once a Checkout Session exists — mounts Stripe's inline card form. */
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   // Compute totals from merged (server) products so admin price changes are reflected.
   const sub = items.reduce((sum, i) => {
@@ -118,6 +130,12 @@ export default function CheckoutClient({
     return null;
   }
 
+  /**
+   * Open the card form inline rather than redirecting.
+   *
+   * Creates the Checkout Session and keeps its clientSecret, which mounts
+   * Stripe's embedded form further down this same page.
+   */
   async function payWithStripe() {
     setErr(null);
     const v = validate();
@@ -131,7 +149,9 @@ export default function CheckoutClient({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
-      window.location.href = data.url;
+
+      if (!data.clientSecret) throw new Error('Could not start the card payment. Please try again.');
+      setClientSecret(data.clientSecret);
     } catch (e: any) {
       setErr(e.message);
       setLoading(false);
@@ -188,15 +208,50 @@ export default function CheckoutClient({
 
           <div className="card p-6 space-y-4">
             <h2 className="font-display text-xl text-ink-900">Payment</h2>
-            <button onClick={payWithStripe} disabled={loading || !agreedToTerms} className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed">
-              {loading ? 'Redirecting…' : `Pay with Card · $${grand.toFixed(2)}`}
-            </button>
 
-            <div className="flex items-center gap-3 text-xs text-ink-500">
-              <span className="h-px flex-1 bg-ink-900/10" /> or <span className="h-px flex-1 bg-ink-900/10" />
-            </div>
+            {/*
+              Card payment renders inline. Once a session exists we swap the
+              button for Stripe's embedded form — the customer never leaves
+              this page. Card fields live inside Stripe's iframe, so card data
+              never touches our site.
+            */}
+            {clientSecret && stripePromise ? (
+              <div className="rounded-2xl overflow-hidden">
+                <EmbeddedCheckoutProvider
+                  stripe={stripePromise}
+                  options={{ clientSecret }}
+                >
+                  <EmbeddedCheckout />
+                </EmbeddedCheckoutProvider>
+                <button
+                  type="button"
+                  onClick={() => setClientSecret(null)}
+                  className="mt-3 text-xs text-ink-400 hover:text-ink-700 underline underline-offset-2"
+                >
+                  ← Edit my details
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={payWithStripe}
+                  disabled={loading || !agreedToTerms}
+                  className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Loading…' : `Pay with Card · $${grand.toFixed(2)}`}
+                </button>
 
-            <div className={!agreedToTerms ? 'opacity-40 pointer-events-none' : ''}>
+                {!stripePromise && (
+                  <p className="text-xs text-blush-500">
+                    Card payment is unavailable — NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set.
+                  </p>
+                )}
+
+                <div className="flex items-center gap-3 text-xs text-ink-500">
+                  <span className="h-px flex-1 bg-ink-900/10" /> or <span className="h-px flex-1 bg-ink-900/10" />
+                </div>
+
+                <div className={!agreedToTerms ? 'opacity-40 pointer-events-none' : ''}>
               <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'USD' }}>
                 <PayPalButtons
                   style={{ layout: 'horizontal', color: 'gold', shape: 'pill', label: 'paypal' }}
@@ -229,13 +284,15 @@ export default function CheckoutClient({
                   }}
                   onError={(e) => setErr(String(e))}
                 />
-              </PayPalScriptProvider>
-            </div>
+                  </PayPalScriptProvider>
+                </div>
 
-            {!agreedToTerms && (
-              <p className="text-xs text-ink-500 italic">
-                Check the Terms and Conditions box above to enable payment.
-              </p>
+                {!agreedToTerms && (
+                  <p className="text-xs text-ink-500 italic">
+                    Check the Terms and Conditions box above to enable payment.
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>

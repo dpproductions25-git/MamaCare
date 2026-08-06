@@ -54,10 +54,11 @@ const nextConfig = {
       "font-src 'self' https://fonts.gstatic.com",
       // Images: self + all HTTPS (product images come from many CDNs)
       "img-src 'self' data: blob: https:",
-      // Frames: Stripe + PayPal only
-      "frame-src https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
+      // Frames: Stripe + PayPal only. checkout.stripe.com is required for
+      // Embedded Checkout — the inline card form is served from that origin.
+      "frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
       // Fetch/XHR: self + payment APIs + Resend + GA
-      "connect-src 'self' https://api.stripe.com https://www.paypal.com https://api.resend.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+      "connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://www.paypal.com https://api.resend.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
       // Media: self only
       "media-src 'self'",
       // No plugins ever

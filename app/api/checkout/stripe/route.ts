@@ -193,11 +193,20 @@ export async function POST(req: Request) {
       // registrations set up in the Stripe Dashboard makes Stripe reject
       // every session, which would take checkout down entirely.
       automatic_tax: { enabled: TAX_ENABLED },
-      // Built from the request origin, not a config constant — a stale
-      // NEXT_PUBLIC_SITE_URL used to drop paying customers on a dead
-      // deployment's 404 page after checkout.
-      success_url: `${origin}/checkout/success?provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/checkout`,
+      /**
+       * Embedded mode — the payment form renders inside our own checkout page
+       * instead of redirecting to a Stripe-hosted page.
+       *
+       * Card details still live in Stripe's iframe, so we never touch them and
+       * PCI scope stays minimal. Note that embedded sessions use return_url and
+       * REJECT success_url/cancel_url — passing those here is an API error.
+       *
+       * The URL is built from the request origin rather than a config constant:
+       * a stale NEXT_PUBLIC_SITE_URL previously dropped paying customers on a
+       * dead deployment's 404 page.
+       */
+      ui_mode: 'embedded',
+      return_url: `${origin}/checkout/success?provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
       customer_email: shippingAddress?.email,
       shipping_address_collection: { allowed_countries: ['US', 'CA', 'GB', 'AU', 'NZ', 'IE'] },
       metadata: {
@@ -218,7 +227,13 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json({ url: session.url, id: session.id });
+    // clientSecret is what mounts the embedded form. `url` is null in embedded
+    // mode — returned anyway so any older client still has something to follow.
+    return NextResponse.json({
+      clientSecret: session.client_secret,
+      id: session.id,
+      url: session.url,
+    });
   } catch (err: any) {
     console.error('Stripe checkout error', err);
     return NextResponse.json({ error: err.message || 'Stripe error' }, { status: 500 });
