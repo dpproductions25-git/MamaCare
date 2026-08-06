@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import {
-  deleteRegistry, adminResetRegistryPin, adminGetRegistryDetail, listAllRegistries,
-} from '@/lib/db-registry';
+import { deleteRegistry, adminResetRegistryPin, adminGetRegistryDetail } from '@/lib/db-registry';
 import { logAudit } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -29,27 +27,13 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     // Zero rows means the id didn't match anything — report it instead of
     // returning a success the UI can't distinguish from a real deletion.
     if (removed === 0) {
-      // Report exactly what was attempted against what's actually stored.
-      // "No rows matched" has two very different causes — the row genuinely
-      // isn't there, or the id we sent doesn't match the id in the column
-      // (encoding, whitespace, wrong field) — and they need opposite fixes.
-      const existing = await listAllRegistries(20);
-      console.error(
-        `[admin/registries DELETE] no match for "${params.id}". ` +
-        `Stored ids: ${existing.map((r) => r.id).join(', ') || '(none)'}`
-      );
+      // Genuinely no matching row — most often because the list on screen was
+      // loaded before someone else (or the owner) deleted it.
+      console.error(`[admin/registries DELETE] no registry matched id "${params.id}"`);
       return NextResponse.json(
         {
-          error: 'Nothing was deleted — no registry matched that id.',
+          error: 'That registry was already deleted. Refresh the page.',
           attemptedId: params.id,
-          attemptedIdLength: params.id.length,
-          storedIds: existing.map((r) => ({ id: r.id, length: r.id.length, email: r.email })),
-          diagnosis:
-            existing.length === 0
-              ? 'The registries table is empty, yet the admin list showed rows — the list is reading from somewhere else.'
-              : existing.some((r) => r.id.trim() === params.id.trim())
-                ? 'An id matches once trimmed — there is stray whitespace in the stored value.'
-                : 'The id sent is not among the stored ids.',
         },
         { status: 404 }
       );

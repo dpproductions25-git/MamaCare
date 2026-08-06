@@ -230,13 +230,26 @@ export async function adminGetRegistryDetail(id: string) {
 export async function deleteRegistry(id: string): Promise<number> {
   await ensureRegistrySchema();
 
-  const items = await sql`DELETE FROM registry_items WHERE registry_id = ${id};`;
-  const reg = await sql`DELETE FROM registries WHERE id = ${id};`;
+  /**
+   * Uses RETURNING rather than rowCount.
+   *
+   * The serverless Postgres driver does not reliably populate `rowCount` for
+   * DELETE — it came back 0 on deletions that had genuinely succeeded, so the
+   * API reported "nothing was deleted" while the rows were in fact gone. That
+   * sent us hunting for a phantom bug. `RETURNING id` populates `rows`, whose
+   * length is always accurate.
+   */
+  const items = await sql<{ id: number }>`
+    DELETE FROM registry_items WHERE registry_id = ${id} RETURNING id;
+  `;
+  const reg = await sql<{ id: string }>`
+    DELETE FROM registries WHERE id = ${id} RETURNING id;
+  `;
 
   console.log(
-    `[deleteRegistry] id=${id} removed ${reg.rowCount ?? 0} registry row(s) and ${items.rowCount ?? 0} item(s)`
+    `[deleteRegistry] id=${id} removed ${reg.rows.length} registry row(s) and ${items.rows.length} item(s)`
   );
-  return reg.rowCount ?? 0;
+  return reg.rows.length;
 }
 
 /** Admin PIN reset — lets support help a mom who forgot her PIN. */
