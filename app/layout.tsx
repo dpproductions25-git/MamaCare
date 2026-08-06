@@ -6,8 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import EmailPopup from '@/components/EmailPopup';
-import RegistryDrawer from '@/components/RegistryDrawer';
+import DeferredOverlays from '@/components/DeferredOverlays';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { getMergedProducts } from '@/lib/product-overrides';
 
@@ -146,8 +145,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Header featuredProduct={navFeatured} />
         <main className="flex-1">{children}</main>
         <Footer />
-        <EmailPopup />
-        <RegistryDrawer />
+        <DeferredOverlays />
         <Analytics />
         <SpeedInsights />
 

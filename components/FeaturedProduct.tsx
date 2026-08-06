@@ -85,13 +85,20 @@ export default function FeaturedProduct({
 
         {/* ── Left: Image panel ── */}
         <div className="relative bg-cream-100 aspect-square lg:aspect-auto lg:min-h-[520px]">
+          {/*
+            Deliberately NOT priority. This block sits below the fold on the
+            homepage, but `priority` disables lazy loading AND emits a preload
+            hint — so it was competing for bandwidth with the hero image, which
+            is the actual LCP element. Marking a below-the-fold image priority
+            makes the metric that matters worse, not better.
+          */}
           <Image
             src={activeImage}
             alt={product.name}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover transition-opacity duration-300"
-            priority
+            loading="lazy"
           />
 
           {onSale && (
