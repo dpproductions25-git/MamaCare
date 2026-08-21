@@ -38,9 +38,13 @@ export function productSchema(
   const returnDays = opts.returnDays ?? 14;
   const inStock = product.inStock;
 
-  // Google requires an explicit validity window; a year out is the convention
-  // for catalogue pricing that has no scheduled end.
-  const priceValidUntil = new Date(Date.now() + 365 * 86_400_000)
+  // Google wants an explicit validity window on the offer. `validFrom` marks
+  // when the price took effect and `priceValidUntil` when it lapses — Search
+  // Console flags both as missing otherwise. A year out is the convention for
+  // catalogue pricing with no scheduled end date.
+  const today = new Date();
+  const validFrom = today.toISOString().slice(0, 10);
+  const priceValidUntil = new Date(today.getTime() + 365 * 86_400_000)
     .toISOString()
     .slice(0, 10);
 
@@ -69,6 +73,7 @@ export function productSchema(
       url: `${SITE_URL}/products/${product.slug}`,
       priceCurrency: product.currency || 'USD',
       price: product.price.toFixed(2),
+      validFrom,
       priceValidUntil,
       availability: inStock
         ? 'https://schema.org/InStock'
