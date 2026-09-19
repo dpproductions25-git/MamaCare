@@ -1,30 +1,23 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { generateSingleUseCode, findUnusedCodeForEmail } from '@/lib/db-commerce';
-import { sendWelcomeCode } from '@/lib/email';
+import { sendWelcomeCode, sendSubscriberNotification } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-// Use your verified Resend domain. Until mamacare.us is verified in Resend,
-// you can temporarily use: 'MamaCare <onboarding@resend.dev>'
-const FROM_EMAIL    = process.env.RESEND_FROM_EMAIL || 'MamaCare <onboarding@resend.dev>';
-const NOTIFY_EMAIL  = process.env.SUBSCRIBE_NOTIFY_EMAIL || 'mamaacaree@gmail.com';
+const NOTIFY_EMAIL = process.env.SUBSCRIBE_NOTIFY_EMAIL || 'mamaacaree@gmail.com';
 
-/** Send via Resend. Returns true on success. */
-async function sendWithResend(to: string, subject: string, html: string): Promise<boolean> {
-  if (!RESEND_API_KEY) return false;
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-    },
-    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
-  });
-  return res.ok;
-}
+/**
+ * The local Resend wrapper that used to live here has been removed.
+ *
+ * It maintained a second sender address and its own error handling, which is
+ * how this bug hid for so long: the owner notification went to the Resend
+ * account holder (allowed by the sandbox sender) and arrived, while the
+ * subscriber's welcome email went to an arbitrary address and was silently
+ * rejected. Both now go through lib/email.ts, so there is one sender and one
+ * place where failures are logged.
+ */
 
 /**
  * POST /api/subscribe
@@ -76,13 +69,6 @@ export async function POST(req: Request) {
     console.error('Could not generate signup code — falling back', e);
   }
 
-  // ── Notification email to you ────────────────────────────────
-  const notifyHtml = `
-<p style="font-family:sans-serif;font-size:15px;color:#2A2A33;">
-  New MamaCare subscriber: <strong>${email}</strong><br>
-  Issued single-use code: <strong>${discountCode}</strong>
-</p>`;
-
   /**
    * Send the welcome email and CHECK THE RESULT.
    *
@@ -95,7 +81,11 @@ export async function POST(req: Request) {
   const delivered = await sendWelcomeCode({ to: email, code: discountCode, percentOff: 10 });
 
   // Owner notification is best-effort — never let it affect the customer.
-  sendWithResend(NOTIFY_EMAIL, `New subscriber: ${email}`, notifyHtml).catch(() => {});
+  sendSubscriberNotification({
+    to: NOTIFY_EMAIL,
+    subscriberEmail: email,
+    code: discountCode,
+  }).catch(() => {});
 
   const accept = req.headers.get('accept') || '';
 

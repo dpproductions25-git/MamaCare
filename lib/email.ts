@@ -27,6 +27,20 @@ const FROM =
 const ADMIN = process.env.CONTACT_EMAIL || 'hello@mamacare.us';
 
 /**
+ * True when we're still on Resend's sandbox sender.
+ *
+ * This is the single most confusing failure in the whole email setup:
+ * `onboarding@resend.dev` will ONLY deliver to the email address that owns the
+ * Resend account. Everything looks configured — the API key works, sends
+ * return success when you test with your own address — but every real customer
+ * is silently rejected.
+ *
+ * Verifying a domain in Resend does NOT fix this on its own. The FROM address
+ * has to actually use that domain, which means setting RESEND_FROM.
+ */
+const USING_SANDBOX_SENDER = /@resend\.dev>?\s*$/i.test(FROM);
+
+/**
  * The Resend SDK resolves with { data, error } instead of throwing, so an
  * unverified domain or bad key looked exactly like success. This surfaces it.
  */
@@ -36,6 +50,16 @@ async function send(opts: { to: string; subject: string; html: string }) {
     console.warn('[email] RESEND_API_KEY not set — skipping:', opts.subject);
     return false;
   }
+
+  if (USING_SANDBOX_SENDER) {
+    console.warn(
+      `[email] ⚠ Sending as "${FROM}" — Resend's SANDBOX sender. It can only ` +
+      `deliver to the address that owns your Resend account, so "${opts.to}" ` +
+      `will be REJECTED unless that is you. Fix: set RESEND_FROM in Vercel to ` +
+      `an address on your verified domain, e.g. "MamaCare <hello@mamacare.us>".`
+    );
+  }
+
   try {
     const res: any = await c.emails.send({
       from: FROM,
@@ -175,6 +199,22 @@ export async function sendWelcomeCode(opts: {
     to: opts.to,
     subject: `🌸 Your ${pct}% off code from MamaCare`,
     html: shell('You’re in, mama!', body),
+  });
+}
+
+/** Owner notification when someone subscribes. Best-effort, never blocks. */
+export async function sendSubscriberNotification(opts: {
+  to: string;
+  subscriberEmail: string;
+  code: string;
+}): Promise<boolean> {
+  return send({
+    to: opts.to,
+    subject: `New subscriber: ${opts.subscriberEmail}`,
+    html: shell('New subscriber', `
+      <p>New MamaCare subscriber: <strong>${opts.subscriberEmail}</strong></p>
+      <p>Issued single-use code: <strong>${opts.code}</strong></p>
+    `),
   });
 }
 
