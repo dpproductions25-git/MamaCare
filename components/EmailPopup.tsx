@@ -45,6 +45,8 @@ export default function EmailPopup() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  /** Shown when the code was created but the email couldn't be delivered. */
+  const [fallbackCode, setFallbackCode] = useState('');
 
   const inputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -169,6 +171,12 @@ export default function EmailPopup() {
         setStatus('done');
         markDismissed();
         setTimeout(() => setVisible(false), 3200);
+      } else if (data?.code) {
+        // Email delivery failed but the code was created and is valid — show it
+        // rather than losing the signup entirely.
+        setFallbackCode(data.code);
+        setStatus('done');
+        markDismissed();
       } else {
         setStatus('error');
         setErrorMsg(data?.error || 'Something went wrong — please try again.');
@@ -230,9 +238,22 @@ export default function EmailPopup() {
           {status === 'done' ? (
             <div className="mt-8 py-5 px-6 rounded-2xl bg-sage-50 border border-sage-200" role="status" aria-live="polite">
               <p className="font-display text-xl text-sage-600">You&apos;re in! 🎉</p>
-              <p className="text-sm text-ink-600 mt-1 break-words">
-                Your 10% code is on its way to <strong>{email}</strong>.
-              </p>
+
+              {fallbackCode ? (
+                <>
+                  <p className="text-sm text-ink-600 mt-1">
+                    We couldn&apos;t email it just now, so here&apos;s your code —
+                    copy it before closing:
+                  </p>
+                  <p className="font-mono text-lg font-bold tracking-wider text-ink-900 bg-white border-2 border-dashed border-blush-300 rounded-xl py-2.5 mt-3">
+                    {fallbackCode}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-ink-600 mt-1 break-words">
+                  Your 10% code is on its way to <strong>{email}</strong>.
+                </p>
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-3" noValidate={false}>

@@ -130,6 +130,54 @@ export async function sendOrderConfirmation(opts: {
   });
 }
 
+/**
+ * Welcome email with the subscriber's single-use discount code.
+ *
+ * Lives here rather than in the subscribe route so it goes through the same
+ * guarded sender as every other email. The route previously had its own copy
+ * of the Resend call which ignored the result entirely — a rejected send still
+ * returned success, so the popup said "You're in!" while nothing was delivered
+ * and nothing was logged.
+ *
+ * Returns whether Resend actually accepted it, so the caller can tell the
+ * truth to the customer.
+ */
+export async function sendWelcomeCode(opts: {
+  to: string;
+  code: string;
+  percentOff?: number;
+}): Promise<boolean> {
+  const pct = opts.percentOff ?? 10;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mamacare.us';
+
+  const body = `
+    <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#E68197;font-weight:600;">Welcome to the circle</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#4B4B58;line-height:1.7;">
+      Thank you for joining MamaCare. Here&rsquo;s your code for ${pct}% off your first order:
+    </p>
+
+    <div style="background:#FDF2F4;border:2px dashed #E68197;border-radius:16px;padding:20px 32px;text-align:center;margin-bottom:28px;">
+      <p style="margin:0 0 4px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#E68197;font-weight:600;">Your code</p>
+      <p style="margin:0;font-size:28px;font-weight:700;letter-spacing:0.08em;color:#2A2A33;font-family:monospace;">${opts.code}</p>
+    </div>
+
+    <p style="margin:0 0 32px;font-size:13px;color:#7A7A87;line-height:1.6;">
+      Enter this at checkout. It&rsquo;s unique to you and can be used once.
+    </p>
+
+    <p style="text-align:center;">
+      <a href="${siteUrl}/shop" style="display:inline-block;background:#E68197;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:999px;font-size:15px;font-weight:600;">
+        Shop now →
+      </a>
+    </p>`;
+
+  return send({
+    to: opts.to,
+    subject: `🌸 Your ${pct}% off code from MamaCare`,
+    html: shell('You’re in, mama!', body),
+  });
+}
+
 export async function sendRegistryGiftNotification(opts: {
   to: string;
   ownerName: string;
