@@ -7,6 +7,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import DeferredOverlays from '@/components/DeferredOverlays';
+import ConsentedAnalytics from '@/components/ConsentedAnalytics';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { getMergedProducts } from '@/lib/product-overrides';
 
@@ -35,19 +36,25 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${SITE_NAME} – Baby Gear, Sleep, Feeding & Nursery Essentials`,
     description: DEFAULT_DESCRIPTION,
-    url: SITE_URL,
-    images: [{ url: '/og-default.jpg', width: 1200, height: 630, alt: SITE_NAME }]
+    url: SITE_URL
+    // images omitted — app/opengraph-image.tsx supplies it automatically
   },
   twitter: {
     card: 'summary_large_image',
     title: SITE_NAME,
-    description: DEFAULT_DESCRIPTION,
-    images: ['/og-default.jpg']
+    description: DEFAULT_DESCRIPTION
   },
-  icons: {
-    icon: [{ url: '/favicon.ico' }, { url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: '/apple-touch-icon.png'
-  },
+  /**
+   * No `icons` block and no `openGraph.images` here on purpose.
+   *
+   * These previously pointed at /favicon.ico, /apple-touch-icon.png and
+   * /og-default.jpg — none of which existed in public/, so every one returned
+   * a 404. Social shares rendered with a blank thumbnail and iOS showed a
+   * blurry page screenshot instead of an icon.
+   *
+   * Next.js now generates them from app/icon.svg, app/apple-icon.tsx and
+   * app/opengraph-image.tsx, and wires the correct tags in automatically.
+   */
   robots: {
     index: true,
     follow: true,
@@ -91,7 +98,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     name: SITE_NAME,
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
-    image: `${SITE_URL}/og-default.jpg`,
+    image: `${SITE_URL}/opengraph-image`,
     description: DEFAULT_DESCRIPTION,
     currenciesAccepted: 'USD',
     paymentAccepted: 'Credit Card, Debit Card, PayPal, Apple Pay, Google Pay',
@@ -160,14 +167,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
 
-        {gaId ? (
-          <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
-            <Script id="ga-init" strategy="afterInteractive">
-              {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '${gaId}', { anonymize_ip: true });`}
-            </Script>
-          </>
-        ) : null}
+        {/* GA now loads only after the visitor accepts cookies. Vercel
+            Analytics and Speed Insights above are cookieless, so they don't
+            require consent. */}
+        <ConsentedAnalytics gaId={gaId} />
       </body>
     </html>
   );

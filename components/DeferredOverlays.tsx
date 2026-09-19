@@ -18,12 +18,14 @@ import dynamic from 'next/dynamic';
  */
 const EmailPopup = dynamic(() => import('./EmailPopup'), { ssr: false });
 const RegistryDrawer = dynamic(() => import('./RegistryDrawer'), { ssr: false });
+const CookieBanner = dynamic(() => import('./CookieBanner'), { ssr: false });
 
 export default function DeferredOverlays() {
   return (
     <>
       <EmailPopup />
       <RegistryDrawer />
+      <CookieBanner />
     </>
   );
 }

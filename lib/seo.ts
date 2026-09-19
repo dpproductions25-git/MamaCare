@@ -57,7 +57,16 @@ export function buildMetadata({
 }): Metadata {
   const url = `${SITE_URL}${path}`;
   const desc = description || DEFAULT_DESCRIPTION;
-  const ogImage = image || `${SITE_URL}/og-default.jpg`;
+
+  /**
+   * Pages that pass a real image (a product photo, a blog cover) use it.
+   * Pages that don't now fall through to the generated card in
+   * app/opengraph-image.tsx — previously they pointed at /og-default.jpg,
+   * which did not exist, so shares rendered with a blank thumbnail.
+   */
+  const ogImages = image
+    ? [{ url: image, width: 1200, height: 630, alt: title }]
+    : undefined;
 
   return {
     title,
@@ -69,7 +78,7 @@ export function buildMetadata({
       description: desc,
       url,
       siteName: SITE_NAME,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+      ...(ogImages && { images: ogImages }),
       type: 'website',
       locale: 'en_US'
     },
@@ -77,7 +86,7 @@ export function buildMetadata({
       card: 'summary_large_image',
       title,
       description: desc,
-      images: [ogImage]
+      ...(image && { images: [image] })
     },
     robots: {
       index: true,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Product, ProductVariant } from '@/lib/types';
 import { useCart } from '@/lib/cart';
@@ -98,6 +98,28 @@ export default function ProductGallery({
   const add = useCart((s) => s.add);
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
+
+  /**
+   * Show the sticky mobile buy bar only once the real button is off screen.
+   *
+   * IntersectionObserver rather than a scroll listener — it fires off the main
+   * thread, so it can't cause the scroll jank a scroll handler would on a
+   * mid-range phone.
+   */
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const [showStickyCta, setShowStickyCta] = useState(false);
+
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyCta(!entry.isIntersecting),
+      { rootMargin: '0px 0px -80px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   function handleAdd() {
     add(product.id, qty, selectedVariant?.vid);
@@ -254,7 +276,10 @@ export default function ProductGallery({
         )}
 
         {/* ── Qty + Add to cart + Registry ── */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <div
+          ref={ctaRef}
+          className="mt-8 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center"
+        >
           <div className="inline-flex items-center bg-white border border-ink-900/10 rounded-full">
             <button type="button" aria-label="Decrease quantity" className="w-10 h-10 text-ink-700 hover:text-blush-500" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
             <span aria-live="polite" className="w-8 text-center">{qty}</span>
@@ -281,6 +306,35 @@ export default function ProductGallery({
           <li className="flex items-center gap-2">💳 Secure checkout</li>
         </ul>
       </div>
+
+      {/*
+        Sticky mobile buy bar.
+        Appears only once the real Add-to-cart button has scrolled out of view,
+        so it never sits redundantly on top of the control it duplicates. Mobile
+        only — on desktop the button stays visible in the layout anyway.
+      */}
+      {showStickyCta && (
+        <div
+          className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur border-t border-ink-900/10 px-4 py-3"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-ink-500 truncate">{product.name}</p>
+              <p className="text-base font-medium text-ink-900">
+                ${(selectedVariant?.price ?? product.price).toFixed(2)}
+              </p>
+            </div>
+            <button
+              onClick={handleAdd}
+              disabled={(hasVariants && !selectedVariant) || added}
+              className={`btn-primary px-6 py-3 flex-shrink-0 disabled:opacity-60 ${added ? 'bg-sage-500' : ''}`}
+            >
+              {cartLabel}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

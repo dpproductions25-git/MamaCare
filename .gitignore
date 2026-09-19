@@ -4,9 +4,12 @@ out/
 build/
 dist/
 *.log
+# Ignore every .env variant EXCEPT the committed placeholder template.
+# The previous rules missed plain `.env.production` / `.env.development`,
+# which would have committed real secrets to a public repo.
 .env
-.env.local
-.env*.local
+.env.*
+!.env.example
 .DS_Store
 .vercel
 .idea/
