@@ -8,6 +8,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import DeferredOverlays from '@/components/DeferredOverlays';
 import ConsentedAnalytics from '@/components/ConsentedAnalytics';
+import MetaPixel from '@/components/MetaPixel';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { getMergedProducts } from '@/lib/product-overrides';
 
@@ -171,6 +172,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             Analytics and Speed Insights above are cookieless, so they don't
             require consent. */}
         <ConsentedAnalytics gaId={gaId} />
+
+        {/* Meta Pixel — same consent gate as GA, plus PageView on client-side
+            navigation, which the stock Events Manager snippet doesn't do. */}
+        <MetaPixel />
       </body>
     </html>
   );

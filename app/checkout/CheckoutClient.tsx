@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/lib/cart';
@@ -9,6 +9,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 import type { Product } from '@/lib/types';
+import { trackMeta } from '@/components/MetaPixel';
 
 /**
  * Created once at module scope, not per render — loadStripe() injects a script
@@ -115,6 +116,25 @@ export default function CheckoutClient({
     if (items.length === 0) router.replace('/cart');
   }, [items, router]);
 
+  /**
+   * Meta InitiateCheckout — fired once when the checkout page is reached with a
+   * real cart, not on every totals recalculation (the effect above re-runs on
+   * every coupon keystroke, which would inflate the event count and wreck the
+   * funnel numbers Meta reports).
+   */
+  const initiateSent = useRef(false);
+  useEffect(() => {
+    if (initiateSent.current || items.length === 0) return;
+    initiateSent.current = true;
+    trackMeta('InitiateCheckout', {
+      content_ids: items.map((i) => i.variantId || i.productId),
+      content_type: 'product',
+      num_items: items.reduce((n, i) => n + i.qty, 0),
+      value: sub,
+      currency: 'USD',
+    });
+  }, [items, sub]);
+
   function update<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
@@ -127,6 +147,33 @@ export default function CheckoutClient({
     if (!/^\S+@\S+\.\S+$/.test(form.email)) return 'Please enter a valid email.';
     if (!agreedToTerms) return 'Please agree to the Terms and Conditions before continuing.';
     return null;
+  }
+
+  /**
+   * Hand the order details to the thank-you page so it can fire Meta's Purchase
+   * event.
+   *
+   * The success page clears the cart as its first action, so by the time it
+   * could read the cart there is nothing left to report — and a Purchase event
+   * with no value is worthless for ad optimisation, which bids on revenue.
+   * sessionStorage rather than a URL parameter: order totals have no business
+   * being in a link someone might paste or a referrer header.
+   */
+  function stashPendingPurchase() {
+    try {
+      window.sessionStorage.setItem(
+        'mc_pending_purchase',
+        JSON.stringify({
+          content_ids: items.map((i) => i.variantId || i.productId),
+          content_type: 'product',
+          num_items: items.reduce((n, i) => n + i.qty, 0),
+          value: Number(grand.toFixed(2)),
+          currency: 'USD',
+        })
+      );
+    } catch {
+      /* storage blocked — the pixel just loses the value on this order */
+    }
   }
 
   /**
@@ -150,6 +197,7 @@ export default function CheckoutClient({
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
 
       if (!data.clientSecret) throw new Error('Could not start the card payment. Please try again.');
+      stashPendingPurchase();
       setClientSecret(data.clientSecret);
     } catch (e: any) {
       setErr(e.message);
@@ -310,6 +358,9 @@ export default function CheckoutClient({
                       setErr(d.error || 'PayPal capture failed');
                       return;
                     }
+                    // Stash before clear() — clear() empties the cart we're
+                    // reading the order value from.
+                    stashPendingPurchase();
                     clear();
                     router.push('/checkout/success?provider=paypal');
                   }}

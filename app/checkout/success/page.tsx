@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useCart } from '@/lib/cart';
 import { useRegistry } from '@/lib/registry-store';
+import { trackMeta } from '@/components/MetaPixel';
 
 /**
  * Order confirmation.
@@ -25,6 +26,27 @@ export default function SuccessPage() {
       setCleared(true);
     }
   }, [clear, cleared]);
+
+  /**
+   * Meta Purchase — the event every ad campaign optimises against.
+   *
+   * Reads the order details the checkout page stashed, then deletes them, so a
+   * refresh or a back-button return here cannot report the same purchase twice.
+   * Duplicate purchases don't just inflate the numbers: they teach Meta the
+   * wrong cost-per-purchase and it bids accordingly.
+   */
+  useEffect(() => {
+    let payload: any = null;
+    try {
+      const raw = window.sessionStorage.getItem('mc_pending_purchase');
+      if (!raw) return;
+      window.sessionStorage.removeItem('mc_pending_purchase');
+      payload = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (payload) trackMeta('Purchase', payload);
+  }, []);
 
   return (
     <section className="container-page py-16 sm:py-20">

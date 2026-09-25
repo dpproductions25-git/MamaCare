@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Product, ProductVariant } from '@/lib/types';
 import { useCart } from '@/lib/cart';
+import { trackMeta } from './MetaPixel';
 import { colorSwatchStyle } from '@/lib/colors';
 import AddToRegistryButton from './AddToRegistryButton';
 
@@ -109,6 +110,23 @@ export default function ProductGallery({
   const ctaRef = useRef<HTMLDivElement>(null);
   const [showStickyCta, setShowStickyCta] = useState(false);
 
+  /**
+   * Meta ViewContent — one per product view.
+   *
+   * This is what powers dynamic retargeting ("you looked at this"), so it has
+   * to carry the same content_ids the product feed uses or Meta can't match the
+   * view to a catalog item.
+   */
+  useEffect(() => {
+    trackMeta('ViewContent', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'USD',
+    });
+  }, [product.id, product.name, product.price]);
+
   useEffect(() => {
     const el = ctaRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
@@ -125,6 +143,18 @@ export default function ProductGallery({
     add(product.id, qty, selectedVariant?.vid);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
+
+    // Meta AddToCart. No-op unless the visitor accepted cookies and the pixel
+    // loaded. content_ids/value/currency are what makes the event usable for
+    // catalog-based ads and value optimisation — without them Meta can count
+    // adds but can't optimise toward revenue.
+    trackMeta('AddToCart', {
+      content_ids: [selectedVariant?.vid || product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: (selectedVariant?.price ?? product.price) * qty,
+      currency: 'USD',
+    });
   }
 
   const onSale = product.compareAtPrice && product.compareAtPrice > product.price;

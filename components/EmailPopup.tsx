@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
+import { trackMeta } from './MetaPixel';
 
 // Bump this key any time you want to re-show the popup to everyone
 const STORAGE_KEY = 'mc_popup_v3';
@@ -170,6 +171,8 @@ export default function EmailPopup() {
       if (res.ok) {
         setStatus('done');
         markDismissed();
+        // Meta Lead — lets an ad campaign optimise for signups, not just sales.
+        trackMeta('Lead', { content_name: 'Email popup — 10% off', currency: 'USD' });
         setTimeout(() => setVisible(false), 3200);
       } else if (data?.code) {
         // Email delivery failed but the code was created and is valid — show it
