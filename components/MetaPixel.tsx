@@ -24,7 +24,25 @@ import { getConsent } from './CookieBanner';
  *    it made would be based on landing pages alone.
  */
 
-const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || '710352846664282';
+/**
+ * Every pixel that should receive events.
+ *
+ * Two pixels are configured deliberately (two ad accounts). Meta's `fbq` is
+ * built for this: calling `init` more than once registers additional pixels,
+ * and a later `track` fans the event out to all of them. That is why the
+ * tracking helpers below take no pixel argument — there is nothing to route.
+ *
+ * NEXT_PUBLIC_META_PIXEL_ID overrides the list entirely when set, and accepts a
+ * comma-separated list. Useful for pointing a preview deployment at a test
+ * pixel so experiments don't pollute the real campaign data.
+ */
+const PIXEL_IDS = (process.env.NEXT_PUBLIC_META_PIXEL_ID || '710352846664282,1110628708189056')
+  .split(',')
+  .map((id) => id.trim())
+  // Pixel IDs are numeric. Anything else is a typo or a pasted stray character,
+  // and passing it to fbq would silently break tracking for every pixel after
+  // it in the list.
+  .filter((id) => /^\d+$/.test(id));
 
 declare global {
   interface Window {
@@ -80,7 +98,7 @@ export default function MetaPixel() {
     trackMeta('PageView');
   }, [allowed, pathname]);
 
-  if (!PIXEL_ID || !allowed) return null;
+  if (PIXEL_IDS.length === 0 || !allowed) return null;
 
   return (
     <>
@@ -93,24 +111,28 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '${PIXEL_ID}');
+${PIXEL_IDS.map((id) => `fbq('init', '${id}');`).join('\n')}
 fbq('track', 'PageView');`}
       </Script>
 
       {/*
-        The <noscript> tracking pixel. It only ever renders for visitors who
-        accepted cookies, which is why it sits inside this component rather
+        The <noscript> fallback — one per pixel, since a no-JS visitor never
+        runs fbq and so gets no fan-out. These only render for visitors who
+        accepted cookies, which is why they sit inside this component rather
         than directly in the layout.
       */}
       <noscript>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          height="1"
-          width="1"
-          style={{ display: 'none' }}
-          alt=""
-          src={`https://www.facebook.com/tr?id=${PIXEL_ID}&ev=PageView&noscript=1`}
-        />
+        {PIXEL_IDS.map((id) => (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            key={id}
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            alt=""
+            src={`https://www.facebook.com/tr?id=${id}&ev=PageView&noscript=1`}
+          />
+        ))}
       </noscript>
     </>
   );
