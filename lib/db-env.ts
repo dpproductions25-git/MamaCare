@@ -62,10 +62,9 @@ export let usingPrefixedVars = false;
 
 function resolve() {
   const keys = Object.keys(process.env);
+  const preferBare = process.env.DB_ENV_PREFER_BARE === 'true';
 
   for (const name of CONNECTION_VARS) {
-    if (process.env[name]) continue;
-
     // Exact suffix match only. `_POSTGRES_URL` must not match
     // `..._POSTGRES_URL_NON_POOLING`, or the pooled and direct connection
     // strings get swapped — which fails in a far more confusing way than
@@ -73,11 +72,38 @@ function resolve() {
     const suffix = `_${name}`;
     const source = keys.find((k) => k.endsWith(suffix) && process.env[k]);
 
-    if (source) {
-      process.env[name] = process.env[source];
-      aliasedFrom[name] = source;
-      usingPrefixedVars = true;
+    if (!source) continue;
+
+    /**
+     * The prefixed variable WINS, even when a bare one already exists.
+     *
+     * This is the subtle part, and getting it backwards is what kept the
+     * "password authentication failed" error alive after the first fix.
+     * This project still carries bare POSTGRES_URL / POSTGRES_URL_NON_POOLING
+     * entries left over from an earlier manual attempt. They hold a password
+     * Neon rotated long ago. The prefixed ones are published and rotated by
+     * the Vercel–Neon integration, so they are the authoritative pair.
+     *
+     * Skipping a name because a bare value happened to exist meant quietly
+     * preferring the dead credential over the live one.
+     *
+     * Set DB_ENV_PREFER_BARE=true to invert this — for the case where someone
+     * deliberately points a bare variable at a different database.
+     */
+    if (process.env[name]) {
+      if (preferBare) continue;
+      if (process.env[name] === process.env[source]) continue; // already agree
+      console.warn(
+        `[db-env] ${name} was already set but is being overridden by ` +
+          `${source}, which the Neon integration manages and rotates. Delete ` +
+          `the bare ${name} in Vercel to silence this, or set ` +
+          `DB_ENV_PREFER_BARE=true to keep the bare value.`
+      );
     }
+
+    process.env[name] = process.env[source];
+    aliasedFrom[name] = source;
+    usingPrefixedVars = true;
   }
 
   const count = Object.keys(aliasedFrom).length;
