@@ -36,7 +36,7 @@ import { getConsent } from './CookieBanner';
  * comma-separated list. Useful for pointing a preview deployment at a test
  * pixel so experiments don't pollute the real campaign data.
  */
-const PIXEL_IDS = (process.env.NEXT_PUBLIC_META_PIXEL_ID || '710352846664282,1110628708189056')
+const PIXEL_IDS = (process.env.NEXT_PUBLIC_META_PIXEL_ID || '1439725497456446')
   .split(',')
   .map((id) => id.trim())
   // Pixel IDs are numeric. Anything else is a typo or a pasted stray character,
