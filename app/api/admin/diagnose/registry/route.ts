@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import '@/lib/db-env'; // must precede @vercel/postgres — see lib/db-env.ts
 import { sql } from '@vercel/postgres';
 import { ensureRegistrySchema } from '@/lib/db-registry';
 import { getAllProductsForAdmin } from '@/lib/product-overrides';

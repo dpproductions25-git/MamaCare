@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { aliasedFrom, usingPrefixedVars } from '@/lib/db-env'; // must precede @vercel/postgres
 import { sql } from '@vercel/postgres';
 
 export const runtime = 'nodejs';
@@ -24,6 +25,23 @@ export async function GET() {
     POSTGRES_URL_NON_POOLING: !!process.env.POSTGRES_URL_NON_POOLING,
     POSTGRES_PRISMA_URL: !!process.env.POSTGRES_PRISMA_URL,
     DATABASE_URL: !!process.env.DATABASE_URL,
+  };
+
+  /**
+   * Where the connection actually came from.
+   *
+   * Vercel's Neon integration is configured with a custom variable prefix, so
+   * the standard names are absent and lib/db-env.ts aliases them at startup.
+   * Reporting that here means the next person to see a connection failure can
+   * tell "the prefix changed again" apart from "the password rotated" without
+   * guessing. Names only — never values.
+   */
+  const resolution = {
+    usingPrefixedVars,
+    aliased: aliasedFrom,
+    note: usingPrefixedVars
+      ? 'Vercel publishes these under a custom prefix; lib/db-env.ts mapped them to the standard names.'
+      : 'Standard unprefixed variables were present — no aliasing needed.',
   };
 
   // Host only — useful for spotting a stale Neon endpoint, no credentials
@@ -57,6 +75,7 @@ export async function GET() {
       tableCount: tables.rows.length,
       tables: tables.rows.map((t) => t.table_name),
       envVarsPresent: vars,
+      resolution,
     });
   } catch (e: any) {
     const message = e?.message || String(e);
@@ -69,10 +88,15 @@ export async function GET() {
         host,
         error: message,
         envVarsPresent: vars,
+        resolution,
         likelyCause: isAuth
-          ? 'The stored connection string no longer matches the database password. ' +
-            'Neon rotates credentials when a project is reset, restored, or reconnected — ' +
-            'copy a fresh connection string from Neon and update it in Vercel.'
+          ? (Object.keys(aliasedFrom).length === 0
+              ? 'No prefixed variables were found to alias either, so this deployment is ' +
+                'running on a connection string baked in before the Neon integration was ' +
+                'reconnected. Redeploy — the current variables will be picked up.'
+              : 'The aliased connection string was found but rejected. Neon rotates ' +
+                'credentials when a project is reset, restored, or reconnected; ' +
+                'reconnect the integration in Vercel → Storage to republish them.')
           : 'Connection failed for a reason other than credentials — check the Neon ' +
             'project is active and the host in the connection string still exists.',
         impact:

@@ -1,3 +1,4 @@
+import './db-env'; // must precede @vercel/postgres — see lib/db-env.ts
 import { sql } from '@vercel/postgres';
 import { getProductDetail, getStockByVid, normalizeImageSet } from './cj';
 import { getAllProductsForAdmin } from './product-overrides';
