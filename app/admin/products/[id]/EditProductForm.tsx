@@ -38,6 +38,8 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
     tags: (initial.tags || []).join(', '),
     cj_product_id: initial.cjProductId || '',
     cj_variant_id: initial.cjVariantId || '',
+    rating: String(initial.rating ?? 5.0),
+    reviews_count: String(initial.reviewsCount ?? 0),
     in_stock: initial.inStock,
     best_seller: initial.bestSeller || false,
     visible
@@ -160,6 +162,22 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
         }
       }
 
+      // Only custom products carry these columns — product_overrides (static
+      // products) has no rating/reviews_count columns, so sending them there
+      // would 500 the whole save.
+      let ratingNum: number | null = null;
+      let reviewsCountNum: number | null = null;
+      if (isCustom) {
+        ratingNum = Number(form.rating);
+        if (!Number.isFinite(ratingNum) || ratingNum < 0 || ratingNum > 5) {
+          throw new Error('Rating must be a number between 0 and 5.');
+        }
+        reviewsCountNum = Number(form.reviews_count);
+        if (!Number.isInteger(reviewsCountNum) || reviewsCountNum < 0) {
+          throw new Error('Review count must be a whole number of 0 or more.');
+        }
+      }
+
       const payload: any = {
         is_custom: isCustom,
         name: form.name.trim(),
@@ -177,7 +195,8 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
         variants_json: cleanVariants.length > 0 ? cleanVariants : null,
         in_stock: form.in_stock,
         best_seller: form.best_seller,
-        visible: form.visible
+        visible: form.visible,
+        ...(isCustom && { rating: ratingNum, reviews_count: reviewsCountNum })
       };
 
       const res = await fetch(`/api/admin/products/${initial.id}`, {
@@ -271,6 +290,32 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
           </Field>
         </div>
       </Section>
+
+      {/* Rating & reviews — custom products only. product_overrides (static
+          catalog items) has no rating/reviews_count columns; those already
+          carry real numbers from lib/products.ts and aren't editable here. */}
+      {isCustom && (
+        <Section title="Rating & reviews" hint="Shown as stars on the storefront. A 5.0 rating with 0 reviews reads as untrustworthy to shoppers.">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Rating (0–5)">
+              <input
+                type="number" min="0" max="5" step="0.1"
+                value={form.rating}
+                onChange={(e) => up('rating', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Review count">
+              <input
+                type="number" min="0" step="1"
+                value={form.reviews_count}
+                onChange={(e) => up('reviews_count', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+        </Section>
+      )}
 
       {/* Images */}
       <Section title="Images" hint="Paste a CJ product URL to auto-fetch all photos. Or enter URLs manually below. Google Drive and Dropbox share links are supported.">

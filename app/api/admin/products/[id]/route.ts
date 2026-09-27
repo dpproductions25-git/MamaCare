@@ -15,7 +15,8 @@ export const dynamic = 'force-dynamic';
  *   price, compare_at_price, image, images_json (array),
  *   category, tags_json (array), cj_product_id, cj_variant_id,
  *   variants_json (array of ProductVariant),
- *   in_stock, best_seller, visible
+ *   in_stock, best_seller, visible,
+ *   rating, reviews_count (custom products only)
  *
  * Static products: writes to product_overrides.
  * Custom products: writes to custom_products.
@@ -67,6 +68,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (has('cj_product_id')) f.cj_product_id = body.cj_product_id || null;
     if (has('cj_variant_id')) f.cj_variant_id = body.cj_variant_id || null;
     if (has('variants_json')) f.variants_json = Array.isArray(body.variants_json) ? body.variants_json : null;
+    // custom_products only — product_overrides has no rating/reviews_count
+    // columns, stripped below before it ever reaches the static-product path.
+    if (has('rating')) f.rating = body.rating == null ? null : Number(body.rating);
+    if (has('reviews_count')) f.reviews_count = body.reviews_count == null ? null : Number(body.reviews_count);
     if (has('in_stock')) f.in_stock = !!body.in_stock;
     if (has('best_seller')) f.best_seller = !!body.best_seller;
     if (has('visible')) f.visible = !!body.visible;
@@ -82,6 +87,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         { error: 'Price must be a valid amount of 0 or more.' },
         { status: 400 }
       );
+    }
+  }
+  if ('rating' in fields && fields.rating != null) {
+    if (!Number.isFinite(fields.rating) || fields.rating < 0 || fields.rating > 5) {
+      return NextResponse.json({ error: 'Rating must be between 0 and 5.' }, { status: 400 });
+    }
+  }
+  if ('reviews_count' in fields && fields.reviews_count != null) {
+    if (!Number.isInteger(fields.reviews_count) || fields.reviews_count < 0) {
+      return NextResponse.json({ error: 'Review count must be a whole number of 0 or more.' }, { status: 400 });
     }
   }
 
@@ -112,7 +127,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       }
       console.log(`[admin/products PATCH] custom "${params.id}" saved, price=${after.price}`);
     } else {
-      await upsertOverride(params.id, { ...fields, updated_by: actor });
+      // product_overrides has no rating/reviews_count columns — never send
+      // them here even if a client somehow included them (the static catalog
+      // already carries real numbers from lib/products.ts).
+      const { rating, reviews_count, ...overrideFields } = fields;
+      await upsertOverride(params.id, { ...overrideFields, updated_by: actor });
       console.log(`[admin/products PATCH] override "${params.id}" saved, price=${fields.price ?? '(unchanged)'}`);
     }
     await logAudit(actor, 'product.update', params.id, fields);
