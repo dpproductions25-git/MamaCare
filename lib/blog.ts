@@ -80,6 +80,7 @@ export const posts: BlogPost[] = [
     ],
     bodyHtml: `
 <p>Every newborn checklist tells you to buy 47 things. Most of them sit unused in a closet by month two. Here is the actually-honest list — what's essential, what's overrated, and what to wait on until you know your baby.</p>
+<p>Building a full baby registry rather than a pre-arrival shopping list? See our <a href="/blog/baby-registry-checklist-room-by-room">room-by-room registry checklist</a> for real quantities and what to skip.</p>
 
 <h2>The first four weeks: bare essentials</h2>
 <ul>
@@ -169,7 +170,7 @@ export const posts: BlogPost[] = [
   <li><strong>1.0 TOG</strong> — comfortable rooms (68–72°F)</li>
   <li><strong>2.5 TOG</strong> — cooler nurseries (61–68°F)</li>
 </ul>
-<p>Check the label, dress baby underneath accordingly, and you'll avoid the sweaty-baby problem.</p>
+<p>Check the label, dress baby underneath accordingly, and you'll avoid the sweaty-baby problem. Nursery temperatures shift the most in fall as heating cycles on and off — see our <a href="/blog/dressing-baby-for-fall-layering-guide">fall layering guide</a> for exactly which weight fits which room temperature.</p>
 
 <h2>The bottom line</h2>
 <p>Use a swaddle for newborns. Switch to a sleep sack at the first sign of rolling. Keep the sleep space empty. Read the TOG rating. Your baby will sleep — eventually.</p>
@@ -664,6 +665,159 @@ export const posts: BlogPost[] = [
 <h2>One practical tip from every mama who's done this</h2>
 <p>Pack a small "quick access" bag inside your main bag — the lip balm, phone charger, hair ties, and snacks you'll need immediately. When you arrive in labor, you don't want to dig through a full suitcase to find the charger.</p>
 <p>And remember: the one thing you cannot forget — yourself. Everything else is replaceable in a 2-hour Amazon order.</p>
+`
+  },
+
+  {
+    slug: 'dressing-baby-for-fall-layering-guide',
+    title: 'Dressing Baby for Fall: The Layering Guide That Actually Works',
+    excerpt:
+      "Crisp mornings, warm afternoons, and a baby who can't tell you if they're cold — here is exactly how to layer baby for fall weather, from stroller walks to nap time.",
+    coverImage: '/images/baby-autumn-leaves-basket-hero.webp',
+    author: 'MamaCare Editorial',
+    date: '2026-09-15',
+    readingMinutes: 6,
+    tags: ['fall', 'baby clothing', 'seasonal guide', 'layering'],
+    relatedProductSlugs: [
+      'soft-fleece-baby-sleep-sack-head-support',
+      'cotton-snap-bottom-baby-bodysuit',
+      'quilted-baby-sleeping-bag-wrap',
+      'breathable-baby-hip-seat-carrier'
+    ],
+    bodyHtml: `
+<p>Fall is the trickiest season to dress a baby for. Mornings start near 50°F, afternoons climb into the 70s, and your baby can't tug at a collar or tell you they're too warm. Overdress them and they overheat — a real safe-sleep concern. Underdress them and you've got a fussy, cold baby on your hands. Here is the layering system that actually works, from nursery to stroller.</p>
+
+<h2>The "one more layer" rule</h2>
+<p>The most reliable rule pediatricians give: dress baby in <strong>one more layer than you're comfortable in</strong> — not two, not three. Babies regulate temperature less efficiently than adults, but they overheat just as easily as they get cold, and overheating is a known risk factor for sleep-related deaths. If you're comfortable in a t-shirt and light cardigan, baby needs a bodysuit, a light layer, and maybe a hat outdoors — not a snowsuit.</p>
+
+<h2>How to check if baby is actually cold</h2>
+<p>Don't trust baby's hands and feet — they're naturally cooler than the rest of the body and are a bad thermometer. Instead, feel the back of baby's neck or their chest. Warm and dry means just right. Cool and clammy means add a layer. Sweaty or flushed means remove one, immediately.</p>
+
+<h2>Layering for the nursery and sleep</h2>
+<p>Fall room temperatures swing more than any other season — a nursery that's 72°F at noon can be 63°F by 4 a.m. once the heat cycles down overnight. This is exactly what TOG ratings on sleep sacks are for (full breakdown in our <a href="/blog/safe-sleep-sleep-sacks-vs-swaddles">sleep sack vs. swaddle guide</a>):</p>
+<ul>
+  <li><strong>68–72°F room:</strong> a 1.0 TOG sleep sack over a short-sleeve bodysuit. Our <a href="/products/soft-fleece-baby-sleep-sack-head-support">Soft Fleece Sleep Sack with Head Support</a> sits right in this range.</li>
+  <li><strong>61–67°F room (typical once heating cycles down at night):</strong> step up to a warmer sack, or add a long-sleeve bodysuit underneath — the <a href="/products/quilted-baby-sleeping-bag-wrap">Quilted Baby Sleeping Bag Wrap</a> is built for this.</li>
+  <li>Never add a loose blanket to compensate for a colder room. Layer the sack rating or the clothing underneath instead — not the bedding.</li>
+</ul>
+<p>A $10 room thermometer for the nursery pays for itself in the first cold snap. Guessing the temperature by hand is how most fall overdressing happens.</p>
+
+<h2>Layering for the stroller and outdoor walks</h2>
+<p>A stroller blocks wind but not much else, so baby will feel closer to the actual outdoor temperature than you might expect sitting still. For a 45–55°F walk: a long-sleeve bodysuit (our <a href="/products/cotton-snap-bottom-baby-bodysuit">Cotton Snap-Bottom Bodysuit</a> works as a base layer year-round), a light fleece or knit layer on top, socks, and a hat — babies lose a disproportionate amount of heat through their head. Add a light blanket over the legs that you can pull off if baby heats up, rather than an all-in-one snowsuit that traps heat the second the stroller stops moving in the sun.</p>
+<p>Check baby every 15–20 minutes on a walk. Stroller naps in direct afternoon sun heat up fast even at 55°F outside.</p>
+
+<h2>Layering for babywearing</h2>
+<p>This is the one place parents consistently overdress. A carrier is already a heat source — your body warms baby directly, plus the carrier fabric itself insulates. In fall weather, baby typically needs <em>one fewer layer</em> than they would in a stroller, not more. A bodysuit and a light layer is usually plenty under a carrier down to about 50°F; you supply the rest of the warmth. If you're using an <a href="/products/breathable-baby-hip-seat-carrier">all-season breathable hip seat carrier</a>, the mesh panels help vent the extra heat two bodies generate — it's easy to overheat baby on a "just cool enough" walk because you forgot you're a space heater.</p>
+
+<h2>The layers you actually need this season</h2>
+<ul>
+  <li><strong>3–4 long-sleeve bodysuits</strong> as your base layer for everything above.</li>
+  <li><strong>2–3 light cardigans, fleece pullovers, or knit layers</strong> that go on and off easily — front-zip beats pullover for a squirmy baby.</li>
+  <li><strong>1 mid-weight sleep sack</strong> for the overnight temperature drop.</li>
+  <li><strong>A knit hat</strong> for stroller walks and any time you're outside longer than a quick errand.</li>
+  <li><strong>Socks or soft booties</strong> — feet get cold fast in an open stroller.</li>
+</ul>
+<p>Notice what's missing: a heavy snowsuit or bunting. Save that for actual winter. In fall, layers you can add and remove beat one thick piece every time.</p>
+
+<h2>Signs you've got it wrong</h2>
+<p><strong>Too warm:</strong> flushed cheeks, damp hair at the neckline, rapid breathing, a rash-like heat prickle. <strong>Too cold:</strong> cool torso or chest (not hands or feet), fussiness that resolves once you add a layer, pale or mottled skin. Both are fixable in under a minute if you check early and often — the goal isn't to get it perfect on the first try, it's to notice and adjust quickly.</p>
+
+<h2>The bottom line</h2>
+<p>Layer for the temperature you'll actually be in, check the back of baby's neck instead of guessing, and keep a couple of easy-on-easy-off pieces within reach for every outing. Fall weather changes faster than any other season — your baby's outfit should be able to change with it.</p>
+`
+  },
+
+  {
+    slug: 'baby-registry-checklist-room-by-room',
+    title: 'The Baby Registry Checklist: A Room-by-Room Guide to What You Actually Need',
+    excerpt:
+      'Registries default to hundreds of items and most of them go unused. Here is the room-by-room checklist — what to add, what to skip, and how many of each to actually register for.',
+    coverImage: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1400&q=80',
+    author: 'MamaCare Editorial',
+    date: '2026-09-22',
+    readingMinutes: 9,
+    tags: ['baby registry', 'baby shower', 'checklist', 'first-time mom'],
+    relatedProductSlugs: [
+      'ergonomic-3-in-1-baby-carrier-hip-seat',
+      'soft-fleece-baby-sleep-sack-head-support',
+      'silicone-baby-bottle-straw-brush-set',
+      'smart-electric-rocking-bassinet-bedside',
+      'newborn-cotton-clothing-gift-set'
+    ],
+    bodyHtml: `
+<p>Most baby registry templates default to 200+ items, because the store hosting your registry makes money either way. The result: overwhelmed parents-to-be, a nursery full of unopened boxes, and gift-givers stuck choosing between fifteen nearly-identical bottle brushes. Here is a registry built room by room, with real quantities and honest priorities — not a store's autofill list.</p>
+
+<h2>When to start your registry</h2>
+<p>Start around <strong>week 20</strong> (the halfway point) so you have time to research without pressure, and finalize it by <strong>week 30–32</strong> — most baby showers happen in the third trimester, and guests need lead time to shop. Revisit it once at 36 weeks to remove anything you've since realized you don't want.</p>
+
+<h2>The nursery / sleep space</h2>
+<ul>
+  <li><strong>A crib or bassinet + firm mattress.</strong> A bedside bassinet like our <a href="/products/smart-electric-rocking-bassinet-bedside">Smart Electric Rocking Bassinet</a> covers the first 4–6 months and keeps baby in-room, which is the AAP's safe-sleep recommendation.</li>
+  <li><strong>2–3 fitted crib sheets.</strong> That's it — no bumpers, no pillows, no loose bedding. They're not just unnecessary, they're a suffocation risk.</li>
+  <li><strong>4–5 sleep sacks</strong> in a couple of weights. See our <a href="/blog/safe-sleep-sleep-sacks-vs-swaddles">sleep sack guide</a> for how many of which TOG rating.</li>
+  <li><strong>A white noise machine.</strong> Inexpensive and genuinely used every single night.</li>
+  <li><strong>A changing pad.</strong> Doesn't need a dedicated table — any flat dresser top works.</li>
+</ul>
+<p><em>Skip:</em> a full nursery furniture set before you know your space, a glider you haven't sat in, decorative crib bedding.</p>
+
+<h2>Feeding</h2>
+<ul>
+  <li><strong>6–8 bottles</strong> across 2 brands (nipple preference is genuinely unpredictable) — a <a href="/products/silicone-baby-bottle-straw-brush-set">bottle brush set</a> that reaches every bottle shape belongs on every registry, breastfeeding or not.</li>
+  <li><strong>A bottle warmer.</strong> Not essential, but genuinely used at 2 a.m. more than almost anything else on this list.</li>
+  <li><strong>15–20 burp cloths.</strong> You will always want more than you think.</li>
+  <li><strong>A nursing pillow</strong> if breastfeeding or bottle-feeding — saves your arms and back for months.</li>
+  <li><strong>A manual or electric breast pump.</strong> Often covered by insurance — check before registering for one.</li>
+</ul>
+<p><em>Skip:</em> a full formula-making system, specialty bottles in bulk before you know what baby takes.</p>
+
+<h2>Diapering and changing</h2>
+<ul>
+  <li><strong>Diapers in newborn and 0–3 month sizes.</strong> Register for a mix, not a single size — newborns often skip the newborn size in 2–3 weeks.</li>
+  <li><strong>A big box of fragrance-free wipes.</strong> You will never regret extra wipes.</li>
+  <li><strong>A <a href="/products/portable-baby-changing-pad-clutch">portable changing pad</a></strong> for the diaper bag — as useful as the one at home.</li>
+  <li><strong>A simple lidded trash can.</strong> Skip the branded diaper pail with proprietary bags.</li>
+</ul>
+
+<h2>Clothing</h2>
+<ul>
+  <li><strong>8–10 bodysuits</strong> and <strong>6–8 sleepers</strong>, split across newborn and 0–3 month sizes.</li>
+  <li><strong>A gift-set bundle</strong> is an easy ask for guests who want to give clothing but don't know sizing — our <a href="/products/newborn-cotton-clothing-gift-set">Newborn Cotton Clothing Gift Set</a> is built for exactly this.</li>
+  <li><strong>A couple of weather-appropriate outerwear pieces</strong> for your due-date season — see our <a href="/blog/dressing-baby-for-fall-layering-guide">seasonal layering guide</a> if you're due in fall or winter.</li>
+</ul>
+<p><em>Skip:</em> shoes before walking, anything hand-wash-only, a full going-out wardrobe before you know baby's size.</p>
+
+<h2>Getting out of the house</h2>
+<ul>
+  <li><strong>A car seat.</strong> Not negotiable, and not something to accept secondhand past its expiration date (check the manufacture-date sticker).</li>
+  <li><strong>A stroller</strong> — ideally one that pairs with your car seat as a travel system for the first several months.</li>
+  <li><strong>A baby carrier.</strong> One of the most-used items in the first year — see our <a href="/blog/best-baby-carriers-2026">carrier buying guide</a> for how to choose. The <a href="/products/ergonomic-3-in-1-baby-carrier-hip-seat">Ergonomic 3-in-1 Carrier with Hip Seat</a> is our most-registered-for pick.</li>
+  <li><strong>A diaper bag</strong> with a wipeable interior and enough structure to find things one-handed.</li>
+</ul>
+
+<h2>Bath and health</h2>
+<ul>
+  <li><strong>An infant tub insert</strong> or bath sling for your existing bathtub or sink.</li>
+  <li><strong>2–3 hooded towels and washcloths.</strong></li>
+  <li><strong>A digital thermometer, nail clippers, and a nasal aspirator</strong> — the unglamorous items that get used weekly.</li>
+  <li><strong>Baby-safe laundry detergent</strong> and a bin or bag for a separate baby laundry load.</li>
+</ul>
+
+<h2>For the person actually having the baby</h2>
+<p>This section gets skipped constantly, and it shouldn't. Postpartum recovery items are entirely appropriate for a registry — see our full <a href="/blog/postpartum-recovery-essentials">postpartum essentials guide</a> — but at minimum, register for: nursing bras, postpartum pads, an upgraded peri bottle, and comfortable loose clothing. Guests generally want to help the parent, not just the baby.</p>
+
+<h2>How many of each: the honest quantities</h2>
+<p>The single biggest registry mistake is registering for one of everything and ten of nothing. As a rule: register for <strong>more</strong> of anything that gets dirty or worn daily (bodysuits, burp cloths, wipes, sleep sacks) and <strong>one good one</strong> of anything durable that you researched carefully (carrier, stroller, car seat, bassinet). Duplicate baby monitors and duplicate bouncers are two of the most-returned registry items — pick one of each and mean it.</p>
+
+<h2>Registry etiquette, quickly</h2>
+<ul>
+  <li>Spread price points — include $15 items alongside $150 items so every guest has something in their range.</li>
+  <li>Add a few "group gift" big-ticket items (car seat, stroller) that multiple guests can split.</li>
+  <li>It's completely fine to register at more than one store if a specific item is registry-exclusive somewhere else.</li>
+  <li>Send thank-you notes within 2–3 weeks — sooner if you can, but grace yourself the recovery window.</li>
+</ul>
+
+<h2>The bottom line</h2>
+<p>A good registry isn't the longest one — it's the one that matches how you'll actually use these first months. Start with our <a href="/blog/newborn-essentials-checklist">newborn essentials checklist</a> if you want the even-shorter version, then build out from there room by room. You can always add to a registry later; you can't un-receive four wipe warmers.</p>
 `
   }
 ];
