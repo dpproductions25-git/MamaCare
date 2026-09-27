@@ -1,23 +1,24 @@
 /**
  * Curated hero slideshow images.
  *
- * These are Unsplash photographs already in use elsewhere on this site (blog
- * headers, the About page, the admin default hero), so they are known-good URLs
- * rather than guessed IDs that could 404 and leave a blank banner.
- *
  * Admin overrides always win: set hero_image, hero_image_2, hero_image_3 and
  * hero_image_4 in site config and those replace these entirely.
  */
 
-const W = 2000;
-const Q = 80;
+/**
+ * Fall hero — swapped in for the season. The previous baby-in-the-inflatable
+ * (pool) shot is intentionally left alone on the About page rather than
+ * deleted, so it's ready to bring back as the summer hero.
+ */
+export const DEFAULT_HERO_IMAGE = '/images/baby-autumn-leaves-basket-hero.webp';
 
-function unsplash(id: string): string {
-  return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${W}&q=${Q}`;
-}
-
-/** The baby-in-the-inflatable shot — the same photograph used on the About page. */
-export const DEFAULT_HERO_IMAGE = unsplash('1519689680058-324335c77eba');
+/**
+ * Descriptive alt text for DEFAULT_HERO_IMAGE, kept separate from the
+ * marketing headline so it actually describes the photo for screen readers
+ * and image search rather than repeating the tagline.
+ */
+export const DEFAULT_HERO_ALT =
+  'Smiling baby in a cream knit sweater and pom-pom hat sitting in a wicker basket lined with a mustard blanket, surrounded by autumn leaves — MamaCare fall baby essentials';
 
 export const CURATED_HERO_SLIDES: string[] = [DEFAULT_HERO_IMAGE];
 

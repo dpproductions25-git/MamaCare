@@ -5,7 +5,7 @@ import ProductCard from '@/components/ProductCard';
 import FeaturedProduct from '@/components/FeaturedProduct';
 import HeroSlideshow from '@/components/HeroSlideshow';
 import TrustBar from '@/components/TrustBar';
-import { buildHeroSlides, DEFAULT_HERO_IMAGE } from '@/lib/hero-slides';
+import { buildHeroSlides, DEFAULT_HERO_IMAGE, DEFAULT_HERO_ALT } from '@/lib/hero-slides';
 import { getWeeklyPicks, currentWeekRange } from '@/lib/weekly';
 import { featuredScore } from '@/lib/featured';
 import { categories } from '@/lib/products';
@@ -44,9 +44,10 @@ export const metadata = buildMetadata({
 });
 
 const DEFAULTS = {
-  // Same photograph as the About page — used as the hero and as the fallback
-  // tile for any category without its own product image.
+  // Fall hero photo — also used as the fallback tile for any category
+  // without its own product image.
   hero_image: DEFAULT_HERO_IMAGE,
+  hero_image_alt: DEFAULT_HERO_ALT,
   hero_eyebrow: 'Lovingly made for every mama',
   hero_headline: 'Soft, supportive essentials for every season of motherhood.',
   hero_subhead: 'From bump to baby and beyond — discover thoughtfully curated baby gear, sleep, feeding, and nursery products designed to feel as good as they look.',
@@ -102,6 +103,10 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
 
   const hero = {
     image: config.hero_image || DEFAULTS.hero_image,
+    // Only the default (no admin override) has real photo-specific alt text —
+    // an admin-uploaded image falls back to the headline since there's no
+    // per-image alt field in the site config yet.
+    imageAlt: config.hero_image ? undefined : DEFAULTS.hero_image_alt,
     eyebrow: config.hero_eyebrow || DEFAULTS.hero_eyebrow,
     headline: config.hero_headline || DEFAULTS.hero_headline,
     subhead: config.hero_subhead || DEFAULTS.hero_subhead,
@@ -112,7 +117,7 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
   return (
     <>
       {/* ── Full-bleed hero slideshow ── */}
-      <HeroSlideshow images={heroSlides} alt={hero.headline}>
+      <HeroSlideshow images={heroSlides} alt={hero.imageAlt || hero.headline}>
           <div className="container-page py-24 lg:py-36">
             <div className="max-w-2xl">
               <p className="uppercase tracking-[0.22em] text-blush-300 text-xs font-semibold mb-5">
