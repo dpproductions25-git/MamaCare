@@ -17,7 +17,11 @@ export const posts: BlogPost[] = [
     title: 'Best Baby Carriers in 2026: A Complete Buying Guide',
     excerpt:
       'Front carriers, hip seats, wraps, and four-in-ones — here is how to pick the right baby carrier for your body, your baby, and your everyday routine.',
-    coverImage: 'https://images.unsplash.com/photo-1518676590629-3dcba9c5a5a7?auto=format&fit=crop&w=1400&q=80',
+    // Was an Unsplash stock photo (photo-1518676590629-3dcba9c5a5a7) that Unsplash
+    // has since removed — the ID now 404s, breaking this post's cover image
+    // wherever it renders. Swapped for our own carrier's real product photo
+    // instead of guessing another stock ID that could just as easily rot later.
+    coverImage: 'https://cf.cjdropshipping.com/20200521/307674343984.jpg?x-oss-process=image/format,webp,image/resize,w_900',
     author: 'MamaCare Editorial',
     date: '2026-05-01',
     readingMinutes: 6,
