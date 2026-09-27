@@ -127,9 +127,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     },
     sameAs: [
       'https://www.instagram.com/mamaacaree_',
-      'https://www.facebook.com/share/1JHrwDTgML/?mibextid=wwXIfr',
-      'https://www.tiktok.com/@mamacare',
-      'https://www.pinterest.com/mamacare'
+      'https://www.facebook.com/share/1JHrwDTgML/?mibextid=wwXIfr'
     ]
   };
 
