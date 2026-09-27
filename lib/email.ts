@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { products } from './products';
+import { SITE_URL } from './seo';
 
 let _resend: Resend | null = null;
 function client(): Resend | null {
@@ -172,7 +173,7 @@ export async function sendWelcomeCode(opts: {
   percentOff?: number;
 }): Promise<boolean> {
   const pct = opts.percentOff ?? 10;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mamacare.us';
+  const siteUrl = SITE_URL;
 
   const body = `
     <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#E68197;font-weight:600;">Welcome to the circle</p>
@@ -225,8 +226,7 @@ export async function sendRegistryGiftNotification(opts: {
   registryId: string;
   giftedItems: { productName: string; qty: number }[];
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mamacare.us';
-  const registryUrl = `${siteUrl}/registry/${opts.registryId}`;
+  const registryUrl = `${SITE_URL}/registry/${opts.registryId}`;
 
   const itemRows = opts.giftedItems
     .map((i) => `

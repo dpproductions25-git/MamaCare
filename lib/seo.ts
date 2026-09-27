@@ -5,13 +5,21 @@ export const SITE_NAME = 'MamaCare';
 /** Domains we're willing to redirect a customer back to after payment. */
 const TRUSTED_HOST_SUFFIXES = ['mamacare.us', '.vercel.app'];
 
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  // Vercel injects this for the production deployment — a better guess than a
-  // hardcoded URL that can silently go stale.
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'https://mamacare.us');
+/**
+ * NEXT_PUBLIC_SITE_URL must be set explicitly in production. Falling back to
+ * VERCEL_PROJECT_PRODUCTION_URL used to seem like a safer default than a
+ * hardcoded string, but in practice it resolved to a stale/renamed
+ * `*.vercel.app` project URL that 404s — and every canonical tag, og:url,
+ * JSON-LD URL, sitemap entry, and robots.txt Host/Sitemap directive on the
+ * site derives from this constant. Pointing all of them at a dead domain is
+ * about the worst technical-SEO failure mode there is: it tells Google the
+ * "real" version of every page lives somewhere that doesn't exist, which
+ * actively suppresses the live domain's own rankings.
+ */
+// The apex domain (mamacare.us) redirects to www — canonical/OG/sitemap URLs
+// must match the domain that actually serves content, or every one of them
+// forces an extra redirect hop for crawlers resolving the canonical target.
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mamacare.us';
 
 /**
  * The origin to send a customer back to after an external redirect (Stripe).
