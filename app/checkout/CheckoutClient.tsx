@@ -10,6 +10,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 import type { Product } from '@/lib/types';
 import { trackMeta } from '@/components/MetaPixel';
+import CheckoutSuggestions from '@/components/CheckoutSuggestions';
 
 /**
  * Created once at module scope, not per render — loadStripe() injects a script
@@ -382,7 +383,12 @@ export default function CheckoutClient({
         {/* Stripe shows its own order summary inside the embedded form, so this
             sidebar would be a duplicate while paying. */}
         <aside className={`card p-6 h-fit lg:sticky lg:top-24 ${clientSecret ? 'hidden' : ''}`}>
-          <h2 className="font-display text-2xl text-ink-900">Order</h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-display text-2xl text-ink-900">Order</h2>
+            <Link href="/cart" className="text-xs text-ink-500 underline underline-offset-2 hover:text-blush-500">
+              Edit cart
+            </Link>
+          </div>
           <ul className="mt-4 divide-y divide-ink-900/5">
             {items.map((i) => {
               const p = serverProducts.find((x) => x.id === i.productId);
@@ -424,6 +430,13 @@ export default function CheckoutClient({
               <dt>Total</dt><dd>${grand.toFixed(2)}<span className="text-xs font-normal text-ink-500"> + tax</span></dd>
             </div>
           </dl>
+
+          <CheckoutSuggestions
+            products={serverProducts}
+            items={items}
+            subtotal={sub}
+            freeThreshold={totals.freeThreshold}
+          />
         </aside>
       </div>
     </section>

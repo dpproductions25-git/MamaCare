@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Product, ProductVariant } from '@/lib/types';
 import { useCart } from '@/lib/cart';
 import { trackMeta } from './MetaPixel';
@@ -96,6 +97,7 @@ export default function ProductGallery({
     if (match?.image) setActiveImage(match.image);
   }
 
+  const router = useRouter();
   const add = useCart((s) => s.add);
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
@@ -155,6 +157,11 @@ export default function ProductGallery({
       value: (selectedVariant?.price ?? product.price) * qty,
       currency: 'USD',
     });
+
+    // Straight to checkout with the item in the order summary. The checkout
+    // page carries "Add to your order" suggestions, so shoppers who want more
+    // can still add without detouring through /cart.
+    router.push('/checkout');
   }
 
   const onSale = product.compareAtPrice && product.compareAtPrice > product.price;
