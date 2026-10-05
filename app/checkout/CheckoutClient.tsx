@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCart } from '@/lib/cart';
 import { calculateTotals } from '@/lib/coupons';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
@@ -382,7 +383,7 @@ export default function CheckoutClient({
 
         {/* Stripe shows its own order summary inside the embedded form, so this
             sidebar would be a duplicate while paying. */}
-        <aside className={`card p-6 h-fit lg:sticky lg:top-24 ${clientSecret ? 'hidden' : ''}`}>
+        <aside className={`card p-6 h-fit order-first lg:order-last lg:sticky lg:top-24 ${clientSecret ? 'hidden' : ''}`}>
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-2xl text-ink-900">Order</h2>
             <Link href="/cart" className="text-xs text-ink-500 underline underline-offset-2 hover:text-blush-500">
@@ -395,10 +396,31 @@ export default function CheckoutClient({
               if (!p) return null;
               const variant = i.variantId ? p.variants?.find((v) => v.vid === i.variantId) : undefined;
               const linePrice = variant?.price ?? p.price;
+              // The chosen colour's photo when there is one, so the thumbnail
+              // matches what the shopper actually picked.
+              const thumb = variant?.image || p.image;
               return (
-                <li key={`${i.productId}-${i.variantId || ''}`} className="py-3 flex justify-between text-sm">
-                  <span>{p.name} {variant ? `(${variant.name})` : ''} × {i.qty}</span>
-                  <span>${(linePrice * i.qty).toFixed(2)}</span>
+                <li key={`${i.productId}-${i.variantId || ''}`} className="py-3 flex items-center gap-3 text-sm">
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <div className="relative w-full h-full rounded-xl overflow-hidden bg-cream-100">
+                      {thumb && (
+                        <Image src={thumb} alt={p.name} fill sizes="64px" className="object-cover" />
+                      )}
+                    </div>
+                    <span
+                      className="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1 rounded-full bg-ink-900 text-white text-xs font-medium flex items-center justify-center"
+                      aria-label={`Quantity ${i.qty}`}
+                    >
+                      {i.qty}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/products/${p.slug}`} className="text-ink-900 hover:text-blush-500 line-clamp-2 leading-snug">
+                      {p.name}
+                    </Link>
+                    {variant && <p className="text-xs text-ink-500 mt-0.5">{variant.name}</p>}
+                  </div>
+                  <span className="flex-shrink-0 font-medium text-ink-900">${(linePrice * i.qty).toFixed(2)}</span>
                 </li>
               );
             })}
