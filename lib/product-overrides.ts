@@ -1,6 +1,7 @@
 import { products as staticProducts } from './products';
 import { Product, Category, ProductVariant } from './types';
 import { getAllOverrides, listCustomProducts, DbOverride, DbCustomProduct } from './db';
+import { repairImageList } from './image-url';
 
 function val<T>(v: T | null | undefined, fallback: T): T {
   return v != null ? v : fallback;
@@ -17,7 +18,7 @@ function applyOverrideToStatic(p: Product, o?: DbOverride): Product {
     price: o.price != null ? Number(o.price) : p.price,
     compareAtPrice: o.compare_at_price != null ? Number(o.compare_at_price) : p.compareAtPrice,
     image: val(o.image, p.image),
-    images: o.images_json != null ? o.images_json : p.images,
+    images: o.images_json != null ? repairImageList(o.images_json) : p.images,
     category: val(o.category as Category, p.category),
     tags: val(o.tags_json, p.tags),
     cjProductId: val(o.cj_product_id, p.cjProductId),
@@ -40,7 +41,7 @@ function customToProduct(c: DbCustomProduct): Product {
     compareAtPrice: c.compare_at_price != null ? Number(c.compare_at_price) : undefined,
     currency: 'USD',
     image: c.image,
-    images: c.images || undefined,
+    images: c.images ? repairImageList(c.images) : undefined,
     category: c.category as Category,
     tags: c.tags || [],
     rating: Number(c.rating),

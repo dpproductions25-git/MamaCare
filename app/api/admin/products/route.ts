@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { insertCustomProduct, logAudit } from '@/lib/db';
 import { parseCjUrl, slugify } from '@/lib/product-overrides';
+import { splitImageList } from '@/lib/image-url';
 import { products as staticProducts, categories } from '@/lib/products';
 import { listCustomProducts } from '@/lib/db';
 import type { Category } from '@/lib/types';
@@ -48,9 +49,10 @@ export async function POST(req: Request) {
   const cjProductId = cjFromUrl || body.cj_product_id?.trim() || null;
   const cjVariantId = body.cj_variant_id?.trim() || null;
 
-  // Parse comma-separated extra image URLs
+  // Extra image URLs — newline- or comma-separated. Not a bare split(','):
+  // CJ image URLs contain commas, which chopped them into broken fragments.
   const extraImages = body.extra_images?.trim()
-    ? body.extra_images.split(',').map((s: string) => s.trim()).filter(Boolean)
+    ? splitImageList(body.extra_images)
     : null;
   const allImages = extraImages
     ? [body.image, ...extraImages]

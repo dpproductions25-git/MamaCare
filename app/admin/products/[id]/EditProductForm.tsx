@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Product, ProductVariant } from '@/lib/types';
 import { categories } from '@/lib/products';
-import { normalizeImageUrl } from '@/lib/image-url';
+import { normalizeImageUrl, splitImageList } from '@/lib/image-url';
 import { colorSwatchStyle } from '@/lib/colors';
 import CjImagePicker from '@/components/CjImagePicker';
 
@@ -121,8 +121,8 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
     setSaving(true);
     try {
       // Build payload — only send fields that changed (best practice)
-      const imageList = form.images
-        .split(/[,\n]/)
+      // splitImageList, not split(','): CJ URLs contain commas of their own.
+      const imageList = splitImageList(form.images)
         .map((s) => normalizeImageUrl(s))
         .filter(Boolean);
 
@@ -322,7 +322,7 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
         {/* CJ image picker */}
         <CjImagePicker
           initialMain={form.image}
-          initialGallery={form.images.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)}
+          initialGallery={splitImageList(form.images)}
           onApply={(main, gallery) => {
             up('image', main);
             up('images', gallery.join(', '));

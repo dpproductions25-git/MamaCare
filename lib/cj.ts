@@ -3,6 +3,8 @@
  * Docs: https://developers.cjdropshipping.com/en/api/overview.html
  */
 
+import { splitImageList } from './image-url';
+
 type TokenCache = { token: string; expiresAt: number };
 let tokenCache: TokenCache | null = null;
 const CJ_BASE = process.env.CJ_API_BASE || 'https://developers.cjdropshipping.com/api2.0/v1';
@@ -137,8 +139,9 @@ export function normalizeImageSet(raw: unknown): string[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed.filter((x): x is string => typeof x === 'string');
     } catch {
-      // Occasionally a plain comma-separated list
-      return raw.split(',').map((s) => s.trim()).filter(Boolean);
+      // Occasionally a plain comma-separated list. CJ URLs contain commas of
+      // their own, so only split where a new URL starts.
+      return splitImageList(raw);
     }
   }
   return [];
