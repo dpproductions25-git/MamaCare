@@ -16,24 +16,6 @@ import { shippingBlurb, shippingSubLabel } from '@/lib/shipping-copy';
 import { buildMetadata } from '@/lib/seo';
 
 
-const TESTIMONIALS = [
-  {
-    quote: "The sleep sack is honestly the best thing we bought for our newborn. She went from waking every 45 minutes to sleeping 4-hour stretches. Worth every penny.",
-    name: "Jessica M.",
-    detail: "Mom of a 3-month-old"
-  },
-  {
-    quote: "I was skeptical about ordering baby gear online but MamaCare had the best carrier I've tried. Arrived in 6 days and the quality is exactly as described.",
-    name: "Priya L.",
-    detail: "First-time mama, NYC"
-  },
-  {
-    quote: "Ordered the bouncer and the diaper bag together. Both are incredible — and customer support answered my question on a Sunday evening. Genuinely impressed.",
-    name: "Sarah K.",
-    detail: "Mom of 2, Texas"
-  }
-];
-
 export const revalidate = 30;
 
 export const metadata = buildMetadata({
@@ -140,15 +122,10 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
                   Our story
                 </Link>
               </div>
-              <div className="mt-12 flex flex-wrap items-center gap-5 text-sm text-white/60">
-                <span className="flex items-center gap-2">
-                  <span className="text-blush-300 text-base tracking-tight">★★★★★</span>
-                  4.8 from 7,400+ mamas
-                </span>
-                <span className="w-px h-4 bg-white/25 hidden sm:block" />
-                <span className="hidden sm:inline">{shipNote}</span>
-                <span className="w-px h-4 bg-white/25 hidden sm:block" />
-                <span className="hidden sm:inline">14-day returns</span>
+              <div className="mt-12 hidden sm:flex flex-wrap items-center gap-5 text-sm text-white/60">
+                <span>{shipNote}</span>
+                <span className="w-px h-4 bg-white/25" />
+                <span>14-day returns</span>
               </div>
             </div>
           </div>
@@ -332,28 +309,6 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
             <h3 className="font-display text-xl text-ink-900">Care-first support</h3>
             <p className="text-ink-500 mt-2 max-w-xs mx-auto">Real humans (and mamas) ready to help — 7 days a week.</p>
           </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ── */}
-      <section className="container-page py-12 sm:py-16">
-        <div className="text-center mb-10">
-          <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium">What mamas are saying</p>
-          <h2 className="font-display text-3xl sm:text-4xl text-ink-900 mt-2">Loved by 10,000+ families</h2>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name} className="card p-7 flex flex-col gap-4">
-              <div className="flex gap-0.5 text-blush-400 text-sm">
-                {'★★★★★'}
-              </div>
-              <p className="text-ink-700 leading-relaxed flex-1">"{t.quote}"</p>
-              <div>
-                <p className="font-medium text-ink-900 text-sm">{t.name}</p>
-                <p className="text-xs text-ink-500 mt-0.5">{t.detail}</p>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

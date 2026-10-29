@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import DeferredOverlays from '@/components/DeferredOverlays';
 import ConsentedAnalytics from '@/components/ConsentedAnalytics';
 import MetaPixel from '@/components/MetaPixel';
+import { metaPixelSnippet } from '@/lib/meta-pixel';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { getMergedProducts } from '@/lib/product-overrides';
 
@@ -147,6 +148,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
+      <head>
+        {/* Meta Pixel base code — in <head> on every page, as Meta's install
+            instructions require. Runs in consent mode: nothing is sent until
+            the visitor accepts cookies (see lib/meta-pixel.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: metaPixelSnippet() }} />
+      </head>
       <body className="font-sans bg-cream-50 text-ink-900 min-h-screen flex flex-col">
         <Header featuredProduct={navFeatured} />
         <main className="flex-1">{children}</main>
@@ -171,8 +178,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             require consent. */}
         <ConsentedAnalytics gaId={gaId} />
 
-        {/* Meta Pixel — same consent gate as GA, plus PageView on client-side
-            navigation, which the stock Events Manager snippet doesn't do. */}
+        {/* Meta Pixel — grants/revokes on the cookie banner and adds PageView
+            on client-side navigation, which the stock snippet doesn't do. */}
         <MetaPixel />
       </body>
     </html>

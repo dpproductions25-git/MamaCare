@@ -114,9 +114,21 @@ export default function CheckoutClient({
 
   const { discount, shipping, total: grand, appliedCode, couponDescription } = totals;
 
+  /**
+   * The cart is persisted to localStorage, but on a hard load React hydrates
+   * with the empty server snapshot first. Redirecting on "no items" before the
+   * saved cart has been restored bounced anyone who refreshed /checkout (or
+   * opened it in a new tab) back to /cart with a full cart.
+   */
+  const [cartLoaded, setCartLoaded] = useState(false);
   useEffect(() => {
-    if (items.length === 0) router.replace('/cart');
-  }, [items, router]);
+    if (useCart.persist.hasHydrated()) setCartLoaded(true);
+    return useCart.persist.onFinishHydration(() => setCartLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (cartLoaded && items.length === 0) router.replace('/cart');
+  }, [cartLoaded, items, router]);
 
   /**
    * Meta InitiateCheckout — fired once when the checkout page is reached with a

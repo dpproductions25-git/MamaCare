@@ -17,22 +17,6 @@ const STROKE = {
   strokeLinejoin: 'round' as const,
 };
 
-function Star() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" stroke="currentColor" {...STROKE}>
-      <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.15 1 5.85L12 16.9l-5.25 2.8 1-5.85L3.5 9.7l5.9-.9L12 3.5z" />
-    </svg>
-  );
-}
-
-function Family() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" stroke="currentColor" {...STROKE}>
-      <path d="M12 20.5s-6.5-4-6.5-8.6a3.6 3.6 0 016.5-2.1 3.6 3.6 0 016.5 2.1c0 4.6-6.5 8.6-6.5 8.6z" />
-    </svg>
-  );
-}
-
 function Truck() {
   return (
     <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" stroke="currentColor" {...STROKE}>
@@ -105,8 +89,8 @@ export default function TrustBar({ shippingLabel }: { shippingLabel: string }) {
   return (
     <div className="bg-white border-y border-ink-900/5">
       {/*
-        Horizontally scrollable with snap points on phones — six items can't fit
-        on a 375px screen, and squashing them made the text unreadable. On
+        Horizontally scrollable with snap points on phones — the items can't all
+        fit on a 375px screen, and squashing them made the text unreadable. On
         desktop it becomes a normal evenly-spaced row.
       */}
       <ul
@@ -114,8 +98,6 @@ export default function TrustBar({ shippingLabel }: { shippingLabel: string }) {
                    sm:overflow-visible sm:justify-between
                    divide-x divide-ink-900/8"
       >
-        <Item tone="blush" icon={<Star />}   stat="4.8 / 5"      label="Average rating" />
-        <Item tone="blush" icon={<Family />} stat="10,000+"      label="Happy families" />
         <Item tone="sage"  icon={<Truck />}  stat="Free shipping" label={shippingLabel} />
         <Item tone="sage"  icon={<Return />} stat="14-day returns" label="No questions asked" />
         <Item tone="ink"   icon={<Lock />}   stat="Secure checkout" label="Stripe & PayPal" />

@@ -46,8 +46,9 @@ const nextConfig = {
     // Content-Security-Policy — tightened but safe for Stripe, PayPal, Google Fonts, GA
     const csp = [
       "default-src 'self'",
-      // Scripts: self + inline (Next.js needs it) + Stripe + PayPal + GA
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.paypal.com https://www.paypalobjects.com https://www.googletagmanager.com https://www.google-analytics.com",
+      // Scripts: self + inline (Next.js needs it) + Stripe + PayPal + GA + Meta Pixel
+      // (connect.facebook.net serves fbevents.js — without it the pixel is blocked outright)
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.paypal.com https://www.paypalobjects.com https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net",
       // Styles: self + inline (Tailwind) + Google Fonts
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Fonts: self + Google Fonts CDN
@@ -57,8 +58,8 @@ const nextConfig = {
       // Frames: Stripe + PayPal only. checkout.stripe.com is required for
       // Embedded Checkout — the inline card form is served from that origin.
       "frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
-      // Fetch/XHR: self + payment APIs + Resend + GA
-      "connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://www.paypal.com https://api.resend.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+      // Fetch/XHR: self + payment APIs + Resend + GA + Meta Pixel event beacons
+      "connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://www.paypal.com https://api.resend.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.facebook.com https://connect.facebook.net",
       // Media: self only
       "media-src 'self'",
       // No plugins ever

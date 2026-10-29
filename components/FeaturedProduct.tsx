@@ -55,9 +55,6 @@ export default function FeaturedProduct({
     ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
     : null;
 
-  const soldK = Math.floor((product.reviewsCount * 11) / 100) * 100;
-  const soldLabel = soldK >= 1000 ? `${(soldK / 1000).toFixed(1)}k+` : `${soldK}+`;
-
   const uniqueSizes = [...new Set(variants.map((v) => v.size).filter(Boolean))];
   const bullets: string[] = [];
   if (colorOrder.length > 1 && uniqueSizes.length > 1) {
@@ -154,8 +151,6 @@ export default function FeaturedProduct({
               {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
             </span>
             <span className="text-sm text-ink-500">{product.reviewsCount.toLocaleString()} reviews</span>
-            <span className="w-px h-3.5 bg-ink-200 hidden sm:block" />
-            <span className="text-sm font-semibold text-ink-700">{soldLabel} sold</span>
           </div>
 
           <div className="mt-6 flex items-baseline gap-3 flex-wrap">

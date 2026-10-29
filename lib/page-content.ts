@@ -41,8 +41,6 @@ export const DEFAULTS: Record<PageId, PageContent> = {
 <p>We curate every product with our own families in mind. Soft materials, thoughtful designs, and the kind of details that matter at 2 a.m. but no one mentions in product photos.</p>
 <p>MamaCare is a small, mama-run curated retailer. We source baby gear, sleep, feeding essentials, and toys from trusted suppliers and ship them directly to you.</p>
 <ul class="stats">
-  <li><strong>10,000+</strong> happy mamas</li>
-  <li><strong>4.8 ★</strong> average rating</li>
   <li><strong>14 days</strong> easy returns</li>
   <li><strong>Free</strong> U.S. shipping over $50</li>
 </ul>
