@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cjAuthPayload } from '@/lib/cj';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,10 +16,16 @@ export async function GET() {
     env_vars_set: { email: !!email, apiKey: !!apiKey },
     email_value: email ? `${email.slice(0, 4)}***` : '(not set)',
     apiKey_value: apiKey ? `${apiKey.slice(0, 6)}***` : '(not set)',
+    // Stray whitespace pasted into the Vercel value is a common cause of "key is wrong".
+    apiKey_has_whitespace_padding: apiKey !== apiKey.trim(),
+    apiKey_is_new_format: apiKey.trim().includes('@api@'),
   };
 
-  if (!email || !apiKey) {
-    return NextResponse.json({ ...result, status: 'MISSING_ENV_VARS' });
+  let payload: Record<string, string>;
+  try {
+    payload = cjAuthPayload();
+  } catch (e: any) {
+    return NextResponse.json({ ...result, status: 'MISSING_ENV_VARS', error: e.message });
   }
 
   // Try auth
@@ -28,7 +35,7 @@ export async function GET() {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, apiKey }),
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(10_000),
       }
     );
@@ -49,6 +56,7 @@ export async function GET() {
     }
 
     result.auth_result = json.result;
+    result.auth_code = json.code;
     result.auth_message = json.message;
 
     if (!json.result) {

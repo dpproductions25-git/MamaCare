@@ -9,18 +9,33 @@ type TokenCache = { token: string; expiresAt: number };
 let tokenCache: TokenCache | null = null;
 const CJ_BASE = process.env.CJ_API_BASE || 'https://developers.cjdropshipping.com/api2.0/v1';
 
+/**
+ * Body for getAccessToken.
+ *
+ * CJ's current docs take only `apiKey`, in the form "CJUserNum@api@…". Keys
+ * without that marker are the older style, which were sent together with the
+ * account email, so that case still includes it. Values are trimmed: a trailing
+ * space or newline pasted into a Vercel variable makes CJ reject a correct key.
+ */
+export function cjAuthPayload(): Record<string, string> {
+  const apiKey = (process.env.CJ_API_KEY || '').trim();
+  const email = (process.env.CJ_API_EMAIL || '').trim();
+  if (!apiKey) throw new Error('CJ_API_KEY is not set.');
+  if (apiKey.includes('@api@')) return { apiKey };
+  if (!email) {
+    throw new Error('CJ_API_EMAIL must be set when CJ_API_KEY is an older-style key (one without "@api@").');
+  }
+  return { email, apiKey };
+}
+
 async function getAccessToken(): Promise<string> {
   const now = Date.now();
   if (tokenCache && tokenCache.expiresAt > now + 60_000) return tokenCache.token;
 
-  const email = process.env.CJ_API_EMAIL;
-  const apiKey = process.env.CJ_API_KEY;
-  if (!email || !apiKey) throw new Error('CJ_API_EMAIL and CJ_API_KEY must be set.');
-
   const res = await fetch(`${CJ_BASE}/authentication/getAccessToken`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, apiKey })
+    body: JSON.stringify(cjAuthPayload())
   });
   if (!res.ok) throw new Error(`CJ auth failed: ${res.status} ${await res.text()}`);
 
@@ -30,7 +45,7 @@ async function getAccessToken(): Promise<string> {
     message: string;
     data: { accessToken: string; accessTokenExpiryDate: string };
   };
-  if (!json.result) throw new Error(`CJ auth error: ${json.message}`);
+  if (!json.result) throw new Error(`CJ auth error ${json.code}: ${json.message}`);
 
   tokenCache = {
     token: json.data.accessToken,

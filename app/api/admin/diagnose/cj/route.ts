@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cjAuthPayload } from '@/lib/cj';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,19 +17,22 @@ const CJ_BASE = process.env.CJ_API_BASE || 'https://developers.cjdropshipping.co
  * Open /api/admin/diagnose/cj while logged into admin.
  */
 async function getToken(): Promise<{ token?: string; error?: string }> {
-  const email = process.env.CJ_API_EMAIL;
-  const apiKey = process.env.CJ_API_KEY;
-  if (!email || !apiKey) return { error: 'CJ_API_EMAIL and/or CJ_API_KEY not set in Vercel' };
+  let payload: Record<string, string>;
+  try {
+    payload = cjAuthPayload();
+  } catch (e: any) {
+    return { error: `${e.message} Set it in Vercel → Settings → Environment Variables, then redeploy.` };
+  }
 
   try {
     const res = await fetch(`${CJ_BASE}/authentication/getAccessToken`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, apiKey }),
+      body: JSON.stringify(payload),
     });
     const json: any = await res.json().catch(() => ({}));
     if (!res.ok || !json?.result) {
-      return { error: `auth failed (${res.status}): ${json?.message || 'unknown'}` };
+      return { error: `auth failed (HTTP ${res.status}, CJ code ${json?.code ?? '?'}): ${json?.message || 'unknown'}` };
     }
     return { token: json.data.accessToken };
   } catch (e: any) {

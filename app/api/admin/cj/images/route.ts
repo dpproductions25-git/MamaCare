@@ -34,7 +34,7 @@ const BROWSER_HEADERS = {
  *   OR ?pid=PRODUCT_ID
  *
  * Strategies (in order):
- *   1. CJ official API       — requires CJ_API_KEY + CJ_API_EMAIL env vars
+ *   1. CJ official API       — requires the CJ_API_KEY env var (plus CJ_API_EMAIL for older-style keys)
  *   2. CJ internal product API — calls the same JSON endpoint their frontend uses
  *   3. HTML scraping          — __NEXT_DATA__ JSON → og:image meta → regex
  */
@@ -75,18 +75,19 @@ export async function GET(req: Request) {
   }
 
   // ── Strategy 1: CJ official API (needs credentials) ─────────────────
-  if (process.env.CJ_API_KEY && process.env.CJ_API_EMAIL && pid) {
+  // Only CJ_API_KEY is required here — a current-format key needs no email
+  // (lib/cj.ts decides that). If the API fails (suspended account, bad key),
+  // remember why and still try the fallbacks below rather than failing the
+  // whole fetch; the reason is reported if nothing else works.
+  let apiError = '';
+  if (process.env.CJ_API_KEY && pid) {
     try {
       const data: any = await getProductDetails(pid);
       const result = parseApiResponse(pid, data);
       if (result.productImages.length > 0) return NextResponse.json(result);
       // Auth worked but no images — fall through to scraping
     } catch (e: any) {
-      // Credentials are set but auth/query failed — return the real error
-      return NextResponse.json(
-        { error: `CJ API error: ${e.message}` },
-        { status: 502 }
-      );
+      apiError = `CJ API error: ${e.message}`;
     }
   }
 
@@ -96,7 +97,7 @@ export async function GET(req: Request) {
     try {
       const result = await fetchFromCjInternalApi(pid);
       if (result.productImages.length > 0 || result.variantImages.length > 0) {
-        return NextResponse.json(result);
+        return NextResponse.json(apiError ? { ...result, apiWarning: apiError } : result);
       }
     } catch {
       // Fall through to HTML scraping
@@ -118,16 +119,16 @@ export async function GET(req: Request) {
   try {
     const result = await scrapeFromPage(pageUrl, pid);
     if (result.productImages.length === 0 && result.variantImages.length === 0) {
+      // 'CJ_API_REQUIRED' tells the picker to show the "add your CJ credentials"
+      // setup steps — wrong when credentials exist but CJ rejected them.
       return NextResponse.json(
-        {
-          error: 'CJ_API_REQUIRED',
-        },
-        { status: 404 }
+        { error: apiError || 'CJ_API_REQUIRED' },
+        apiError ? { status: 502 } : { status: 404 }
       );
     }
-    return NextResponse.json(result);
+    return NextResponse.json(apiError ? { ...result, apiWarning: apiError } : result);
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: apiError || e.message }, { status: apiError ? 502 : 500 });
   }
 }
 
