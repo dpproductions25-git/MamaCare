@@ -6,11 +6,12 @@
  */
 
 /**
- * Fall hero — swapped in for the season. The previous baby-in-the-inflatable
- * (pool) shot is intentionally left alone on the About page rather than
- * deleted, so it's ready to bring back as the summer hero.
+ * Winter hero — swapped in for the season. The earlier seasonal photos are
+ * kept rather than deleted: the autumn one (baby-autumn-leaves-basket-hero.webp)
+ * is also the cover of the fall layering blog post, and the pool shot still
+ * lives on the About page, ready to bring back as the summer hero.
  */
-export const DEFAULT_HERO_IMAGE = '/images/baby-autumn-leaves-basket-hero.webp';
+export const DEFAULT_HERO_IMAGE = '/images/baby-winter-snow-forest-hero.webp';
 
 /**
  * Descriptive alt text for DEFAULT_HERO_IMAGE, kept separate from the
@@ -18,7 +19,7 @@ export const DEFAULT_HERO_IMAGE = '/images/baby-autumn-leaves-basket-hero.webp';
  * and image search rather than repeating the tagline.
  */
 export const DEFAULT_HERO_ALT =
-  'Smiling baby in a cream knit sweater and pom-pom hat sitting in a wicker basket lined with a mustard blanket, surrounded by autumn leaves — MamaCare fall baby essentials';
+  'Laughing baby in a rust knit pom-pom hat and cream cardigan playing with snow on a rust knit blanket in a snowy forest — MamaCare winter baby essentials';
 
 export const CURATED_HERO_SLIDES: string[] = [DEFAULT_HERO_IMAGE];
 
