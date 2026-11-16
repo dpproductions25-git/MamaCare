@@ -7,15 +7,40 @@ function val<T>(v: T | null | undefined, fallback: T): T {
   return v != null ? v : fallback;
 }
 
+/**
+ * Safety net for CJ-imported variants. The old CJ import saved CJ's WHOLESALE
+ * price (`variantSellPrice`) into each variant's `price`, and a variant price
+ * overrides the product price everywhere (storefront, cart, Stripe, PayPal) —
+ * so customers were shown and charged our cost (e.g. $3.93 instead of $22.50).
+ *
+ * A variant priced below half of the product price is never a real retail
+ * price for these products, so drop it and let the variant inherit the product
+ * price. Applied at read time so it covers existing database rows immediately.
+ */
+function sanitizeVariants(
+  variants: ProductVariant[] | null | undefined,
+  productPrice: number
+): ProductVariant[] | undefined {
+  if (!variants) return undefined;
+  return variants.map((v) => {
+    if (v.price != null && v.price < productPrice * 0.5) {
+      const { price: _wholesale, ...rest } = v;
+      return rest;
+    }
+    return v;
+  });
+}
+
 function applyOverrideToStatic(p: Product, o?: DbOverride): Product {
   if (!o) return p;
+  const price = o.price != null ? Number(o.price) : p.price;
   return {
     ...p,
     name: val(o.name, p.name),
     shortDescription: val(o.short_description, p.shortDescription),
     description: val(o.description, p.description),
     seoDescription: val(o.seo_description, p.seoDescription),
-    price: o.price != null ? Number(o.price) : p.price,
+    price,
     compareAtPrice: o.compare_at_price != null ? Number(o.compare_at_price) : p.compareAtPrice,
     image: val(o.image, p.image),
     images: o.images_json != null ? repairImageList(o.images_json) : p.images,
@@ -23,7 +48,7 @@ function applyOverrideToStatic(p: Product, o?: DbOverride): Product {
     tags: val(o.tags_json, p.tags),
     cjProductId: val(o.cj_product_id, p.cjProductId),
     cjVariantId: val(o.cj_variant_id, p.cjVariantId),
-    variants: o.variants_json != null ? o.variants_json : p.variants,
+    variants: o.variants_json != null ? sanitizeVariants(o.variants_json, price) : p.variants,
     inStock: val(o.in_stock, p.inStock),
     bestSeller: val(o.best_seller, p.bestSeller)
   };
@@ -50,7 +75,7 @@ function customToProduct(c: DbCustomProduct): Product {
     bestSeller: c.best_seller,
     cjProductId: c.cj_product_id || undefined,
     cjVariantId: c.cj_variant_id || undefined,
-    variants: c.variants_json || undefined
+    variants: sanitizeVariants(c.variants_json, Number(c.price))
   };
 }
 

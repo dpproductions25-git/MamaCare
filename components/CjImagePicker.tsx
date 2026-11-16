@@ -475,13 +475,18 @@ export default function CjImagePicker({
                       onClick={() => {
                         const toImport = (fetched.variantDetails || [])
                           .filter((v) => selectedVids.has(v.vid))
+                          // No `price` here on purpose. CJ's variant price is what CJ
+                          // charges the store (the wholesale cost), and a variant
+                          // price overrides the product price at checkout — so
+                          // importing it made customers pay the supplier cost
+                          // (e.g. a $22.50 bra selling for $3.93). Set a variant
+                          // price by hand only when a size genuinely costs more.
                           .map((v): ProductVariant => ({
                             vid:   v.vid,
                             sku:   v.sku,
                             name:  v.name,
                             color: v.color,
                             size:  v.size,
-                            price: v.price,
                             image: v.image,
                           }));
                         onApplyVariants(toImport);
