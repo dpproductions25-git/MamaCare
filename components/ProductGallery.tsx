@@ -204,13 +204,16 @@ export default function ProductGallery({
         <p className="uppercase tracking-[0.18em] text-blush-500 text-xs font-medium capitalize">{product.category}</p>
         <h1 className="font-display text-3xl sm:text-4xl text-ink-900 mt-2">{product.name}</h1>
 
-        <div className="flex items-center gap-3 mt-3 text-sm text-ink-500">
-          <span aria-label={`${product.rating} stars`}>
-            {'★'.repeat(Math.round(product.rating))}
-            <span className="text-ink-500/30">{'★'.repeat(5 - Math.round(product.rating))}</span>
-          </span>
-          <span>{product.rating.toFixed(1)} ({product.reviewsCount} reviews)</span>
-        </div>
+        {/* Only show a rating once there are real reviews behind it. */}
+        {product.reviewsCount > 0 && (
+          <div className="flex items-center gap-3 mt-3 text-sm text-ink-500">
+            <span aria-label={`${product.rating} stars`}>
+              {'★'.repeat(Math.round(product.rating))}
+              <span className="text-ink-500/30">{'★'.repeat(5 - Math.round(product.rating))}</span>
+            </span>
+            <span>{product.rating.toFixed(1)} ({product.reviewsCount} reviews)</span>
+          </div>
+        )}
 
         <div className="mt-6 flex items-baseline gap-3">
           <span className="text-3xl text-ink-900 font-medium">${displayPrice.toFixed(2)}</span>

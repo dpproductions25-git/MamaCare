@@ -146,12 +146,14 @@ export default function FeaturedProduct({
             {product.name}
           </h2>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3">
-            <span className="text-blush-400 text-sm leading-none" aria-label={`${stars} stars`}>
-              {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
-            </span>
-            <span className="text-sm text-ink-500">{product.reviewsCount.toLocaleString()} reviews</span>
-          </div>
+          {product.reviewsCount > 0 && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3">
+              <span className="text-blush-400 text-sm leading-none" aria-label={`${stars} stars`}>
+                {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
+              </span>
+              <span className="text-sm text-ink-500">{product.reviewsCount.toLocaleString()} reviews</span>
+            </div>
+          )}
 
           <div className="mt-6 flex items-baseline gap-3 flex-wrap">
             <span className="font-display text-4xl text-ink-900 tracking-tight">
