@@ -77,6 +77,55 @@ export function colorToCss(name: string): string | null {
   return null;
 }
 
+/** The colors offered in the shop filter, in display order. */
+export const COLOR_FAMILIES = [
+  'Black', 'White', 'Beige', 'Brown', 'Red', 'Pink', 'Orange', 'Yellow',
+  'Green', 'Blue', 'Purple', 'Gray', 'Multicolor'
+] as const;
+export type ColorFamily = (typeof COLOR_FAMILIES)[number];
+
+const FAMILY_WORDS: Record<string, ColorFamily> = {
+  black: 'Black',
+  white: 'White',
+  beige: 'Beige', cream: 'Beige', ivory: 'Beige', nude: 'Beige', skin: 'Beige',
+  khaki: 'Beige', tan: 'Beige', champagne: 'Beige', apricot: 'Beige', sand: 'Beige',
+  brown: 'Brown', coffee: 'Brown', camel: 'Brown', chocolate: 'Brown',
+  bean: 'Brown', caramel: 'Brown',
+  red: 'Red', wine: 'Red', burgundy: 'Red', maroon: 'Red', crimson: 'Red',
+  pink: 'Pink', rose: 'Pink', blush: 'Pink', peach: 'Pink', coral: 'Pink',
+  salmon: 'Pink', fuchsia: 'Pink',
+  orange: 'Orange',
+  yellow: 'Yellow', gold: 'Yellow', amber: 'Yellow', mustard: 'Yellow',
+  green: 'Green', mint: 'Green', sage: 'Green', olive: 'Green', teal: 'Green',
+  emerald: 'Green', lime: 'Green',
+  blue: 'Blue', navy: 'Blue', azure: 'Blue', sky: 'Blue', cobalt: 'Blue',
+  cyan: 'Blue', turquoise: 'Blue', denim: 'Blue',
+  purple: 'Purple', violet: 'Purple', lavender: 'Purple', lilac: 'Purple',
+  plum: 'Purple', mauve: 'Purple', indigo: 'Purple',
+  gray: 'Gray', grey: 'Gray', charcoal: 'Gray', silver: 'Gray', ash: 'Gray',
+  multi: 'Multicolor', multicolor: 'Multicolor', multicolour: 'Multicolor',
+  mixed: 'Multicolor', rainbow: 'Multicolor', colorful: 'Multicolor'
+};
+
+/**
+ * Collapses a raw variant color ("Dark Grey", "Wine Red", "Skin Tone") into one
+ * of a dozen shop-filter colors. Returns null for names that aren't really a
+ * color ("AU", "Colorway A", "Style 3", "Dog") so they don't clutter the filter.
+ * Text in parentheses is ignored: "Tiger (white face)" is not a white item.
+ */
+export function colorFamily(name?: string | null): ColorFamily | null {
+  if (!name) return null;
+  const words = name
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  for (const w of words) {
+    if (w in FAMILY_WORDS) return FAMILY_WORDS[w];
+  }
+  return null;
+}
+
 /**
  * Returns inline style for a color swatch element.
  * If the color name resolves to a gradient, uses backgroundImage.

@@ -5,7 +5,25 @@ import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Product, Category } from '@/lib/types';
 import { categories } from '@/lib/products';
-import { colorSwatchStyle } from '@/lib/colors';
+import { colorSwatchStyle, colorFamily, COLOR_FAMILIES } from '@/lib/colors';
+
+/** Sort sizes the way a shopper expects: XS…XXL, then ages/numbers, then the rest. */
+const LETTER_SIZES = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+function sortSizes(sizes: string[]): string[] {
+  const rank = (s: string): [number, number, string] => {
+    const up = s.trim().toUpperCase();
+    const li = LETTER_SIZES.indexOf(up);
+    if (li >= 0) return [0, li, up];
+    const num = parseFloat(up);
+    if (Number.isFinite(num)) return [1, num, up];
+    return [2, 0, up];
+  };
+  return sizes.slice().sort((a, b) => {
+    const ra = rank(a), rb = rank(b);
+    return ra[0] - rb[0] || ra[1] - rb[1] || ra[2].localeCompare(rb[2]);
+  });
+}
+const SIZES_COLLAPSED = 12;
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest';
 
@@ -20,9 +38,10 @@ export default function ShopWithFilters({
   const [selectedCategories, setSelectedCategories] = useState<Set<Category>>(new Set());
   const [selectedColors, setSelectedColors] = useState<Set<string>>(new Set());
   const [selectedSizes, setSelectedSizes] = useState<Set<string>>(new Set());
-  const [maxPrice, setMaxPrice] = useState<number>(() =>
-    Math.ceil(Math.max(...initialProducts.map((p) => p.price)))
-  );
+  // null = no price limit. Kept separate from the slider's ceiling, which now
+  // follows the category being viewed.
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const [showAllSizes, setShowAllSizes] = useState(false);
   const [onSaleOnly, setOnSaleOnly] = useState(false);
   const [bestSellerOnly, setBestSellerOnly] = useState(false);
   const [sort, setSort] = useState<SortOption>('featured');
@@ -32,23 +51,45 @@ export default function ShopWithFilters({
     if (new URLSearchParams(window.location.search).get('sale') === '1') setOnSaleOnly(true);
   }, []);
 
-  // ─── Derive available filter options from the catalog ───
+  // ─── Derive available filter options from the products being browsed ───
+  // Only offer colors, sizes and prices that exist in the category on screen.
+  // These used to be built from the whole catalog, so "Baby Gear" listed 121
+  // colors and 39 sizes (most from unrelated products).
+  const scopeProducts = useMemo(() => {
+    if (lockedCategory) return initialProducts.filter((p) => p.category === lockedCategory);
+    if (selectedCategories.size > 0) {
+      return initialProducts.filter((p) => selectedCategories.has(p.category));
+    }
+    return initialProducts;
+  }, [initialProducts, lockedCategory, selectedCategories]);
+
   const availableColors = useMemo(() => {
-    const set = new Set<string>();
-    initialProducts.forEach((p) => p.variants?.forEach((v) => v.color && set.add(v.color)));
-    return Array.from(set).sort();
-  }, [initialProducts]);
+    const found = new Set<string>();
+    scopeProducts.forEach((p) =>
+      p.variants?.forEach((v) => {
+        const f = colorFamily(v.color);
+        if (f) found.add(f);
+      })
+    );
+    return COLOR_FAMILIES.filter((f) => found.has(f)) as string[];
+  }, [scopeProducts]);
 
   const availableSizes = useMemo(() => {
     const set = new Set<string>();
-    initialProducts.forEach((p) => p.variants?.forEach((v) => v.size && set.add(v.size)));
-    return Array.from(set);
-  }, [initialProducts]);
+    scopeProducts.forEach((p) =>
+      p.variants?.forEach((v) => {
+        const s = (v.size || '').trim();
+        if (s) set.add(s);
+      })
+    );
+    return sortSizes(Array.from(set));
+  }, [scopeProducts]);
 
-  const priceCeiling = useMemo(
-    () => Math.ceil(Math.max(...initialProducts.map((p) => p.price))),
-    [initialProducts]
-  );
+  const priceCeiling = useMemo(() => {
+    const top = scopeProducts.reduce((m, p) => Math.max(m, p.price), 0);
+    return Math.max(5, Math.ceil(top / 5) * 5);
+  }, [scopeProducts]);
+  const effectiveMaxPrice = Math.min(maxPrice ?? priceCeiling, priceCeiling);
 
   // ─── Apply filters ───
   const filtered = useMemo(() => {
@@ -62,7 +103,10 @@ export default function ShopWithFilters({
 
     if (selectedColors.size > 0) {
       list = list.filter((p) =>
-        p.variants?.some((v) => v.color && selectedColors.has(v.color))
+        p.variants?.some((v) => {
+          const f = colorFamily(v.color);
+          return !!f && selectedColors.has(f);
+        })
       );
     }
 
@@ -72,7 +116,7 @@ export default function ShopWithFilters({
       );
     }
 
-    list = list.filter((p) => p.price <= maxPrice);
+    if (maxPrice != null) list = list.filter((p) => p.price <= maxPrice);
 
     if (onSaleOnly) list = list.filter((p) => p.compareAtPrice && p.compareAtPrice > p.price);
     if (bestSellerOnly) list = list.filter((p) => p.bestSeller);
@@ -99,13 +143,13 @@ export default function ShopWithFilters({
     selectedSizes.size +
     (onSaleOnly ? 1 : 0) +
     (bestSellerOnly ? 1 : 0) +
-    (maxPrice < priceCeiling ? 1 : 0);
+    (maxPrice != null && maxPrice < priceCeiling ? 1 : 0);
 
   function clearAll() {
     setSelectedCategories(new Set());
     setSelectedColors(new Set());
     setSelectedSizes(new Set());
-    setMaxPrice(priceCeiling);
+    setMaxPrice(null);
     setOnSaleOnly(false);
     setBestSellerOnly(false);
   }
@@ -142,15 +186,19 @@ export default function ShopWithFilters({
       {/* Price */}
       <fieldset>
         <legend className="font-medium text-ink-900 mb-3">
-          Price · up to ${maxPrice}
+          Price · up to ${effectiveMaxPrice}
         </legend>
         <input
           type="range"
           min={0}
           max={priceCeiling}
           step={5}
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(Number(e.target.value))}
+          value={effectiveMaxPrice}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            // Dragged back to the top = "no limit", so the cap follows the category
+            setMaxPrice(v >= priceCeiling ? null : v);
+          }}
           className="w-full accent-blush-400"
         />
         <div className="flex justify-between text-xs text-ink-500 mt-1">
@@ -203,7 +251,7 @@ export default function ShopWithFilters({
         <fieldset>
           <legend className="font-medium text-ink-900 mb-3">Size</legend>
           <div className="grid grid-cols-3 gap-1.5">
-            {availableSizes.map((s) => {
+            {(showAllSizes ? availableSizes : availableSizes.slice(0, SIZES_COLLAPSED)).map((s) => {
               const active = selectedSizes.has(s);
               return (
                 <button
@@ -221,6 +269,15 @@ export default function ShopWithFilters({
               );
             })}
           </div>
+          {availableSizes.length > SIZES_COLLAPSED && (
+            <button
+              type="button"
+              onClick={() => setShowAllSizes((v) => !v)}
+              className="mt-2 text-xs text-ink-700 underline hover:text-blush-500"
+            >
+              {showAllSizes ? 'Show fewer sizes' : `Show all ${availableSizes.length} sizes`}
+            </button>
+          )}
         </fieldset>
       )}
 
@@ -260,7 +317,9 @@ export default function ShopWithFilters({
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-8">
       {/* ─── Desktop sidebar ─── */}
-      <aside className="hidden lg:block sticky top-24 self-start">
+      {/* Sticky, so it must never be taller than the screen — otherwise the
+          bottom of the filters (and "Clear all") can't be scrolled to. */}
+      <aside className="hidden lg:block sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
         <h2 className="font-display text-2xl text-ink-900 mb-5">Filters</h2>
         {FilterPanel}
       </aside>
@@ -357,8 +416,8 @@ export default function ShopWithFilters({
                 Best sellers ✕
               </button>
             )}
-            {maxPrice < priceCeiling && (
-              <button onClick={() => setMaxPrice(priceCeiling)} className="text-xs px-3 py-1 rounded-full bg-blush-100 text-blush-500 hover:bg-blush-200">
+            {maxPrice != null && maxPrice < priceCeiling && (
+              <button onClick={() => setMaxPrice(null)} className="text-xs px-3 py-1 rounded-full bg-blush-100 text-blush-500 hover:bg-blush-200">
                 Under ${maxPrice} ✕
               </button>
             )}
