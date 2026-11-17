@@ -221,7 +221,9 @@ export default function ProductGallery({
           {onSale && <span className="bg-blush-100 text-blush-500 text-xs px-2 py-1 rounded-full">Save ${(product.compareAtPrice! - product.price).toFixed(2)}</span>}
         </div>
 
-        <p className="text-ink-700 mt-6 leading-relaxed">{product.description}</p>
+        {/* whitespace-pre-line keeps the line breaks stored in the description
+            (paragraphs, bullet lists) instead of collapsing them into one block. */}
+        <p className="text-ink-700 mt-6 leading-relaxed whitespace-pre-line">{product.description}</p>
 
         {/* ── Color picker ── */}
         {colors.length > 0 && (
