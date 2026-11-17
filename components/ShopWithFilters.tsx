@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Product, Category } from '@/lib/types';
@@ -26,6 +26,11 @@ export default function ShopWithFilters({
   const [onSaleOnly, setOnSaleOnly] = useState(false);
   const [bestSellerOnly, setBestSellerOnly] = useState(false);
   const [sort, setSort] = useState<SortOption>('featured');
+
+  // The sale banner links to /shop?sale=1 — open with "On sale" already ticked.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('sale') === '1') setOnSaleOnly(true);
+  }, []);
 
   // ─── Derive available filter options from the catalog ───
   const availableColors = useMemo(() => {

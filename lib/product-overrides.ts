@@ -2,6 +2,7 @@ import { products as staticProducts } from './products';
 import { Product, Category, ProductVariant } from './types';
 import { getAllOverrides, listCustomProducts, DbOverride, DbCustomProduct } from './db';
 import { repairImageList } from './image-url';
+import { applySale } from './sale';
 
 function val<T>(v: T | null | undefined, fallback: T): T {
   return v != null ? v : fallback;
@@ -113,7 +114,9 @@ export async function getAdminProduct(id: string): Promise<AdminListing | null> 
 
 export async function getMergedProducts(): Promise<Product[]> {
   const listings = await getAllProductsForAdmin();
-  return listings.filter((l) => l.visible).map((l) => l.product);
+  // Sale pricing is applied here (the storefront/checkout view) and NOT in
+  // getAllProductsForAdmin, so the admin editor never saves a sale price.
+  return applySale(listings.filter((l) => l.visible).map((l) => l.product));
 }
 
 export async function getMergedProduct(slug: string): Promise<Product | undefined> {

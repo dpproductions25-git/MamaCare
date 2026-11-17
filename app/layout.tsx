@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import './globals.css';
 import Header from '@/components/Header';
+import SaleBanner from '@/components/SaleBanner';
 import Footer from '@/components/Footer';
 import DeferredOverlays from '@/components/DeferredOverlays';
 import ConsentedAnalytics from '@/components/ConsentedAnalytics';
@@ -155,6 +156,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: metaPixelSnippet() }} />
       </head>
       <body className="font-sans bg-cream-50 text-ink-900 min-h-screen flex flex-col">
+        <SaleBanner />
         <Header featuredProduct={navFeatured} />
         <main className="flex-1">{children}</main>
         <Footer />
