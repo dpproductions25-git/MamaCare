@@ -200,6 +200,22 @@ function parseApiResponse(pid: string, data: any) {
   const variantDetails: VariantDetail[] = [];
 
   if (Array.isArray(rawVariants)) {
+    // The product title every variant name starts with ("Baby Rompers Winter
+    // Autumn Clothes …"). Stripping it leaves only what differs between
+    // variants — style/color and size — which is what we want to parse.
+    const names: string[] = rawVariants
+      .map((v: any) => String(v.variantNameEn || v.variantName || v.name || '').trim())
+      .filter(Boolean);
+    let commonPrefix = '';
+    if (names.length >= 2) {
+      let p = names[0];
+      for (const n of names) while (p && !n.startsWith(p)) p = p.slice(0, -1);
+      // Cut back to a whole word so "…Clothes Duck" / "…Clothes DOG" -> "…Clothes"
+      const atWordEnd = names.every((n) => n.length === p.length || /\s/.test(n.charAt(p.length)));
+      if (!atWordEnd) p = p.slice(0, Math.max(0, p.lastIndexOf(' ')));
+      commonPrefix = p.trim().length >= 6 ? p.trim() : '';
+    }
+
     rawVariants.forEach((v: any) => {
       const vid   = v.vid || v.variantId || v.id || `v-${Math.random().toString(36).slice(2)}`;
       const sku   = (v.variantSku || v.sku || '').trim() || undefined;
@@ -221,7 +237,34 @@ function parseApiResponse(pid: string, data: any) {
         else if (/size|尺|型|サイズ|taille/.test(title)) size = val;
       });
 
-      // ── Fallback: parse the variant name string ──
+      // ── Fallback 1: what is left of the name once the shared product title
+      //    is removed. Handles "Duck 6 to 12" (style + age range),
+      //    "Skin tone XXL" (multi-word color + size) and "Black 40" (band size).
+      if (!color && !size && commonPrefix) {
+        const full = (v.variantNameEn || v.variantName || v.name || '').trim();
+        const rest = full.startsWith(commonPrefix) ? full.slice(commonPrefix.length).trim() : '';
+        if (rest) {
+          const sizeTok = /^(XXS|XS|S|M|L|X{1,8}L|\d+XL|One\s*Size|Free\s*Size|\d+M|\d+Y|\d+T|\d{2}|\d+(x\d+)?\s*(cm|in|kg|oz))$/i;
+          const age = rest.match(/^(.*?)\s*(\d+)\s*to\s*(\d+)$/i);
+          if (age) {
+            size = `${age[2]}-${age[3]}`;
+            color = age[1].trim() || undefined;
+          } else {
+            const words = rest.split(/\s+/);
+            const last = words[words.length - 1];
+            if (words.length > 1 && sizeTok.test(last)) {
+              size = last;
+              color = words.slice(0, -1).join(' ');
+            } else if (sizeTok.test(rest)) {
+              size = rest;
+            } else {
+              color = rest;
+            }
+          }
+        }
+      }
+
+      // ── Fallback 2: parse the full variant name string ──
       if (!color && !size) {
         const raw = (v.variantNameEn || v.variantName || v.name || '').trim();
         if (raw) {
