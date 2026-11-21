@@ -5,6 +5,7 @@ import { getShippingSettings } from '@/lib/db-commerce';
 import { shippingBlurb } from '@/lib/shipping-copy';
 import RegistryCta from '@/components/RegistryCta';
 import { buildMetadata } from '@/lib/seo';
+import { SHOW_PRODUCT_RATINGS } from '@/lib/reviews';
 
 export const metadata = buildMetadata({
   title: 'Baby Shower Gift Guide 2026 — MamaCare',
@@ -142,7 +143,7 @@ export default async function GiftGuidePage() {
                           <span className="text-sm text-ink-400 line-through">${p.compareAtPrice.toFixed(2)}</span>
                         )}
                       </div>
-                      {p.rating > 0 && (
+                      {SHOW_PRODUCT_RATINGS && p.reviewsCount > 0 && (
                         <div className="flex items-center gap-1 mt-1.5">
                           <span className="text-blush-400 text-xs">{'★'.repeat(Math.round(p.rating))}</span>
                           <span className="text-xs text-ink-400">({p.reviewsCount})</span>

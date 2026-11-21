@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Product, ProductVariant } from '@/lib/types';
 import { useCart } from '@/lib/cart';
+import { SHOW_PRODUCT_RATINGS } from '@/lib/reviews';
 import { trackMeta } from './MetaPixel';
 import { colorSwatchStyle } from '@/lib/colors';
 import AddToRegistryButton from './AddToRegistryButton';
@@ -205,7 +206,7 @@ export default function ProductGallery({
         <h1 className="font-display text-3xl sm:text-4xl text-ink-900 mt-2">{product.name}</h1>
 
         {/* Only show a rating once there are real reviews behind it. */}
-        {product.reviewsCount > 0 && (
+        {SHOW_PRODUCT_RATINGS && product.reviewsCount > 0 && (
           <div className="flex items-center gap-3 mt-3 text-sm text-ink-500">
             <span aria-label={`${product.rating} stars`}>
               {'★'.repeat(Math.round(product.rating))}

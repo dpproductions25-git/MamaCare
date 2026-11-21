@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Product } from '@/lib/types';
+import { SHOW_PRODUCT_RATINGS } from '@/lib/reviews';
 
 
 interface Props {
@@ -146,7 +147,7 @@ export default function FeaturedProduct({
             {product.name}
           </h2>
 
-          {product.reviewsCount > 0 && (
+          {SHOW_PRODUCT_RATINGS && product.reviewsCount > 0 && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3">
               <span className="text-blush-400 text-sm leading-none" aria-label={`${stars} stars`}>
                 {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}

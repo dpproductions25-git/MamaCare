@@ -295,7 +295,7 @@ export default function EditProductForm({ initial, isCustom, visible }: Props) {
           catalog items) has no rating/reviews_count columns; those already
           carry real numbers from lib/products.ts and aren't editable here. */}
       {isCustom && (
-        <Section title="Rating & reviews" hint="Shown as stars on the storefront. A 5.0 rating with 0 reviews reads as untrustworthy to shoppers.">
+        <Section title="Rating & reviews" hint="Not shown on the storefront right now — ratings are switched off in lib/reviews.ts until real reviews exist. Only enter genuine numbers.">
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Rating (0–5)">
               <input

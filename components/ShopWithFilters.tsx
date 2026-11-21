@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Product, Category } from '@/lib/types';
 import { categories } from '@/lib/products';
+import { SHOW_PRODUCT_RATINGS } from '@/lib/reviews';
 import { colorSwatchStyle, colorFamily, COLOR_FAMILIES } from '@/lib/colors';
 
 /** Sort sizes the way a shopper expects: XS…XXL, then ages/numbers, then the rest. */
@@ -357,7 +358,7 @@ export default function ShopWithFilters({
               <option value="featured">Featured</option>
               <option value="price-asc">Price: low to high</option>
               <option value="price-desc">Price: high to low</option>
-              <option value="rating">Top rated</option>
+              {SHOW_PRODUCT_RATINGS && <option value="rating">Top rated</option>}
               <option value="newest">Newest</option>
             </select>
           </label>

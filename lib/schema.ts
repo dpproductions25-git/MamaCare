@@ -1,5 +1,6 @@
 import { SITE_URL, SITE_NAME } from './seo';
 import type { Product } from './types';
+import { SHOW_PRODUCT_RATINGS } from './reviews';
 import type { ShippingSettings } from './db-commerce';
 
 /**
@@ -59,7 +60,7 @@ export function productSchema(
     sku: product.id,
     mpn: product.cjProductId || product.id,
     brand: { '@type': 'Brand', name: SITE_NAME },
-    ...(product.reviewsCount > 0 && {
+    ...(SHOW_PRODUCT_RATINGS && product.reviewsCount > 0 && {
       aggregateRating: {
         '@type': 'AggregateRating',
         ratingValue: product.rating,
