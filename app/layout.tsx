@@ -10,6 +10,7 @@ import Footer from '@/components/Footer';
 import DeferredOverlays from '@/components/DeferredOverlays';
 import ConsentedAnalytics from '@/components/ConsentedAnalytics';
 import MetaPixel from '@/components/MetaPixel';
+import AutoApplyCoupon from '@/components/AutoApplyCoupon';
 import { metaPixelSnippet } from '@/lib/meta-pixel';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { getMergedProducts } from '@/lib/product-overrides';
@@ -183,6 +184,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Meta Pixel — grants/revokes on the cookie banner and adds PageView
             on client-side navigation, which the stock snippet doesn't do. */}
         <MetaPixel />
+
+        {/* ?code=… in any link (e.g. from an ad) saves that discount code to the cart. */}
+        <AutoApplyCoupon />
       </body>
     </html>
   );
