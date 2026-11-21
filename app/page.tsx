@@ -52,7 +52,7 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
   const shipNote = shippingBlurb(shipping);
 
   // Pick the highest-scoring product for the featured spotlight.
-  // Algorithm: reviewsCount × rating × (1 + discountPct) × bestSellerBonus
+  // Algorithm: (1 + discountPct) × bestSellerBonus (see lib/featured.ts)
   // Exclude the test product.
   const featuredProduct = [...all]
     .filter((p) => p.id !== 'mc-test')
