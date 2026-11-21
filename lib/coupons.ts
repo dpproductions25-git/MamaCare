@@ -35,6 +35,18 @@ export const COUPONS: Coupon[] = [
     description: 'Free shipping'
   },
   {
+    // Black Friday / Cyber Monday. Expires on its own at the end of Cyber Monday
+    // (Nov 30, 2026, Eastern), so it can't be left running by accident. 15% is
+    // what stays profitable across the catalog after CJ cost, shipping and
+    // payment fees; raising it needs a margin check on the thinnest products
+    // (e.g. the US-warehouse Camel bouncer).
+    code: 'BLACKFRIDAY',
+    type: 'percent',
+    value: 15,
+    description: 'Black Friday — 15% off',
+    expiresAt: '2026-11-30T23:59:59-05:00'
+  },
+  {
     // Safety net: the signup flow issues a unique single-use code per customer,
     // but falls back to this one if the database is briefly unreachable.
     code: 'WELCOME10',
