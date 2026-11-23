@@ -5,7 +5,9 @@ import { useCart } from '@/lib/cart';
 
 /**
  * Applies a discount code carried in the URL (?code=BLACKFRIDAY or ?coupon=…)
- * so shoppers arriving from an ad don't have to remember and type it.
+ * so shoppers arriving from an ad don't have to remember and type it. The sale
+ * banner uses the same path through an 'mc-apply-coupon' window event, because
+ * a client-side link click never reloads the page and so never re-reads the URL.
  *
  * It only stores the code in the cart. Whether it is valid, expired, or what it
  * is worth is still decided by the server at cart/checkout — the same path as a
@@ -18,30 +20,50 @@ export default function AutoApplyCoupon() {
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const raw = (params.get('code') || params.get('coupon') || '').trim();
-      if (!CODE_RE.test(raw)) return;
 
+    function apply(raw: string): boolean {
+      if (!CODE_RE.test(raw)) return false;
       const code = raw.toUpperCase();
       useCart.getState().applyCoupon(code);
       setApplied(code);
+      if (timer) clearTimeout(timer);
       timer = setTimeout(() => setApplied(null), 5000);
+      return true;
+    }
 
-      // Drop the param so a refresh or shared link doesn't re-apply it after
-      // the shopper has removed the code on purpose. The code stays in the cart.
-      params.delete('code');
-      params.delete('coupon');
-      const qs = params.toString();
-      window.history.replaceState(
-        window.history.state,
-        '',
-        window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
-      );
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const raw = (params.get('code') || params.get('coupon') || '').trim();
+      if (apply(raw)) {
+        // Drop the param so a refresh or shared link doesn't re-apply it after
+        // the shopper has removed the code on purpose. The code stays in the cart.
+        params.delete('code');
+        params.delete('coupon');
+        const qs = params.toString();
+        window.history.replaceState(
+          window.history.state,
+          '',
+          window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
+        );
+      }
     } catch {
       /* never let a promo link break the page */
     }
-    return () => { if (timer) clearTimeout(timer); };
+
+    const onApplyEvent = (e: Event) => {
+      try {
+        const detail = (e as CustomEvent).detail;
+        if (typeof detail === 'string') apply(detail.trim());
+      } catch {
+        /* never let a promo link break the page */
+      }
+    };
+    window.addEventListener('mc-apply-coupon', onApplyEvent);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('mc-apply-coupon', onApplyEvent);
+    };
   }, []);
 
   if (!applied) return null;

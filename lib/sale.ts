@@ -31,6 +31,10 @@ export const SALE = {
   // Eastern time (EST, UTC-5). Black Friday is Nov 27 2026, Cyber Monday Nov 30.
   startsAt: '2026-11-23T00:00:00-05:00',
   endsAt: '2026-11-30T23:59:59-05:00',
+  // Must match a live code in lib/coupons.ts; its own expiry is the same
+  // moment as `endsAt`, so the banner and the code switch off together.
+  bannerCode: 'BLACKFRIDAY',
+  bannerCodeText: 'for 15% off',
   bannerText: 'Black Friday Sale — up to 20% off nursing wear & baby clothing',
   bannerSubtext: 'Ends Cyber Monday',
   bannerHref: '/shop?sale=1'
