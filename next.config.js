@@ -20,6 +20,12 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: false },
 
   images: {
+    // Images are resized by their own CDNs instead of Vercel's metered optimizer
+    // (see lib/image-loader.ts). With a custom loader, `formats` and
+    // `remotePatterns` below are no longer consulted; they're kept as a record
+    // of the hosts the site uses, and are what applies if this is ever removed.
+    loader: 'custom',
+    loaderFile: './lib/image-loader.ts',
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
