@@ -224,17 +224,24 @@ export async function upsertCustomer({ email, name, phone }: { email: string; na
 }
 
 // ─── Orders ───
+/**
+ * Returns true if the order was newly saved, false if it was already there
+ * (a redelivered or manually resent payment event). Throws if the database
+ * can't be written to.
+ */
 export async function saveOrder(order: {
   id: string; customerId: number; totalCents: number; currency?: string;
   status?: OrderStatus; paymentProvider: 'stripe' | 'paypal'; paymentId: string;
   shipping: any; items: any;
-}) {
-  await sql`
+}): Promise<boolean> {
+  const r = await sql`
     INSERT INTO orders (id, customer_id, total_cents, currency, status, payment_provider, payment_id, shipping_json, items_json)
     VALUES (${order.id}, ${order.customerId}, ${order.totalCents}, ${order.currency ?? 'USD'}, ${order.status ?? 'paid'},
             ${order.paymentProvider}, ${order.paymentId}, ${JSON.stringify(order.shipping)}::jsonb, ${JSON.stringify(order.items)}::jsonb)
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING
+    RETURNING id;
   `;
+  return r.rows.length > 0;
 }
 
 export async function setCjOrderId(orderId: string, cjOrderId: string) {

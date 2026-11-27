@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createOrder as createCjOrder } from '@/lib/cj';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
-import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
+import { sendOrderConfirmation, sendOrderSaveFailedAlert, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
 import { redeemCoupon } from '@/lib/db-commerce';
@@ -81,7 +81,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1) Save customer + order
+    // 1) Save customer + order.
+    // PayPal has already taken the money and nothing will redeliver this, so a
+    // failed save must not fail the request (the buyer might pay twice). The
+    // owner is emailed after the CJ step instead.
+    let saveError = '';
     try {
       const customerId = await upsertCustomer({
         email: shipping.email,
@@ -99,8 +103,9 @@ export async function POST(req: Request) {
         shipping,
         items
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error('DB save failed (PayPal)', e);
+      saveError = e?.message || String(e);
     }
 
     // 1b) Record coupon redemption (idempotent — keyed on order id)
@@ -128,6 +133,7 @@ export async function POST(req: Request) {
     }
 
     // 3) CJ fulfillment
+    let cjSummary = 'Nothing was sent to CJ.';
     try {
       // Merged catalog — the static list omits admin-created products, which
       // meant those orders were paid for but never sent to the supplier.
@@ -152,10 +158,29 @@ export async function POST(req: Request) {
           remark: 'MamaCare order',
           products: cjItems
         });
-        if ((cj as any)?.orderId) await setCjOrderId(orderId, String((cj as any).orderId));
+        if ((cj as any)?.orderId) {
+          cjSummary =
+            `CJ order ${(cj as any).orderId} was created for ${cjItems.length} of ` +
+            `${(items as unknown[]).length} item line(s).`;
+          await setCjOrderId(orderId, String((cj as any).orderId));
+        }
       }
     } catch (e) {
       console.error('CJ fulfillment after PayPal capture failed', e);
+    }
+
+    if (saveError) {
+      await sendOrderSaveFailedAlert({
+        orderId,
+        provider: 'PayPal',
+        totalCents: cents,
+        items,
+        shipping,
+        nextStep:
+          `This order will not appear in /admin/orders. ${cjSummary} Check CJ, and place ` +
+          'anything missing by hand.',
+        error: saveError
+      });
     }
 
     // 4) Mark registry items as purchased and notify the registry owner

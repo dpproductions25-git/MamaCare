@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { createOrder as createCjOrder } from '@/lib/cj';
 import { getMergedProducts } from '@/lib/product-overrides';
 import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
-import { sendOrderConfirmation, sendRegistryGiftNotification } from '@/lib/email';
+import { sendOrderConfirmation, sendOrderSaveFailedAlert, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
 import { redeemCoupon } from '@/lib/db-commerce';
@@ -70,24 +70,55 @@ export async function POST(req: Request) {
       email: session.customer_details?.email || fallbackShip.email || ''
     };
 
-    // 1) Save customer & order
-    const customerId = await upsertCustomer({
-      email: shipping.email,
-      name: shipping.fullName,
-      phone: shipping.phone
-    });
+    // 1) Save customer & order.
+    // Nothing else has happened yet, so if this fails we answer with an error
+    // and Stripe redelivers the event (for up to 3 days). Answering "received"
+    // here used to lose the order for good: no record, email or CJ order.
+    let isNewOrder: boolean;
+    try {
+      const customerId = await upsertCustomer({
+        email: shipping.email,
+        name: shipping.fullName,
+        phone: shipping.phone
+      });
 
-    await saveOrder({
-      id: session.id,
-      customerId,
-      totalCents: session.amount_total ?? 0,
-      currency: (session.currency || 'usd').toUpperCase(),
-      status: 'paid',
-      paymentProvider: 'stripe',
-      paymentId: session.payment_intent as string,
-      shipping,
-      items: snapshot
-    });
+      isNewOrder = await saveOrder({
+        id: session.id,
+        customerId,
+        totalCents: session.amount_total ?? 0,
+        currency: (session.currency || 'usd').toUpperCase(),
+        status: 'paid',
+        paymentProvider: 'stripe',
+        paymentId: session.payment_intent as string,
+        shipping,
+        items: snapshot
+      });
+    } catch (e: any) {
+      console.error(`[stripe webhook] could not save order ${session.id} — asking Stripe to retry`, e);
+      // Alert once, around the first delivery — not on every retry.
+      if (Date.now() - event.created * 1000 < 3 * 60 * 1000) {
+        await sendOrderSaveFailedAlert({
+          orderId: session.id,
+          provider: 'Stripe',
+          totalCents: session.amount_total ?? 0,
+          items: snapshot,
+          shipping,
+          nextStep:
+            'Fix the database. Stripe will retry by itself for up to 3 days, and the order then ' +
+            'processes normally. Do not also place it in CJ by hand unless it is still missing ' +
+            'from /admin/orders after Stripe stops retrying.',
+          error: e?.message || String(e)
+        });
+      }
+      return NextResponse.json({ error: 'Order could not be saved. Please retry.' }, { status: 500 });
+    }
+
+    // A redelivered or resent event for an order we already have: stop here so
+    // the customer isn't emailed twice and CJ doesn't ship it twice.
+    if (!isNewOrder) {
+      console.log(`[stripe webhook] order ${session.id} already saved — skipping`);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
 
     // 1b) Record coupon redemption (idempotent — keyed on order id, so Stripe's
     //     webhook retries can't inflate the counter or burn a code twice)

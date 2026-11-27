@@ -155,6 +155,57 @@ export async function sendOrderConfirmation(opts: {
   });
 }
 
+const escapeHtml = (v: unknown) =>
+  String(v ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+  );
+
+/**
+ * Tells the shop owner a customer has paid but the order couldn't be saved.
+ *
+ * Deliberately needs no database: this is sent when the database is the thing
+ * that's broken. Items are listed by id (plus the name when the product is in
+ * the code catalog), because admin-created products can't be looked up then.
+ */
+export async function sendOrderSaveFailedAlert(opts: {
+  orderId: string;
+  provider: 'Stripe' | 'PayPal';
+  totalCents: number;
+  items: { productId: string; qty: number; variantId?: string }[];
+  shipping: any;
+  /** What the owner needs to do about it. */
+  nextStep: string;
+  error: string;
+}): Promise<boolean> {
+  const s = opts.shipping || {};
+  const itemRows = (Array.isArray(opts.items) ? opts.items : [])
+    .map((i) => {
+      const name = products.find((p) => p.id === i.productId)?.name;
+      return `<li>${escapeHtml(i.qty)} × ${escapeHtml(name || i.productId)}${
+        i.variantId ? ` (variant ${escapeHtml(i.variantId)})` : ''
+      }</li>`;
+    })
+    .join('');
+  const address = [s.fullName, s.line1, s.line2, s.city, s.state, s.postalCode, s.country]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(', ');
+
+  return send({
+    to: ADMIN,
+    subject: `⚠ ACTION NEEDED: paid ${opts.provider} order not saved — ${opts.orderId}`,
+    html: shell('A paid order was not saved', `
+      <p><strong>${escapeHtml(opts.nextStep)}</strong></p>
+      <p><strong>${opts.provider} order:</strong> ${escapeHtml(opts.orderId)}<br/>
+         <strong>Paid:</strong> ${dollars(opts.totalCents)}</p>
+      <p><strong>Customer:</strong> ${escapeHtml(s.email)} ${escapeHtml(s.phone)}<br/>
+         <strong>Ship to:</strong> ${address || 'no address received'}</p>
+      <ul>${itemRows || '<li>Item list unavailable</li>'}</ul>
+      <p style="font-size:12px;color:#7A7A87;">Database error: ${escapeHtml(opts.error).slice(0, 300)}</p>
+    `),
+  });
+}
+
 /**
  * Welcome email with the subscriber's single-use discount code.
  *
