@@ -5,13 +5,14 @@ import ProductCard from '@/components/ProductCard';
 import FeaturedProduct from '@/components/FeaturedProduct';
 import HeroSlideshow from '@/components/HeroSlideshow';
 import TrustBar from '@/components/TrustBar';
+import NewsletterForm from '@/components/NewsletterForm';
 import { buildHeroSlides, DEFAULT_HERO_IMAGE, DEFAULT_HERO_ALT } from '@/lib/hero-slides';
 import { getWeeklyPicks, currentWeekRange } from '@/lib/weekly';
 import { featuredScore } from '@/lib/featured';
 import { categories } from '@/lib/products';
 import { getMergedProducts } from '@/lib/product-overrides';
-import { getAllConfig } from '@/lib/db';
-import { getShippingSettings } from '@/lib/db-commerce';
+import { getStoreConfig } from '@/lib/db';
+import { getStorefrontShipping } from '@/lib/db-commerce';
 import { shippingBlurb, shippingSubLabel } from '@/lib/shipping-copy';
 import { buildMetadata } from '@/lib/seo';
 
@@ -37,12 +38,11 @@ const DEFAULTS = {
   hero_cta_link: '/shop'
 };
 
-export default async function HomePage({ searchParams }: { searchParams?: { subscribed?: string } }) {
-  const subscribed = searchParams?.subscribed === '1';
+export default async function HomePage() {
   const [all, config, shipping] = await Promise.all([
     getMergedProducts(),
-    getAllConfig(),
-    getShippingSettings(),
+    getStoreConfig(),
+    getStorefrontShipping(),
   ]);
   // "Most loved this week" — rotates automatically every Monday. Seeded by ISO
   // week, so every visitor sees the same line-up all week and it changes on its
@@ -315,20 +315,7 @@ export default async function HomePage({ searchParams }: { searchParams?: { subs
       <section className="container-page py-16">
         <div className="rounded-4xl bg-blush-50 p-8 sm:p-12 text-center">
           <h2 className="font-display text-3xl sm:text-4xl text-ink-900">Join the MamaCare circle</h2>
-          {subscribed && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-sage-50 border border-sage-200 text-sage-600 text-sm font-medium px-5 py-3 rounded-full">
-              <span>🎉</span> You&apos;re in! Check your inbox for your 10% off code.
-            </div>
-          )}
-          <p className="text-ink-700 mt-2 max-w-xl mx-auto">
-            Pregnancy & postpartum tips, early access to new arrivals, and 10% off your first order.
-          </p>
-          <form action="/api/subscribe" method="post" className={`mt-6 flex flex-col sm:flex-row gap-3 max-w-lg mx-auto${subscribed ? ' hidden' : ''}`}>
-            <label htmlFor="email" className="sr-only">Email address</label>
-            <input id="email" type="email" name="email" required placeholder="Your email address"
-              className="flex-1 rounded-full px-5 py-3 bg-white border border-ink-900/10 focus:outline-none focus:ring-2 focus:ring-blush-300" />
-            <button type="submit" className="btn-primary">Subscribe</button>
-          </form>
+          <NewsletterForm />
         </div>
       </section>
     </>

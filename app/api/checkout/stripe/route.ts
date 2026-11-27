@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getMergedProducts } from '@/lib/product-overrides';
+import { getLiveProducts } from '@/lib/product-overrides';
 import { resolveOrigin } from '@/lib/seo';
 import { TAX_ENABLED } from '@/lib/tax';
 import { getTaxCodes, taxCodeFor } from '@/lib/db-commerce';
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
      * Stripe to reject the whole order with "line_items is required".
      * Prices still come from the server, never from the client.
      */
-    const products = await getMergedProducts();
+    const products = await getLiveProducts();
 
     // Per-category Stripe tax codes, configured in Admin → Shipping & discounts.
     // Only fetched when tax is on, so a normal checkout doesn't pay for the query.

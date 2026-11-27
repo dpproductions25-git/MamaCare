@@ -1,4 +1,5 @@
-import { getAllConfig, setConfig } from './db';
+import { getStoreConfig, setConfig } from './db';
+import { invalidateStoreData } from './store-cache';
 
 /**
  * Page content management for the 7 editable static pages.
@@ -214,7 +215,7 @@ const keyFor = (id: PageId, field: keyof PageContent) => `page_${id}_${field}`;
 
 /** Fetch full content for one page, with defaults applied for any missing field. */
 export async function getPageContent(id: PageId): Promise<PageContent> {
-  const config = await getAllConfig();
+  const config = await getStoreConfig();
   const def = DEFAULTS[id];
   return {
     title:   config[keyFor(id, 'title')]   || def.title,
@@ -242,4 +243,5 @@ export async function resetPageContent(id: PageId) {
   for (const field of FIELDS) {
     await sql`DELETE FROM site_config WHERE key = ${keyFor(id, field)};`;
   }
+  invalidateStoreData();
 }

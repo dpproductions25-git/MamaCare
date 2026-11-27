@@ -1,6 +1,6 @@
 import { getMergedProducts } from '@/lib/product-overrides';
 import { getAllPosts } from '@/lib/blog';
-import { getShippingSettings } from '@/lib/db-commerce';
+import { getStorefrontShipping } from '@/lib/db-commerce';
 import { shippingBlurb } from '@/lib/shipping-copy';
 import { SITE_URL, SITE_NAME } from '@/lib/seo';
 import { categories } from '@/lib/products';
@@ -21,7 +21,7 @@ export const revalidate = 3600;
 export async function GET() {
   const [products, shipping] = await Promise.all([
     getMergedProducts(),
-    getShippingSettings(),
+    getStorefrontShipping(),
   ]);
 
   const inStock = products.filter((p) => p.inStock && p.id !== 'mc-test');

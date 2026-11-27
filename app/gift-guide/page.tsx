@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { getMergedProducts } from '@/lib/product-overrides';
-import { getShippingSettings } from '@/lib/db-commerce';
+import { getStorefrontShipping } from '@/lib/db-commerce';
 import { shippingBlurb } from '@/lib/shipping-copy';
 import RegistryCta from '@/components/RegistryCta';
 import { buildMetadata } from '@/lib/seo';
@@ -62,7 +62,7 @@ const SECTIONS = [
 export default async function GiftGuidePage() {
   const all = await getMergedProducts();
   const bySlug = Object.fromEntries(all.map((p) => [p.slug, p]));
-  const shipNote = shippingBlurb(await getShippingSettings());
+  const shipNote = shippingBlurb(await getStorefrontShipping());
 
   return (
     <>

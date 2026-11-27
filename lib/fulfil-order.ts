@@ -2,7 +2,7 @@ import { createOrder as createCjOrder } from './cj';
 import { setCjOrderId } from './db';
 import { sendManualFulfilmentAlert } from './email';
 import { planCjFulfilment, type OrderLine } from './fulfilment';
-import { getMergedProducts } from './product-overrides';
+import { getLiveProducts } from './product-overrides';
 
 /**
  * Orders a paid purchase from CJ and emails the owner about anything that
@@ -28,7 +28,7 @@ export async function fulfilOrder(order: {
 }): Promise<string> {
   const { shipping } = order;
   // The merged catalog: the code list alone omits admin-created products.
-  const { cjItems, planned, manual } = planCjFulfilment(order.lines, await getMergedProducts());
+  const { cjItems, planned, manual } = planCjFulfilment(order.lines, await getLiveProducts());
   if (order.linesError) {
     manual.push({ productId: '', name: 'Whole order', qty: 0, reason: order.linesError });
   }

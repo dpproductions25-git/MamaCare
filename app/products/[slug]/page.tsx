@@ -4,7 +4,7 @@ import Script from 'next/script';
 import ProductGallery from '@/components/ProductGallery';
 import { products } from '@/lib/products';
 import { getMergedProduct } from '@/lib/product-overrides';
-import { getShippingSettings } from '@/lib/db-commerce';
+import { getStorefrontShipping } from '@/lib/db-commerce';
 import { getAltMap } from '@/lib/db-images';
 import { shippingBlurb } from '@/lib/shipping-copy';
 import { buildMetadata } from '@/lib/seo';
@@ -37,7 +37,7 @@ export default async function ProductPage({ params }: Params) {
   if (!product) return notFound();
 
   const [shipping, altMap] = await Promise.all([
-    getShippingSettings(),
+    getStorefrontShipping(),
     getAltMap(),
   ]);
 

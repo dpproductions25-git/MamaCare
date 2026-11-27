@@ -1,4 +1,4 @@
-import { getMergedProducts } from '@/lib/product-overrides';
+import { getLiveProducts } from '@/lib/product-overrides';
 import { getShippingSettings } from '@/lib/db-commerce';
 import CheckoutClient from './CheckoutClient';
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function CheckoutPage() {
   const [products, shipping] = await Promise.all([
-    getMergedProducts(),
+    getLiveProducts(),
     getShippingSettings(),
   ]);
   return <CheckoutClient serverProducts={products} shippingSettings={shipping} />;

@@ -1,6 +1,7 @@
 import './db-env'; // must precede @vercel/postgres — see lib/db-env.ts
 import { sql } from '@vercel/postgres';
 import type { Category, ProductVariant } from './types';
+import { cachedRead, invalidateStoreData } from './store-cache';
 
 export type OrderStatus =
   | 'pending' | 'paid' | 'fulfilling' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
@@ -279,12 +280,28 @@ export async function getOrder(id: string): Promise<DbOrder | null> {
 }
 
 // ─── Product overrides ───
+async function readOverrides(): Promise<Record<string, DbOverride>> {
+  const r = await sql<DbOverride>`SELECT * FROM product_overrides;`;
+  const map: Record<string, DbOverride> = {};
+  for (const row of r.rows) map[row.product_id] = row;
+  return map;
+}
+
+/** Live read, for admin and payments. */
 export async function getAllOverrides(): Promise<Record<string, DbOverride>> {
   try {
-    const r = await sql<DbOverride>`SELECT * FROM product_overrides;`;
-    const map: Record<string, DbOverride> = {};
-    for (const row of r.rows) map[row.product_id] = row;
-    return map;
+    return await readOverrides();
+  } catch {
+    return {};
+  }
+}
+
+const cachedOverrides = cachedRead('product-overrides', readOverrides);
+
+/** Cached read, for storefront pages. */
+export async function getStoreOverrides(): Promise<Record<string, DbOverride>> {
+  try {
+    return await cachedOverrides();
   } catch {
     return {};
   }
@@ -345,17 +362,35 @@ export async function upsertOverride(productId: string, fields: Partial<DbOverri
 
   // @ts-ignore raw query
   await sql.query(query, vals);
+  invalidateStoreData();
 }
 
 export async function clearOverride(productId: string) {
   await sql`DELETE FROM product_overrides WHERE product_id = ${productId};`;
+  invalidateStoreData();
 }
 
 // ─── Custom products ───
+async function readCustomProducts(): Promise<DbCustomProduct[]> {
+  const r = await sql<DbCustomProduct>`SELECT * FROM custom_products ORDER BY created_at DESC;`;
+  return r.rows;
+}
+
+/** Live read, for admin and payments. */
 export async function listCustomProducts(): Promise<DbCustomProduct[]> {
   try {
-    const r = await sql<DbCustomProduct>`SELECT * FROM custom_products ORDER BY created_at DESC;`;
-    return r.rows;
+    return await readCustomProducts();
+  } catch {
+    return [];
+  }
+}
+
+const cachedCustomProducts = cachedRead('custom-products', readCustomProducts);
+
+/** Cached read, for storefront pages. */
+export async function getStoreCustomProducts(): Promise<DbCustomProduct[]> {
+  try {
+    return await cachedCustomProducts();
   } catch {
     return [];
   }
@@ -386,6 +421,7 @@ export async function insertCustomProduct(p: Omit<DbCustomProduct, 'created_at' 
        ${p.in_stock}, ${p.best_seller}, ${p.visible},
        ${p.cj_product_id ?? null}, ${p.cj_variant_id ?? null}, ${p.created_by});
   `;
+  invalidateStoreData();
 }
 
 export async function updateCustomProduct(id: string, fields: Partial<DbCustomProduct>) {
@@ -408,10 +444,12 @@ export async function updateCustomProduct(id: string, fields: Partial<DbCustomPr
   const query = `UPDATE custom_products SET ${sets.join(', ')} WHERE id = $${i};`;
   // @ts-ignore raw query
   await sql.query(query, vals);
+  invalidateStoreData();
 }
 
 export async function deleteCustomProduct(id: string) {
   await sql`DELETE FROM custom_products WHERE id = ${id};`;
+  invalidateStoreData();
 }
 
 // ─── Site config (homepage + page content) ───
@@ -424,12 +462,28 @@ export async function getConfig(key: string): Promise<string | null> {
   }
 }
 
+async function readAllConfig(): Promise<Record<string, string>> {
+  const r = await sql<DbSiteConfig>`SELECT * FROM site_config;`;
+  const out: Record<string, string> = {};
+  for (const row of r.rows) out[row.key] = row.value;
+  return out;
+}
+
+/** Live read, for admin. */
 export async function getAllConfig(): Promise<Record<string, string>> {
   try {
-    const r = await sql<DbSiteConfig>`SELECT * FROM site_config;`;
-    const out: Record<string, string> = {};
-    for (const row of r.rows) out[row.key] = row.value;
-    return out;
+    return await readAllConfig();
+  } catch {
+    return {};
+  }
+}
+
+const cachedConfig = cachedRead('site-config', readAllConfig);
+
+/** Cached read, for storefront pages. */
+export async function getStoreConfig(): Promise<Record<string, string>> {
+  try {
+    return await cachedConfig();
   } catch {
     return {};
   }
@@ -442,6 +496,7 @@ export async function setConfig(key: string, value: string, updatedBy: string) {
     ON CONFLICT (key) DO UPDATE
       SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW();
   `;
+  invalidateStoreData();
 }
 
 // ─── Audit log ───

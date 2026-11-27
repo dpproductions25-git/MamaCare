@@ -1,6 +1,7 @@
 import './db-env'; // must precede @vercel/postgres — see lib/db-env.ts
 import { sql } from '@vercel/postgres';
 import crypto from 'crypto';
+import { cachedRead, invalidateStoreData } from './store-cache';
 
 /**
  * Shipping settings + database-backed discount codes.
@@ -41,7 +42,18 @@ export type DbCoupon = {
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
-export async function ensureCommerceSchema() {
+let commerceSchemaReady: Promise<void> | null = null;
+
+/** Runs once per server instance, not on every request. Retries if it failed. */
+export function ensureCommerceSchema(): Promise<void> {
+  commerceSchemaReady ??= createCommerceSchema().catch((e) => {
+    commerceSchemaReady = null;
+    throw e;
+  });
+  return commerceSchemaReady;
+}
+
+async function createCommerceSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS store_settings (
       key TEXT PRIMARY KEY,
@@ -90,35 +102,55 @@ export async function ensureCommerceSchema() {
  * fallback here is indistinguishable from "the admin save didn't work", which
  * makes this impossible to debug from the outside.
  */
+async function readShippingSettings(): Promise<ShippingSettings> {
+  await ensureCommerceSchema();
+  const r = await sql<{ key: string; value: string }>`
+    SELECT key, value FROM store_settings
+    WHERE key IN ('shipping_free_threshold', 'shipping_flat_rate');
+  `;
+  const map = Object.fromEntries(r.rows.map((x) => [x.key, x.value]));
+
+  const rawThreshold = map['shipping_free_threshold'];
+  const rawFlat = map['shipping_flat_rate'];
+  const threshold = Number(rawThreshold);
+  const flat = Number(rawFlat);
+
+  if (rawThreshold == null || rawFlat == null) {
+    console.warn(
+      `[shipping] no saved settings yet (threshold=${rawThreshold}, flat=${rawFlat}) — using defaults`
+    );
+  }
+
+  return {
+    // Note: Number('0') === 0 which is falsy, so we must check isFinite,
+    // never truthiness — otherwise a $0 flat rate silently becomes $6.99.
+    freeThreshold: Number.isFinite(threshold) ? threshold : DEFAULT_SHIPPING.freeThreshold,
+    flatRate: Number.isFinite(flat) ? flat : DEFAULT_SHIPPING.flatRate,
+  };
+}
+
+function shippingFallback(e: any): ShippingSettings {
+  console.error('[shipping] reading settings FAILED — falling back to defaults:', e?.message);
+  return DEFAULT_SHIPPING;
+}
+
+/** Live read, for pricing, checkout and admin. */
 export async function getShippingSettings(): Promise<ShippingSettings> {
   try {
-    await ensureCommerceSchema();
-    const r = await sql<{ key: string; value: string }>`
-      SELECT key, value FROM store_settings
-      WHERE key IN ('shipping_free_threshold', 'shipping_flat_rate');
-    `;
-    const map = Object.fromEntries(r.rows.map((x) => [x.key, x.value]));
+    return await readShippingSettings();
+  } catch (e) {
+    return shippingFallback(e);
+  }
+}
 
-    const rawThreshold = map['shipping_free_threshold'];
-    const rawFlat = map['shipping_flat_rate'];
-    const threshold = Number(rawThreshold);
-    const flat = Number(rawFlat);
+const cachedShipping = cachedRead('shipping-settings', readShippingSettings);
 
-    if (rawThreshold == null || rawFlat == null) {
-      console.warn(
-        `[shipping] no saved settings yet (threshold=${rawThreshold}, flat=${rawFlat}) — using defaults`
-      );
-    }
-
-    return {
-      // Note: Number('0') === 0 which is falsy, so we must check isFinite,
-      // never truthiness — otherwise a $0 flat rate silently becomes $6.99.
-      freeThreshold: Number.isFinite(threshold) ? threshold : DEFAULT_SHIPPING.freeThreshold,
-      flatRate: Number.isFinite(flat) ? flat : DEFAULT_SHIPPING.flatRate,
-    };
-  } catch (e: any) {
-    console.error('[shipping] getShippingSettings FAILED — falling back to defaults:', e?.message);
-    return DEFAULT_SHIPPING;
+/** Cached read, for storefront pages. */
+export async function getStorefrontShipping(): Promise<ShippingSettings> {
+  try {
+    return await cachedShipping();
+  } catch (e) {
+    return shippingFallback(e);
   }
 }
 
@@ -191,6 +223,7 @@ export async function saveShippingSettings(s: ShippingSettings, updatedBy: strin
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value,
       updated_by = EXCLUDED.updated_by, updated_at = NOW();
   `;
+  invalidateStoreData();
 }
 
 // ── Coupons ───────────────────────────────────────────────────────────────────

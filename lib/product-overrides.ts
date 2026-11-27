@@ -1,6 +1,9 @@
 import { products as staticProducts } from './products';
 import { Product, Category, ProductVariant } from './types';
-import { getAllOverrides, listCustomProducts, DbOverride, DbCustomProduct } from './db';
+import {
+  getAllOverrides, listCustomProducts, getStoreOverrides, getStoreCustomProducts,
+  DbOverride, DbCustomProduct
+} from './db';
 import { repairImageList } from './image-url';
 import { applySale } from './sale';
 
@@ -88,7 +91,13 @@ export type AdminListing = {
 
 export async function getAllProductsForAdmin(): Promise<AdminListing[]> {
   const [overrides, customs] = await Promise.all([getAllOverrides(), listCustomProducts()]);
+  return toListings(overrides, customs);
+}
 
+function toListings(
+  overrides: Record<string, DbOverride>,
+  customs: DbCustomProduct[]
+): AdminListing[] {
   const staticListings: AdminListing[] = staticProducts.map((p) => {
     const o = overrides[p.id];
     return {
@@ -112,11 +121,21 @@ export async function getAdminProduct(id: string): Promise<AdminListing | null> 
   return all.find((l) => l.product.id === id) || null;
 }
 
+// Sale pricing is applied here (the storefront/checkout view) and NOT in
+// getAllProductsForAdmin, so the admin editor never saves a sale price. It is
+// applied after any cache, so a sale starts and ends on time.
+const toStorefront = (listings: AdminListing[]) =>
+  applySale(listings.filter((l) => l.visible).map((l) => l.product));
+
+/** The catalog for storefront pages — cached (lib/store-cache.ts). */
 export async function getMergedProducts(): Promise<Product[]> {
-  const listings = await getAllProductsForAdmin();
-  // Sale pricing is applied here (the storefront/checkout view) and NOT in
-  // getAllProductsForAdmin, so the admin editor never saves a sale price.
-  return applySale(listings.filter((l) => l.visible).map((l) => l.product));
+  const [overrides, customs] = await Promise.all([getStoreOverrides(), getStoreCustomProducts()]);
+  return toStorefront(toListings(overrides, customs));
+}
+
+/** The catalog read straight from the database — use wherever money or orders are involved. */
+export async function getLiveProducts(): Promise<Product[]> {
+  return toStorefront(await getAllProductsForAdmin());
 }
 
 export async function getMergedProduct(slug: string): Promise<Product | undefined> {

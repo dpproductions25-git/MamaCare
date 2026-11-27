@@ -1,5 +1,6 @@
 import './db-env'; // must precede @vercel/postgres — see lib/db-env.ts
 import { sql } from '@vercel/postgres';
+import { cachedRead, invalidateStoreData } from './store-cache';
 
 /**
  * Alt-text store.
@@ -21,7 +22,18 @@ export type ImageAlt = {
   updated_at: string;
 };
 
-export async function ensureImageSchema() {
+let imageSchemaReady: Promise<void> | null = null;
+
+/** Runs once per server instance, not on every request. Retries if it failed. */
+export function ensureImageSchema(): Promise<void> {
+  imageSchemaReady ??= createImageSchema().catch((e) => {
+    imageSchemaReady = null;
+    throw e;
+  });
+  return imageSchemaReady;
+}
+
+async function createImageSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS image_alt_text (
       image_url TEXT PRIMARY KEY,
@@ -34,14 +46,20 @@ export async function ensureImageSchema() {
   await sql`CREATE INDEX IF NOT EXISTS idx_alt_product ON image_alt_text(product_id);`;
 }
 
+async function readAltMap(): Promise<Record<string, string>> {
+  await ensureImageSchema();
+  const r = await sql<{ image_url: string; alt_text: string }>`
+    SELECT image_url, alt_text FROM image_alt_text;
+  `;
+  return Object.fromEntries(r.rows.map((x) => [x.image_url, x.alt_text]));
+}
+
+const cachedAltMap = cachedRead('image-alt-text', readAltMap);
+
 /** url → alt text, for rendering. Never throws — missing alt is not fatal. */
 export async function getAltMap(): Promise<Record<string, string>> {
   try {
-    await ensureImageSchema();
-    const r = await sql<{ image_url: string; alt_text: string }>`
-      SELECT image_url, alt_text FROM image_alt_text;
-    `;
-    return Object.fromEntries(r.rows.map((x) => [x.image_url, x.alt_text]));
+    return await cachedAltMap();
   } catch (e: any) {
     console.error('[alt-text] could not load map:', e?.message);
     return {};
@@ -84,10 +102,12 @@ export async function saveAltBatch(
     saved += r.rows.length;
   }
 
+  if (saved) invalidateStoreData();
   return saved;
 }
 
 export async function deleteAlt(imageUrl: string) {
   await ensureImageSchema();
   await sql`DELETE FROM image_alt_text WHERE image_url = ${imageUrl};`;
+  invalidateStoreData();
 }

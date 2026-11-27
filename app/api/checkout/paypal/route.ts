@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMergedProducts } from '@/lib/product-overrides';
+import { getLiveProducts } from '@/lib/product-overrides';
 import { resolveTotals } from '@/lib/pricing';
 import { calculateTax, TAX_ENABLED } from '@/lib/tax';
 import { paypalBase } from '@/lib/paypal-env';
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // Full catalog including admin-created products — see the note in the
     // Stripe route. The static-only list silently dropped custom products.
-    const products = await getMergedProducts();
+    const products = await getLiveProducts();
 
     let subtotal = 0;
     const ppItems = items.map((i) => {
