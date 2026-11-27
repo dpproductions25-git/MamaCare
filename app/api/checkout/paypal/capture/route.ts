@@ -6,6 +6,7 @@ import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySc
 import { enrichRegistryItems } from '@/lib/registry-enrich';
 import { redeemCoupon } from '@/lib/db-commerce';
 import { paypalBase } from '@/lib/paypal-env';
+import { openPayPalSeal } from '@/lib/paypal-seal';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,8 +29,43 @@ async function paypalToken(): Promise<string> {
 
 export async function POST(req: Request) {
   try {
-    const { orderId, items, shippingAddress, couponCode } = await req.json();
+    const body = await req.json();
+    const { orderId, shippingAddress } = body;
+    if (typeof orderId !== 'string' || !/^[A-Za-z0-9-]{5,64}$/.test(orderId)) {
+      return NextResponse.json({ error: 'Invalid PayPal order.' }, { status: 400 });
+    }
     const token = await paypalToken();
+
+    // Before taking money: is this an order we created, for exactly these items
+    // at this amount? (lib/paypal-seal.ts)
+    const lookup = await fetch(`${paypalBase()}/v2/checkout/orders/${orderId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store'
+    });
+    const pending = await lookup.json();
+    if (!lookup.ok) {
+      return NextResponse.json({ error: pending?.message || 'PayPal order not found' }, { status: lookup.status });
+    }
+    const units: any[] = pending?.purchase_units || [];
+    const sealedAmount: string | undefined = units[0]?.amount?.value;
+    const seal = openPayPalSeal(
+      units[0]?.custom_id,
+      body.items,
+      sealedAmount,
+      process.env.PAYPAL_CLIENT_SECRET || ''
+    );
+    if (units.length !== 1 || !seal.ok) {
+      console.error(`[paypal capture] order ${orderId} does not match the submitted cart — not captured`);
+      return NextResponse.json(
+        { error: 'Your cart changed during payment. You have not been charged — please try PayPal again.' },
+        { status: 409 }
+      );
+    }
+    // From here on: the cart that matched the seal, and the coupon inside it.
+    // (Registry ids ride along unsealed; they don't affect price or shipping.)
+    const items = seal.items;
+    const couponCode = seal.coupon;
+
     const r = await fetch(`${paypalBase()}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
@@ -133,12 +169,20 @@ export async function POST(req: Request) {
 
     // 3) Order from CJ — the size/colour the shopper chose (lib/fulfilment.ts).
     let cjSummary = 'Check CJ to see whether anything was ordered.';
+    // The order was checked just before capture; if the money taken still
+    // differs, someone changed it in between, so order nothing automatically.
+    const expectedCents = Math.round(Number(sealedAmount) * 100);
+    const amountOk = cents === expectedCents;
     try {
       cjSummary = await fulfilOrder({
         orderId,
         provider: 'PayPal',
-        lines: items,
-        shipping
+        lines: amountOk ? items : [],
+        shipping,
+        linesError: amountOk
+          ? undefined
+          : `PayPal captured $${(cents / 100).toFixed(2)} but the cart was priced at ` +
+            `$${(expectedCents / 100).toFixed(2)}. Check the payment before ordering anything.`
       });
     } catch (e) {
       console.error('CJ fulfillment after PayPal capture failed', e);

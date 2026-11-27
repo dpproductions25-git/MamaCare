@@ -51,6 +51,10 @@ export function planCjFulfilment(
 
     if (!product) {
       hold('Product could not be found in the catalog.');
+    } else if (line.variantId && !chosen) {
+      // The id comes from the shopper's browser: only this product's own
+      // options may be ordered, or any CJ item could be slipped in.
+      hold('The recorded option is not one of this product’s current options.');
     } else if (line.variantId) {
       if (isCjVariantId(line.variantId)) send(line.variantId);
       // With only one option there is nothing to get wrong.

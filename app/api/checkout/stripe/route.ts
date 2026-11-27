@@ -73,6 +73,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `${p.name} is out of stock.` }, { status: 400 });
       }
       const variant = it.variantId ? p.variants?.find((v) => v.vid === it.variantId) : undefined;
+      // An option that isn't this product's would be priced as the base product
+      // while a different CJ item was ordered.
+      if (it.variantId && !variant) {
+        return NextResponse.json(
+          { error: `The selected option for ${p.name} is no longer available. Please remove it and add it again.` },
+          { status: 400 }
+        );
+      }
       const price = variant?.price ?? p.price;
       const variantLabel = variant ? ` (${variant.name})` : '';
       subtotal += price * it.qty;

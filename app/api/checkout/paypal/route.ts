@@ -4,6 +4,7 @@ import { resolveTotals } from '@/lib/pricing';
 import { calculateTax, TAX_ENABLED } from '@/lib/tax';
 import { paypalBase } from '@/lib/paypal-env';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { isCartLines, sealPayPalOrder } from '@/lib/paypal-seal';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,9 @@ export async function POST(req: Request) {
     const items: { productId: string; qty: number; variantId?: string }[] = body.items || [];
     const couponCode: string | undefined = body.couponCode || undefined;
     if (!items.length) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+    if (!isCartLines(items)) {
+      return NextResponse.json({ error: 'One of the quantities in your cart is invalid.' }, { status: 400 });
+    }
 
     // Full catalog including admin-created products — see the note in the
     // Stripe route. The static-only list silently dropped custom products.
@@ -49,6 +53,11 @@ export async function POST(req: Request) {
       }
       if (!p.inStock) throw new Error(`${p.name} is out of stock.`);
       const variant = i.variantId ? p.variants?.find((v) => v.vid === i.variantId) : undefined;
+      // An option that isn't this product's would be priced as the base product
+      // while a different CJ item was ordered.
+      if (i.variantId && !variant) {
+        throw new Error(`The selected option for ${p.name} is no longer available. Please remove it and add it again.`);
+      }
       const price = variant?.price ?? p.price;
       subtotal += price * i.qty;
       return {
@@ -126,7 +135,13 @@ export async function POST(req: Request) {
         purchase_units: [{
           amount: { currency_code: 'USD', value: grandTotal.toFixed(2), breakdown },
           items: ppItems,
-          custom_id: appliedCode || undefined
+          // Checked at capture — see lib/paypal-seal.ts.
+          custom_id: sealPayPalOrder(
+            items,
+            grandTotal.toFixed(2),
+            appliedCode || '',
+            process.env.PAYPAL_CLIENT_SECRET || ''
+          )
         }],
         application_context: {
           brand_name: 'MamaCare',
