@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useCart } from '@/lib/cart';
 import { calculateTotals } from '@/lib/coupons';
 import { freeShippingNudge } from '@/lib/shipping-copy';
+import { PAYPAL_ENABLED } from '@/lib/payments';
 import type { Product } from '@/lib/types';
 
 export default function CartClient({
@@ -268,7 +269,7 @@ export default function CartClient({
 
           <Link href="/checkout" className="btn-primary w-full mt-6">Checkout</Link>
           <Link href="/shop" className="btn-ghost w-full mt-2">Continue shopping</Link>
-          <p className="text-xs text-ink-500 mt-4">Secure checkout via Stripe &amp; PayPal.</p>
+          <p className="text-xs text-ink-500 mt-4">Secure checkout via Stripe{PAYPAL_ENABLED ? ' & PayPal' : ''}.</p>
         </aside>
       </div>
     </section>

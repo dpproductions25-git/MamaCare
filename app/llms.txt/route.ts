@@ -4,6 +4,7 @@ import { getStorefrontShipping } from '@/lib/db-commerce';
 import { shippingBlurb } from '@/lib/shipping-copy';
 import { SITE_URL, SITE_NAME } from '@/lib/seo';
 import { categories } from '@/lib/products';
+import { PAYPAL_ENABLED } from '@/lib/payments';
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
@@ -57,7 +58,7 @@ export async function GET() {
 - Website: ${SITE_URL}
 - Shipping: ${shippingBlurb(shipping)}. US delivery typically 5–18 business days.
 - Returns: accepted within 14 days of delivery.
-- Payment: card (Stripe) and PayPal. Checkout is secured by the payment provider.
+- Payment: card (Stripe)${PAYPAL_ENABLED ? ' and PayPal' : ''}. Checkout is secured by the payment provider.
 - Baby registry: free to create, shareable by link, tracks what has been bought
   so gifts are not duplicated — ${SITE_URL}/registry
 - Business model: MamaCare is a dropshipping retailer and does not manufacture

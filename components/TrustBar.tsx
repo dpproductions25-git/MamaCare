@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PAYPAL_ENABLED } from '@/lib/payments';
 
 /**
  * Trust / social-proof strip under the hero.
@@ -100,7 +101,7 @@ export default function TrustBar({ shippingLabel }: { shippingLabel: string }) {
       >
         <Item tone="sage"  icon={<Truck />}  stat="Free shipping" label={shippingLabel} />
         <Item tone="sage"  icon={<Return />} stat="14-day returns" label="No questions asked" />
-        <Item tone="ink"   icon={<Lock />}   stat="Secure checkout" label="Stripe & PayPal" />
+        <Item tone="ink"   icon={<Lock />}   stat="Secure checkout" label={PAYPAL_ENABLED ? 'Stripe & PayPal' : 'Powered by Stripe'} />
         <Item tone="sage"  icon={<Leaf />}   stat="Thoughtfully sourced" label="Mama-approved" />
       </ul>
 

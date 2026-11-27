@@ -1,6 +1,7 @@
 import Script from 'next/script';
 import { buildMetadata } from '@/lib/seo';
 import { getPageContent } from '@/lib/page-content';
+import { PAYPAL_ENABLED } from '@/lib/payments';
 
 export const revalidate = 30;
 
@@ -15,7 +16,7 @@ const faqs = [
   { q: 'Can I return an item?', a: 'Yes — unworn items can be returned within 14 days of delivery. Health & safety items (used balms, opened bottle warmers) are final sale.' },
   { q: 'Does MamaCare manufacture its own products?', a: 'No. MamaCare is a curated dropshipping store. We source quality baby gear from trusted suppliers and ship it directly to you.' },
   { q: 'Are your products safe for babies?', a: 'Every product we list is reviewed for material safety and age-appropriate design. We avoid items that are not compliant with U.S. CPSC standards.' },
-  { q: 'What payment methods do you accept?', a: 'Visa, Mastercard, Amex, Discover, Apple Pay, Google Pay (via Stripe), and PayPal.' },
+  { q: 'What payment methods do you accept?', a: `Visa, Mastercard, Amex, Discover, Apple Pay, Google Pay (via Stripe)${PAYPAL_ENABLED ? ', and PayPal' : ''}.` },
   { q: 'What if my order arrives damaged?', a: 'Email us within 7 days with photos and we will replace it or refund you in full — including any return shipping cost.' }
 ];
 

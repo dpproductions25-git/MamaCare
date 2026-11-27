@@ -14,6 +14,7 @@ import AutoApplyCoupon from '@/components/AutoApplyCoupon';
 import { metaPixelSnippet } from '@/lib/meta-pixel';
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { getMergedProducts } from '@/lib/product-overrides';
+import { PAYPAL_ENABLED } from '@/lib/payments';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', display: 'swap' });
@@ -105,7 +106,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     image: `${SITE_URL}/opengraph-image`,
     description: DEFAULT_DESCRIPTION,
     currenciesAccepted: 'USD',
-    paymentAccepted: 'Credit Card, Debit Card, PayPal, Apple Pay, Google Pay',
+    paymentAccepted: `Credit Card, Debit Card, ${PAYPAL_ENABLED ? 'PayPal, ' : ''}Apple Pay, Google Pay`,
     areaServed: [
       { '@type': 'Country', name: 'United States' },
       { '@type': 'Country', name: 'Canada' },

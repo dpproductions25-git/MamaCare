@@ -12,6 +12,7 @@ import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe
 import type { Product } from '@/lib/types';
 import { trackMeta } from '@/components/MetaPixel';
 import CheckoutSuggestions from '@/components/CheckoutSuggestions';
+import { PAYPAL_ENABLED } from '@/lib/payments';
 
 /**
  * Created once at module scope, not per render — loadStripe() injects a script
@@ -340,48 +341,52 @@ export default function CheckoutClient({
                   </p>
                 )}
 
-                <div className="flex items-center gap-3 text-xs text-ink-500">
-                  <span className="h-px flex-1 bg-ink-900/10" /> or <span className="h-px flex-1 bg-ink-900/10" />
-                </div>
+                {PAYPAL_ENABLED && (
+                  <>
+                    <div className="flex items-center gap-3 text-xs text-ink-500">
+                      <span className="h-px flex-1 bg-ink-900/10" /> or <span className="h-px flex-1 bg-ink-900/10" />
+                    </div>
 
-                <div className={!agreedToTerms ? 'opacity-40 pointer-events-none' : ''}>
-              <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'USD' }}>
-                <PayPalButtons
-                  style={{ layout: 'horizontal', color: 'gold', shape: 'pill', label: 'paypal' }}
-                  disabled={loading || !agreedToTerms}
-                  createOrder={async () => {
-                    const v = validate();
-                    if (v) { setErr(v); throw new Error(v); }
-                    const r = await fetch('/api/checkout/paypal', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ items, shippingAddress: form, couponCode })
-                    });
-                    const d = await r.json();
-                    if (!r.ok) throw new Error(d.error || 'PayPal order failed');
-                    return d.id;
-                  }}
-                  onApprove={async (data) => {
-                    const r = await fetch('/api/checkout/paypal/capture', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ orderId: data.orderID, items, shippingAddress: form, couponCode })
-                    });
-                    if (!r.ok) {
-                      const d = await r.json().catch(() => ({}));
-                      setErr(d.error || 'PayPal capture failed');
-                      return;
-                    }
-                    // Stash before clear() — clear() empties the cart we're
-                    // reading the order value from.
-                    stashPendingPurchase();
-                    clear();
-                    router.push('/checkout/success?provider=paypal');
-                  }}
-                  onError={(e) => setErr(String(e))}
-                />
-                  </PayPalScriptProvider>
-                </div>
+                    <div className={!agreedToTerms ? 'opacity-40 pointer-events-none' : ''}>
+                      <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'USD' }}>
+                        <PayPalButtons
+                          style={{ layout: 'horizontal', color: 'gold', shape: 'pill', label: 'paypal' }}
+                          disabled={loading || !agreedToTerms}
+                          createOrder={async () => {
+                            const v = validate();
+                            if (v) { setErr(v); throw new Error(v); }
+                            const r = await fetch('/api/checkout/paypal', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ items, shippingAddress: form, couponCode })
+                            });
+                            const d = await r.json();
+                            if (!r.ok) throw new Error(d.error || 'PayPal order failed');
+                            return d.id;
+                          }}
+                          onApprove={async (data) => {
+                            const r = await fetch('/api/checkout/paypal/capture', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ orderId: data.orderID, items, shippingAddress: form, couponCode })
+                            });
+                            if (!r.ok) {
+                              const d = await r.json().catch(() => ({}));
+                              setErr(d.error || 'PayPal capture failed');
+                              return;
+                            }
+                            // Stash before clear() — clear() empties the cart we're
+                            // reading the order value from.
+                            stashPendingPurchase();
+                            clear();
+                            router.push('/checkout/success?provider=paypal');
+                          }}
+                          onError={(e) => setErr(String(e))}
+                        />
+                      </PayPalScriptProvider>
+                    </div>
+                  </>
+                )}
 
                 {!agreedToTerms && (
                   <p className="text-xs text-ink-500 italic">

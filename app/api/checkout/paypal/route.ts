@@ -5,6 +5,7 @@ import { calculateTax, TAX_ENABLED } from '@/lib/tax';
 import { paypalBase } from '@/lib/paypal-env';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { isCartLines, sealPayPalOrder } from '@/lib/paypal-seal';
+import { PAYPAL_ENABLED } from '@/lib/payments';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,15 @@ async function paypalToken(): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  // Also refuse here, so a checkout tab opened before the pause can't start a
+  // new PayPal order. (Capture stays open for payments already under way.)
+  if (!PAYPAL_ENABLED) {
+    return NextResponse.json(
+      { error: 'PayPal is temporarily unavailable. Please pay by card.' },
+      { status: 503 }
+    );
+  }
+
   const ip = getClientIp(req);
   if (!rateLimit(`checkout:paypal:${ip}`, 10, 60_000)) {
     return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
