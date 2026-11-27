@@ -6,6 +6,7 @@ import { TAX_ENABLED } from '@/lib/tax';
 import { getTaxCodes, taxCodeFor } from '@/lib/db-commerce';
 import { resolveTotals } from '@/lib/pricing';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { encodeProductSnapshot } from '@/lib/fulfilment';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -214,13 +215,8 @@ export async function POST(req: Request) {
         // pushed this toward Stripe's 500-char-per-value metadata limit once
         // registry fields were added — and an oversized value makes Stripe
         // reject the entire session. Registry data lives in registrySnapshot.
-        productSnapshot: JSON.stringify(
-          items.map((i) => ({
-            productId: i.productId,
-            qty: i.qty,
-            ...(i.variantId ? { variantId: i.variantId } : {}),
-          }))
-        ).slice(0, 490),
+        // Split over several keys for larger carts — never truncated.
+        ...encodeProductSnapshot(items),
         shippingAddress: JSON.stringify(shippingAddress || {}).slice(0, 490),
         couponCode: appliedCode || '',
         registrySnapshot,

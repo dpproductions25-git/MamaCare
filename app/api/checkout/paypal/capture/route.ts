@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createOrder as createCjOrder } from '@/lib/cj';
-import { getMergedProducts } from '@/lib/product-overrides';
-import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
+import { fulfilOrder } from '@/lib/fulfil-order';
+import { upsertCustomer, saveOrder } from '@/lib/db';
 import { sendOrderConfirmation, sendOrderSaveFailedAlert, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
@@ -132,39 +131,15 @@ export async function POST(req: Request) {
       console.error('Email send failed (PayPal)', e);
     }
 
-    // 3) CJ fulfillment
-    let cjSummary = 'Nothing was sent to CJ.';
+    // 3) Order from CJ — the size/colour the shopper chose (lib/fulfilment.ts).
+    let cjSummary = 'Check CJ to see whether anything was ordered.';
     try {
-      // Merged catalog — the static list omits admin-created products, which
-      // meant those orders were paid for but never sent to the supplier.
-      const catalog = await getMergedProducts();
-      const cjItems = (items as { productId: string; qty: number }[])
-        .map((s) => {
-          const p = catalog.find((x) => x.id === s.productId);
-          return p?.cjVariantId ? { vid: p.cjVariantId, quantity: s.qty } : null;
-        })
-        .filter(Boolean) as { vid: string; quantity: number }[];
-
-      if (cjItems.length && shipping && process.env.CJ_API_KEY) {
-        const cj = await createCjOrder({
-          orderNumber: orderId,
-          shippingZip: shipping.postalCode,
-          shippingCountryCode: shipping.country,
-          shippingProvince: shipping.state,
-          shippingCity: shipping.city,
-          shippingAddress: [shipping.line1, shipping.line2].filter(Boolean).join(', '),
-          shippingCustomerName: shipping.fullName,
-          shippingPhone: shipping.phone || '',
-          remark: 'MamaCare order',
-          products: cjItems
-        });
-        if ((cj as any)?.orderId) {
-          cjSummary =
-            `CJ order ${(cj as any).orderId} was created for ${cjItems.length} of ` +
-            `${(items as unknown[]).length} item line(s).`;
-          await setCjOrderId(orderId, String((cj as any).orderId));
-        }
-      }
+      cjSummary = await fulfilOrder({
+        orderId,
+        provider: 'PayPal',
+        lines: items,
+        shipping
+      });
     } catch (e) {
       console.error('CJ fulfillment after PayPal capture failed', e);
     }

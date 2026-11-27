@@ -206,6 +206,40 @@ export async function sendOrderSaveFailedAlert(opts: {
   });
 }
 
+/** Tells the shop owner which paid items still need to be ordered from CJ by hand. */
+export async function sendManualFulfilmentAlert(opts: {
+  orderId: string;
+  provider: 'Stripe' | 'PayPal';
+  shipping: any;
+  lines: { name: string; qty: number; variant?: string; reason: string }[];
+}): Promise<boolean> {
+  const s = opts.shipping || {};
+  const rows = opts.lines
+    .map(
+      (l) =>
+        `<li style="margin-bottom:10px;"><strong>${l.qty > 0 ? `${escapeHtml(l.qty)} × ` : ''}${escapeHtml(l.name)}</strong>` +
+        `${l.variant ? `<br/>Chosen option: ${escapeHtml(l.variant)}` : ''}` +
+        `<br/><span style="color:#7A7A87;">${escapeHtml(l.reason).slice(0, 300)}</span></li>`
+    )
+    .join('');
+  const address = [s.fullName, s.line1, s.line2, s.city, s.state, s.postalCode, s.country]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(', ');
+
+  return send({
+    to: ADMIN,
+    subject: `⚠ Order in CJ by hand — ${opts.orderId}`,
+    html: shell('Items not sent to CJ', `
+      <p><strong>These paid items were not ordered from CJ. Place them yourself.</strong></p>
+      <p><strong>${opts.provider} order:</strong> ${escapeHtml(opts.orderId)}<br/>
+         <strong>Customer:</strong> ${escapeHtml(s.email)} ${escapeHtml(s.phone)}<br/>
+         <strong>Ship to:</strong> ${address || 'no address received'}</p>
+      <ul>${rows}</ul>
+    `),
+  });
+}
+
 /**
  * Welcome email with the subscriber's single-use discount code.
  *

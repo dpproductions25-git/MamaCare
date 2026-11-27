@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createOrder as createCjOrder } from '@/lib/cj';
-import { getMergedProducts } from '@/lib/product-overrides';
-import { upsertCustomer, saveOrder, setCjOrderId } from '@/lib/db';
+import { fulfilOrder } from '@/lib/fulfil-order';
+import { decodeProductSnapshot, type OrderLine } from '@/lib/fulfilment';
+import { upsertCustomer, saveOrder } from '@/lib/db';
 import { sendOrderConfirmation, sendOrderSaveFailedAlert, sendRegistryGiftNotification } from '@/lib/email';
 import { markItemPurchased, findRegistryById, getRegistryItems, ensureRegistrySchema } from '@/lib/db-registry';
 import { enrichRegistryItems } from '@/lib/registry-enrich';
@@ -54,7 +54,14 @@ export async function POST(req: Request) {
   const session = event.data.object as Stripe.Checkout.Session;
 
   try {
-    const snapshot = JSON.parse(session.metadata?.productSnapshot || '[]') as { productId: string; qty: number }[];
+    // An unreadable item list must not stop the order being saved.
+    let snapshot: OrderLine[] = [];
+    let linesError: string | undefined;
+    try {
+      snapshot = decodeProductSnapshot(session.metadata);
+    } catch {
+      linesError = 'The item list on this payment is unreadable. Check its line items in Stripe.';
+    }
     const stripeShip: any = (session as any).shipping_details || (session as any).collected_information;
     const fallbackShip = JSON.parse(session.metadata?.shippingAddress || '{}');
     const shippingName = stripeShip?.name || session.customer_details?.name || fallbackShip.fullName || 'Customer';
@@ -149,42 +156,17 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3) Fire CJ fulfillment.
-    // Must use the merged catalog — the static list omits admin-created
-    // products, which meant those orders were paid for but never sent to the
-    // supplier.
-    const catalog = await getMergedProducts();
-    const cjItems = snapshot
-      .map((s) => {
-        const p = catalog.find((x) => x.id === s.productId);
-        return p?.cjVariantId ? { vid: p.cjVariantId, quantity: s.qty } : null;
-      })
-      .filter(Boolean) as { vid: string; quantity: number }[];
-
-    if (cjItems.length !== snapshot.length) {
-      console.warn(
-        `[stripe webhook] ${snapshot.length - cjItems.length} item(s) in order ${session.id} have no CJ variant id — fulfil these manually.`
-      );
-    }
-
-    if (cjItems.length && process.env.CJ_API_KEY) {
-      try {
-        const cj = await createCjOrder({
-          orderNumber: session.id,
-          shippingZip: shipping.postalCode,
-          shippingCountryCode: shipping.country,
-          shippingProvince: shipping.state,
-          shippingCity: shipping.city,
-          shippingAddress: [shipping.line1, shipping.line2].filter(Boolean).join(', '),
-          shippingCustomerName: shipping.fullName,
-          shippingPhone: shipping.phone,
-          remark: 'MamaCare order',
-          products: cjItems
-        });
-        if ((cj as any)?.orderId) await setCjOrderId(session.id, String((cj as any).orderId));
-      } catch (e) {
-        console.error('CJ fulfillment failed', e);
-      }
+    // 3) Order from CJ — the size/colour the shopper chose (lib/fulfilment.ts).
+    try {
+      await fulfilOrder({
+        orderId: session.id,
+        provider: 'Stripe',
+        lines: snapshot,
+        shipping,
+        linesError
+      });
+    } catch (e) {
+      console.error('CJ fulfillment failed', e);
     }
 
     // 4) Mark registry items as purchased and notify the registry owner.
